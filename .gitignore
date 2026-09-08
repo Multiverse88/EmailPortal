@@ -33,6 +33,7 @@ prisma/*.db
 prisma/*.db-journal
 backend/storage/*
 !backend/storage/.gitkeep
+storage/
 
 # Testing & Reports
 coverage/
