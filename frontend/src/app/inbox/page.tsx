@@ -232,7 +232,7 @@ function Inbox_() {
         </aside>
 
         {/* Email List Panel */}
-        <div className={`${message ? 'hidden lg:flex' : 'flex'} flex-col w-full md:w-[360px] lg:w-[420px] border-r border-surface-variant bg-surface overflow-hidden`}>
+        <div className={`${openUid ? 'hidden lg:flex' : 'flex'} flex-col w-full md:w-[360px] lg:w-[420px] border-r border-surface-variant bg-surface overflow-hidden`}>
           <div className="px-md py-sm flex items-center justify-between border-b border-surface-variant bg-surface sticky top-0 z-10">
             <div className="flex items-center gap-xs">
               <button className="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded flex items-center transition-colors">
@@ -320,8 +320,9 @@ function Inbox_() {
         </div>
 
         {/* Reading Pane */}
-        {message && openUid ? (
-          <article data-testid="message-view" className="hidden lg:flex flex-1 flex-col bg-surface overflow-hidden">
+        {openUid ? (
+          message ? (
+            <article data-testid="message-view" className="flex flex-1 flex-col bg-surface overflow-hidden">
             <div className="px-lg py-sm flex items-center justify-between border-b border-surface-variant bg-surface z-10 sticky top-0">
               <div className="flex items-center gap-xs">
                 <button data-testid="back" onClick={() => setOpenUid(null)} className="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Back">
@@ -445,6 +446,13 @@ function Inbox_() {
             </div>
           </article>
         ) : (
+          <div className="flex flex-1 items-center justify-center bg-surface p-xl">
+            <div className="text-center text-on-surface-variant text-sm flex items-center gap-2">
+              <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+              <span>Memuat pesan...</span>
+            </div>
+          </div>
+        )) : (
           <div className="hidden lg:flex flex-1 items-center justify-center bg-surface">
             <div className="text-center">
               <span className="material-symbols-outlined text-[64px] text-outline mb-4">mail</span>

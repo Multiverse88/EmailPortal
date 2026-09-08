@@ -41,6 +41,7 @@ function Admin_() {
   const [showForm, setShowForm] = useState(false);
   const [created, setCreated] = useState<{ mailboxAddress: string; temporaryPassword: string } | null>(null);
   const [toast, setToast] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data, mutate, isLoading } = useSWR<{ data: Mailbox[]; quota: { used: number; limit: number } }>(
     '/mailboxes?limit=100', fetcher
@@ -61,6 +62,16 @@ function Admin_() {
   const mailboxes = data?.data ?? [];
   const quota = data?.quota;
 
+  const filteredMailboxes = mailboxes.filter((m) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (m.name && m.name.toLowerCase().includes(q)) ||
+      (m.mailboxAddress && m.mailboxAddress.toLowerCase().includes(q)) ||
+      (m.personalEmail && m.personalEmail.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div className="min-h-screen bg-surface-container-lowest flex flex-col">
       {/* Top Nav */}
@@ -75,7 +86,24 @@ function Admin_() {
               <div className="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
                 <span className="material-symbols-outlined text-outline">search</span>
               </div>
-              <input className="block w-full pl-xl pr-md py-sm rounded-full bg-surface-container-high border-none text-body-text text-on-surface focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors placeholder:text-on-surface-variant" placeholder="Search users..." type="text" />
+              <input
+                data-testid="admin-search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full pl-xl pr-md py-sm rounded-full bg-surface-container-high border-none text-body-text text-on-surface focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors placeholder:text-on-surface-variant"
+                placeholder="Cari nama, mailbox, atau email customer..."
+                type="text"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 pr-md flex items-center text-outline hover:text-on-surface transition-colors"
+                  title="Hapus pencarian"
+                >
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -164,6 +192,32 @@ function Admin_() {
             </div>
           )}
 
+          {/* Mobile search bar */}
+          <div className="md:hidden mb-md">
+            <div className="relative w-full">
+              <div className="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
+                <span className="material-symbols-outlined text-outline">search</span>
+              </div>
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full pl-xl pr-md py-sm rounded-full bg-surface-container-high border-none text-body-text text-on-surface focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors placeholder:text-on-surface-variant text-sm"
+                placeholder="Cari mailbox customer..."
+                type="text"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 pr-md flex items-center text-outline hover:text-on-surface transition-colors"
+                  title="Hapus pencarian"
+                >
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="bg-surface-container-lowest rounded-xl border border-surface-variant overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-body-text" data-testid="mailbox-table">
@@ -184,7 +238,14 @@ function Admin_() {
                   {!isLoading && mailboxes.length === 0 && (
                     <tr><td colSpan={6} className="px-lg py-8 text-center text-on-surface-variant" data-testid="admin-empty">Belum ada mailbox</td></tr>
                   )}
-                  {mailboxes.map((m) => (
+                  {!isLoading && mailboxes.length > 0 && filteredMailboxes.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-lg py-8 text-center text-on-surface-variant">
+                        Tidak ada mailbox yang cocok dengan &quot;{searchQuery}&quot;
+                      </td>
+                    </tr>
+                  )}
+                  {filteredMailboxes.map((m) => (
                     <tr key={m.id} data-testid="mailbox-row" className="border-b border-surface-variant hover:bg-surface-container-low/50 transition-colors">
                       <td className="px-lg py-md text-on-surface font-medium">{m.name}</td>
                       <td className="px-lg py-md text-on-surface">{m.mailboxAddress}</td>
