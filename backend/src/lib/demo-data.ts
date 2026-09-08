@@ -809,6 +809,334 @@ export const CUSTOMERS_DATA = [
   },
 ];
 
+// ─── Extended Hub Modules Data ──────────────────────────────────────
+export const BUDI_LOGIN_SESSIONS = [
+  {
+    deviceName: 'MacBook Pro 16"',
+    deviceType: 'laptop',
+    browser: 'Chrome 128 (macOS)',
+    ipAddress: '182.253.140.22',
+    location: 'Jakarta, Indonesia',
+    isCurrent: true,
+    lastActiveMinutesAgo: 5,
+    daysAgo: 3,
+  },
+  {
+    deviceName: 'iPhone 14 Pro',
+    deviceType: 'mobile',
+    browser: 'Mobile Safari 17',
+    ipAddress: '114.122.45.10',
+    location: 'Jakarta, Indonesia',
+    isCurrent: false,
+    lastActiveMinutesAgo: 240,
+    daysAgo: 7,
+  },
+  {
+    deviceName: 'Windows Desktop',
+    deviceType: 'desktop',
+    browser: 'Edge 126 (Windows 11)',
+    ipAddress: '180.252.88.14',
+    location: 'Surabaya, Indonesia',
+    isCurrent: false,
+    lastActiveMinutesAgo: 2880,
+    daysAgo: 14,
+  },
+];
+
+export const TRIAL_LOGIN_SESSIONS = [
+  {
+    deviceName: 'MacBook Pro 14"',
+    deviceType: 'laptop',
+    browser: 'Chrome 128 (macOS)',
+    ipAddress: '182.253.140.22',
+    location: 'Jakarta, Indonesia',
+    isCurrent: true,
+    lastActiveMinutesAgo: 2,
+    daysAgo: 1,
+  },
+  {
+    deviceName: 'iPhone 15',
+    deviceType: 'mobile',
+    browser: 'Mobile Safari 17',
+    ipAddress: '114.122.45.10',
+    location: 'Jakarta, Indonesia',
+    isCurrent: false,
+    lastActiveMinutesAgo: 480,
+    daysAgo: 5,
+  },
+];
+
+export const BUDI_LEGAL_DOCUMENTS = [
+  {
+    title: 'SK Kemenkumham PT Maju Bersama Digital',
+    category: 'Client Agreements',
+    filename: 'sk-kemenkumham-2026.pdf',
+    mimeType: 'application/pdf',
+    size: 1024 * 240,
+    path: 'sk-kemenkumham-2026.pdf',
+    status: 'Approved',
+    isStarred: true,
+    ownerName: 'Kemenkumham RI',
+    versions: [
+      {
+        versionNumber: 'v1.0',
+        authorName: 'Notaris Ahmad Fauzi, S.H.',
+        approved: true,
+        notes: 'Penerbitan awal SK AHU pendirian badan hukum',
+        daysAgo: 30,
+      },
+      {
+        versionNumber: 'v2.0',
+        authorName: 'Divisi Perizinan EasyLegal',
+        approved: true,
+        notes: 'Penyesuaian KBLI 62019 pasca migrasi OSS RBA',
+        daysAgo: 14,
+      },
+      {
+        versionNumber: 'v2.1',
+        authorName: 'Sarah Jenkins, LL.M.',
+        approved: true,
+        notes: 'v2.1 Approved by Sarah J. - Pengesahan final dokumen legalitas',
+        daysAgo: 2,
+      },
+    ],
+  },
+  {
+    title: 'Perjanjian Kerjasama Investasi & Kemitraan',
+    category: 'NDA Templates',
+    filename: 'perjanjian-kerjasama.pdf',
+    mimeType: 'application/pdf',
+    size: 1024 * 350,
+    path: 'perjanjian-kerjasama.pdf',
+    status: 'Urgent Review',
+    isStarred: true,
+    ownerName: 'Legal Team',
+    versions: [
+      {
+        versionNumber: 'v1.0',
+        authorName: 'Jonathan Prakoso',
+        approved: true,
+        notes: 'Draf awal perjanjian investasi modal disetor',
+        daysAgo: 10,
+      },
+      {
+        versionNumber: 'v2.0',
+        authorName: 'Sarah Jenkins, LL.M.',
+        approved: false,
+        notes: 'v2.0 Revisi klausul arbitrase SIAC & batasan tanggung jawab',
+        daysAgo: 3,
+      },
+    ],
+  },
+  {
+    title: 'Invoice Retainer & Perizinan 2026-088',
+    category: 'Tax Filings',
+    filename: 'invoice-2025-088.pdf',
+    mimeType: 'application/pdf',
+    size: 1024 * 180,
+    path: 'invoice-2025-088.pdf',
+    status: 'Reviewed',
+    isStarred: false,
+    ownerName: 'Finance EasyLegal',
+    versions: [
+      {
+        versionNumber: 'v1.0',
+        authorName: 'Finance Team',
+        approved: true,
+        notes: 'v1.0 Faktur pajak & invoice resmi terverifikasi',
+        daysAgo: 5,
+      },
+    ],
+  },
+];
+
+export const TRIAL_LEGAL_DOCUMENTS = [
+  {
+    title: 'Panduan Memulai Layanan EasyLegal Trial',
+    category: 'Client Agreements',
+    filename: 'panduan-trial.pdf',
+    mimeType: 'application/pdf',
+    size: 1024 * 120,
+    path: 'panduan-trial.pdf',
+    status: 'Approved',
+    isStarred: true,
+    ownerName: 'EasyLegal Onboarding',
+    versions: [
+      {
+        versionNumber: 'v1.0',
+        authorName: 'Onboarding Specialist',
+        approved: true,
+        notes: 'v1.0 Dokumen panduan orientasi masa percobaan',
+        daysAgo: 14,
+      },
+    ],
+  },
+  {
+    title: 'Penawaran Paket Tahunan EasyLegal',
+    category: 'Client Agreements',
+    filename: 'penawaran-paket-tahunan.pdf',
+    mimeType: 'application/pdf',
+    size: 1024 * 210,
+    path: 'penawaran-paket-tahunan.pdf',
+    status: 'Reviewed',
+    isStarred: false,
+    ownerName: 'Sales EasyLegal',
+    versions: [
+      {
+        versionNumber: 'v1.0',
+        authorName: 'Sales Specialist',
+        approved: true,
+        notes: 'v1.0 Proposal konversi paket tahunan diskon 20%',
+        daysAgo: 5,
+      },
+    ],
+  },
+];
+
+export const BUDI_SUPPORT_TICKETS = [
+  {
+    ticketNumber: '#TK-4920',
+    subject: 'Document Review Delay',
+    category: 'Document Review',
+    status: 'open',
+    priority: 'urgent',
+    daysAgo: 2,
+    messages: [
+      {
+        senderName: 'Budi Setiawan',
+        senderRole: 'client',
+        senderAvatar: null,
+        message:
+          'Halo Tim EasyLegal, pengajuan telaah draf Perjanjian Kerjasama Investasi kami belum ada update sejak 3 hari lalu. Mohon percepatan karena penandatanganan dijadwalkan Jumat ini.',
+        isInternal: false,
+        hoursAgo: 48,
+      },
+      {
+        senderName: 'Sarah Jenkins, LL.M.',
+        senderRole: 'agent',
+        senderAvatar: null,
+        message:
+          'Internal Note: Sedang dicek silang dengan Notaris Ahmad mengenai klausul non-kompetisi pasal 12. Estimasi selesai hari ini pukul 16.00 WIB.',
+        isInternal: true,
+        hoursAgo: 24,
+      },
+      {
+        senderName: 'Sarah Jenkins, LL.M.',
+        senderRole: 'agent',
+        senderAvatar: null,
+        message:
+          'Selamat siang Pak Budi, mohon maaf atas keterlambatannya. Tim legal senior kami sedang menyelesaikan verifikasi klausul non-kompetisi dan SLA. Kami pastikan draf final dapat diunduh sore ini.',
+        isInternal: false,
+        hoursAgo: 18,
+      },
+    ],
+  },
+  {
+    ticketNumber: '#TK-4811',
+    subject: 'Billing Discrepancy',
+    category: 'Billing',
+    status: 'resolved',
+    priority: 'normal',
+    daysAgo: 5,
+    messages: [
+      {
+        senderName: 'Budi Setiawan',
+        senderRole: 'client',
+        senderAvatar: null,
+        message:
+          'Selamat pagi, pada invoice #INV-2026-088 tercantum biaya materai 2x padahal di perjanjian awal hanya 1 berkas. Mohon klarifikasinya.',
+        isInternal: false,
+        hoursAgo: 120,
+      },
+      {
+        senderName: 'Finance Support',
+        senderRole: 'agent',
+        senderAvatar: null,
+        message:
+          'Halo Pak Budi, kami telah mengoreksi invoice tersebut dan menerbitkan nota kredit untuk penyesuaian biaya e-Meterai. Status tagihan sudah disesuaikan.',
+        isInternal: false,
+        hoursAgo: 96,
+      },
+      {
+        senderName: 'Budi Setiawan',
+        senderRole: 'client',
+        senderAvatar: null,
+        message: 'Terima kasih atas respons cepatnya. Pembayaran telah kami selesaikan.',
+        isInternal: false,
+        hoursAgo: 72,
+      },
+    ],
+  },
+  {
+    ticketNumber: '#TK-4925',
+    subject: 'Access Revocation Error',
+    category: 'Access Revocation',
+    status: 'open',
+    priority: 'urgent',
+    daysAgo: 1,
+    messages: [
+      {
+        senderName: 'Budi Setiawan',
+        senderRole: 'client',
+        senderAvatar: null,
+        message:
+          "Kami mencoba menonaktifkan akses mantan staf legal kami pada drive dokumen perusahaan, namun sistem memunculkan error 'Session token still active'. Mohon bantuan tim teknis untuk terminate session terkait.",
+        isInternal: false,
+        hoursAgo: 6,
+      },
+      {
+        senderName: 'IT Security Ops',
+        senderRole: 'agent',
+        senderAvatar: null,
+        message:
+          'Internal Note: Stale token terdeteksi di cache Redis. Perlu purge manual atau invalidate via security session manager.',
+        isInternal: true,
+        hoursAgo: 4,
+      },
+      {
+        senderName: 'IT Security Ops',
+        senderRole: 'agent',
+        senderAvatar: null,
+        message:
+          'Halo Pak Budi, kami telah meremove sesi login perangkat terkait dari server secara paksa. Akses dokumen kini telah tertutup sepenuhnya.',
+        isInternal: false,
+        hoursAgo: 2,
+      },
+    ],
+  },
+];
+
+export const TRIAL_SUPPORT_TICKETS = [
+  {
+    ticketNumber: '#TK-4930',
+    subject: 'Permintaan Penawaran Lisensi Multi-User',
+    category: 'Billing',
+    status: 'open',
+    priority: 'normal',
+    daysAgo: 1,
+    messages: [
+      {
+        senderName: 'Pengguna Trial EasyLegal',
+        senderRole: 'client',
+        senderAvatar: null,
+        message:
+          'Halo tim sales EasyLegal, apakah ada paket bundling 5 mailbox dengan kapasitas storage 50 GB untuk startup kami?',
+        isInternal: false,
+        hoursAgo: 24,
+      },
+      {
+        senderName: 'Sales Consultant',
+        senderRole: 'agent',
+        senderAvatar: null,
+        message:
+          'Halo! Tentu ada, proposal penawaran khusus startup telah kami kirimkan ke email Anda. Silakan dicek.',
+        isInternal: false,
+        hoursAgo: 12,
+      },
+    ],
+  },
+];
+
 export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: string) {
   const prisma = prismaClient || new PrismaClient();
   const domain = process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id';
@@ -819,6 +1147,11 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
 
   // 1. Clear existing data
   await prisma.auditLog.deleteMany();
+  await prisma.ticketMessage.deleteMany();
+  await prisma.supportTicket.deleteMany();
+  await prisma.documentVersion.deleteMany();
+  await prisma.legalDocument.deleteMany();
+  await prisma.loginSession.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.messageCache.deleteMany();
   await prisma.customer.deleteMany();
@@ -838,6 +1171,13 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
   // 3. Buat Customer Mailbox
   const createdCustomers: Record<string, any> = {};
   for (const c of CUSTOMERS_DATA) {
+    const signature =
+      c.localPart === 'budi'
+        ? '--\nBudi Setiawan\nDirektur Utama PT Maju Bersama Digital\nEmail: budi@clienteasylegal.co.id'
+        : c.localPart === 'trial'
+        ? '--\nPengguna Trial EasyLegal\nPT Solusi Digital Nusantara\nEmail: trial@clienteasylegal.co.id'
+        : `--\n${c.name}\nEmail: ${c.localPart}@${domain}`;
+
     const cust = await prisma.customer.create({
       data: {
         name: c.name,
@@ -845,6 +1185,14 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
         mailboxAddress: `${c.localPart}@${domain}`,
         passwordEnc: encrypt('Customer123!'),
         status: c.status,
+        twoFactorEnabled: false,
+        preferences: JSON.stringify({
+          language: 'id',
+          timezone: 'Asia/Jakarta',
+          signature,
+          notifyEmail: true,
+          notifySound: c.localPart !== 'trial',
+        }),
         lastLoginAt: c.lastLoginMinutesAgo
           ? new Date(Date.now() - c.lastLoginMinutesAgo * 60 * 1000)
           : null,
@@ -1169,7 +1517,106 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
     });
   }
 
+  // ─── 8. Seed Login Sessions for Budi & Trial ──────────────────────
+  const seedSessions = async (customerId: string, sessions: typeof BUDI_LOGIN_SESSIONS) => {
+    for (const s of sessions) {
+      await prisma.loginSession.create({
+        data: {
+          customerId,
+          deviceName: s.deviceName,
+          deviceType: s.deviceType,
+          browser: s.browser,
+          ipAddress: s.ipAddress,
+          location: s.location,
+          isCurrent: s.isCurrent,
+          lastActiveAt: new Date(Date.now() - s.lastActiveMinutesAgo * 60 * 1000),
+          createdAt: new Date(Date.now() - s.daysAgo * 24 * 3600_000),
+        },
+      });
+    }
+  };
+
+  if (budi) {
+    await seedSessions(budi.id, BUDI_LOGIN_SESSIONS);
+  }
+  if (trial) {
+    await seedSessions(trial.id, TRIAL_LOGIN_SESSIONS);
+  }
+
+  // ─── 9. Seed Legal Documents & Version History ────────────────────
+  const seedDocuments = async (customerId: string, docs: typeof BUDI_LEGAL_DOCUMENTS) => {
+    for (const doc of docs) {
+      await prisma.legalDocument.create({
+        data: {
+          customerId,
+          title: doc.title,
+          category: doc.category,
+          filename: doc.filename,
+          mimeType: doc.mimeType,
+          size: doc.size,
+          path: doc.path,
+          status: doc.status,
+          isStarred: doc.isStarred,
+          ownerName: doc.ownerName,
+          versions: {
+            create: doc.versions.map((v) => ({
+              versionNumber: v.versionNumber,
+              authorName: v.authorName,
+              approved: v.approved,
+              notes: v.notes,
+              createdAt: new Date(Date.now() - v.daysAgo * 24 * 3600_000),
+            })),
+          },
+        },
+      });
+    }
+  };
+
+  if (budi) {
+    await seedDocuments(budi.id, BUDI_LEGAL_DOCUMENTS);
+  }
+  if (trial) {
+    await seedDocuments(trial.id, TRIAL_LEGAL_DOCUMENTS);
+  }
+
+  // ─── 10. Seed Support Tickets & Ticket Messages ───────────────────
+  const seedTickets = async (customerId: string, tickets: typeof BUDI_SUPPORT_TICKETS) => {
+    for (const ticket of tickets) {
+      await prisma.supportTicket.create({
+        data: {
+          customerId,
+          ticketNumber: ticket.ticketNumber,
+          subject: ticket.subject,
+          category: ticket.category,
+          status: ticket.status,
+          priority: ticket.priority,
+          createdAt: new Date(Date.now() - ticket.daysAgo * 24 * 3600_000),
+          messages: {
+            create: ticket.messages.map((m) => ({
+              senderName: m.senderName,
+              senderRole: m.senderRole,
+              senderAvatar: m.senderAvatar,
+              message: m.message,
+              isInternal: m.isInternal,
+              createdAt: new Date(Date.now() - m.hoursAgo * 3600_000),
+            })),
+          },
+        },
+      });
+    }
+  };
+
+  if (budi) {
+    await seedTickets(budi.id, BUDI_SUPPORT_TICKETS);
+  }
+  if (trial) {
+    await seedTickets(trial.id, TRIAL_SUPPORT_TICKETS);
+  }
+
   const totalEmails = await prisma.messageCache.count();
+  const totalDocuments = await prisma.legalDocument.count();
+  const totalTickets = await prisma.supportTicket.count();
+  const totalSessions = await prisma.loginSession.count();
 
   return {
     domain,
@@ -1177,5 +1624,8 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
     customersCount: CUSTOMERS_DATA.length,
     totalEmails,
     auditLogsCount: auditEntries.length,
+    totalDocuments,
+    totalTickets,
+    totalSessions,
   };
 }

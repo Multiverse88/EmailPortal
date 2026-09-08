@@ -21,8 +21,14 @@ model Customer {
   updatedAt         DateTime  @updatedAt
   lastLoginAt       DateTime?
 
+  twoFactorEnabled  Boolean         @default(false)
+  preferences       String?         // JSON: { language: "id", timezone: "Asia/Jakarta", signature: "...", notifyEmail: true, notifySound: true }
+
   messages  MessageCache[]
   auditLogs AuditLog[]
+  documents LegalDocument[]
+  tickets   SupportTicket[]
+  sessions  LoginSession[]
 
   @@index([mailboxAddress])
   @@index([status])
@@ -102,3 +108,90 @@ model AuditLog {
   @@index([createdAt])
   @@index([action])
 }
+
+model LoginSession {
+  id           String    @id @default(uuid())
+  customerId   String
+  deviceName   String    // e.g. "MacBook Pro 16\""
+  deviceType   String    // "laptop" | "mobile" | "desktop"
+  browser      String    // e.g. "Chrome 120"
+  ipAddress    String    // e.g. "182.253.140.22"
+  location     String    // e.g. "Jakarta, Indonesia"
+  isCurrent    Boolean   @default(false)
+  lastActiveAt DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+
+  customer     Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+model LegalDocument {
+  id          String            @id @default(uuid())
+  customerId  String
+  title       String            // e.g. "Master Service Agreement v2.pdf"
+  category    String            // "Client Agreements" | "Tax Filings" | "NDA Templates"
+  filename    String
+  mimeType    String            @default("application/pdf")
+  size        Int               @default(0) // bytes
+  path        String            // file path relative to backend/storage
+  status      String            @default("Reviewed") // "Urgent Review" | "Reviewed" | "Approved"
+  isStarred   Boolean           @default(false)
+  ownerName   String            @default("Legal Team")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  customer    Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  versions    DocumentVersion[]
+
+  @@index([customerId])
+  @@index([category])
+}
+
+model DocumentVersion {
+  id            String        @id @default(uuid())
+  documentId    String
+  versionNumber String        // "v2.1", "v2.0", "v1.0"
+  authorName    String
+  approved      Boolean       @default(true)
+  notes         String?
+  createdAt     DateTime      @default(now())
+
+  document      LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model SupportTicket {
+  id           String          @id @default(uuid())
+  customerId   String
+  ticketNumber String          @unique // e.g. "#TK-4920"
+  subject      String
+  category     String          @default("Umum") // "Billing", "Document Review", "Access Revocation"
+  status       String          @default("open") // "open", "resolved", "closed"
+  priority     String          @default("normal") // "normal", "urgent"
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  customer     Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  messages     TicketMessage[]
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model TicketMessage {
+  id           String        @id @default(uuid())
+  ticketId     String
+  senderName   String
+  senderRole   String        // "client", "agent", "system"
+  senderAvatar String?
+  message      String
+  isInternal   Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+

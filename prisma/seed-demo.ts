@@ -28,6 +28,9 @@ async function main() {
   - Email       : budi@${result.domain}
   - Password    : Customer123!
   - Total Email : 21 email (12 inbox, 4 sent, 2 draf, 3 trash)
+  - Dokumen Hub : ${result.totalDocuments} dokumen legal dengan riwayat versi
+  - Tiket Hub   : ${result.totalTickets} tiket support aktif & thread percakapan
+  - Sesi Login  : ${result.totalSessions} sesi login audit perangkat
   - Lampiran File Nyata (.pdf, .xlsx, .png) siap diunduh!
 
 Akun Trial Demo (Masa Percobaan 14 Hari):
