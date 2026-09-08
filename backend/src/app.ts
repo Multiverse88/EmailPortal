@@ -10,6 +10,8 @@ import authRoutes from './routes/auth';
 import mailboxRoutes from './routes/mailboxes';
 import emailRoutes from './routes/email';
 import searchRoutes from './routes/search';
+import securityRoutes from './routes/security';
+import settingsRoutes from './routes/settings';
 
 const app = express();
 export const prisma = new PrismaClient();
@@ -35,6 +37,8 @@ app.use('/api/auth', authRoutes(prisma));
 app.use('/api/mailboxes', authenticateAdmin, mailboxRoutes(prisma));
 app.use('/api/email', authenticateCustomer, emailRoutes(prisma));
 app.use('/api/search', authenticateCustomer, searchRoutes(prisma));
+app.use('/api/security', authenticateCustomer, securityRoutes(prisma));
+app.use('/api/settings', authenticateCustomer, settingsRoutes(prisma));
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
