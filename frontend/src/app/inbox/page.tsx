@@ -8,7 +8,30 @@ import { id as localeId } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { ComposeModal, Draft } from '@/components/compose';
-import { Star } from 'lucide-react';
+import {
+  Star,
+  Mail,
+  Send,
+  Inbox,
+  FileText,
+  Trash2,
+  Paperclip,
+  Search,
+  Menu,
+  X,
+  ArrowLeft,
+  Reply,
+  Forward,
+  Download,
+  RefreshCw,
+  Settings,
+  LogOut,
+  MailCheck,
+  MailQuestion,
+  ShieldCheck,
+  ChevronDown,
+  HardDrive,
+} from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
 
 interface Message {
@@ -28,11 +51,11 @@ interface Message {
 }
 
 const FOLDER_META = [
-  { key: 'INBOX', label: 'Inbox', icon: 'inbox' },
-  { key: 'Starred', label: 'Berbintang', icon: 'star' },
-  { key: 'Sent', label: 'Sent', icon: 'send' },
-  { key: 'Drafts', label: 'Drafts', icon: 'draft' },
-  { key: 'Trash', label: 'Trash', icon: 'delete' },
+  { key: 'INBOX', label: 'Kotak Masuk', icon: Inbox },
+  { key: 'Starred', label: 'Berbintang', icon: Star },
+  { key: 'Sent', label: 'Terkirim', icon: Send },
+  { key: 'Drafts', label: 'Draf', icon: FileText },
+  { key: 'Trash', label: 'Sampah', icon: Trash2 },
 ];
 
 const initials = (name: string | null) => {
@@ -44,10 +67,11 @@ const initials = (name: string | null) => {
 
 const avatarColor = (seed: string | null | undefined) => {
   const colors = [
-    'bg-primary-container text-on-primary-container',
-    'bg-tertiary-container text-on-tertiary-container',
-    'bg-surface-variant text-on-surface-variant',
-    'bg-secondary-container text-on-secondary-container',
+    'bg-primary/10 text-primary border border-primary/20',
+    'bg-blue-50 text-blue-700 border border-blue-200',
+    'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    'bg-purple-50 text-purple-700 border border-purple-200',
+    'bg-amber-50 text-amber-700 border border-amber-200',
   ];
   if (!seed) return colors[0];
   let h = 0;
@@ -84,11 +108,16 @@ function Inbox_() {
   const listKey = `/email?folder=${encodeURIComponent(folder)}&limit=50${query ? `&q=${encodeURIComponent(query)}` : ''}`;
   const list = useSWR<{ data: Message[] }>(listKey, fetcher, { refreshInterval: 15000 });
   const folders = useSWR<{ data: { folder: string; total: number; unread: number }[] }>(
-    '/email/folders', fetcher, { refreshInterval: 15000 }
+    '/email/folders',
+    fetcher,
+    { refreshInterval: 15000 }
   );
   const opened = useSWR<Message>(openUid ? `/email/${openUid}` : null, fetcher, {
     revalidateOnFocus: false,
-    onSuccess: () => { folders.mutate(); list.mutate(); },
+    onSuccess: () => {
+      folders.mutate();
+      list.mutate();
+    },
   });
 
   useEffect(() => {
@@ -97,7 +126,10 @@ function Inbox_() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const refresh = useCallback(() => { list.mutate(); folders.mutate(); }, [list, folders]);
+  const refresh = useCallback(() => {
+    list.mutate();
+    folders.mutate();
+  }, [list, folders]);
 
   const act = async (fn: () => Promise<unknown>, message: string) => {
     try {
@@ -128,99 +160,204 @@ function Inbox_() {
   const messages = list.data?.data ?? [];
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Top Nav */}
-      <header className="flex items-center justify-between px-md py-sm w-full h-16 border-b border-surface-variant bg-surface z-20 relative shrink-0">
-        <div className="flex items-center gap-md flex-1">
-          <button data-testid="menu-toggle" className="md:hidden p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" onClick={() => setSidebar((s) => !s)}>
-            <span className="material-symbols-outlined">menu</span>
+    <div className="h-screen flex flex-col bg-[#f8f9fa] overflow-hidden">
+      {/* Top Header */}
+      <header className="flex items-center justify-between px-4 sm:px-6 w-full h-16 border-b border-slate-200/90 bg-white z-30 shrink-0 select-none">
+        {/* Left Brand */}
+        <div className="flex items-center gap-3 w-64 shrink-0">
+          <button
+            type="button"
+            aria-label="Menu"
+            data-testid="menu-toggle"
+            className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            onClick={() => setSidebar((s) => !s)}
+          >
+            <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-sm">
-            <span className="material-symbols-outlined text-primary text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>mail</span>
-            <span className="text-page-title font-page-title text-on-surface font-bold hidden sm:block">MailPortal</span>
+          
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow-sm shadow-primary/20">
+              <Mail className="w-5 h-5 text-white" strokeWidth={2.2} />
+            </div>
+            <div>
+              <span className="text-base font-bold text-slate-900 tracking-tight block leading-tight">
+                MailPortal
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium hidden sm:block">
+                clienteasylegal.co.id
+              </span>
+            </div>
           </div>
         </div>
 
+        {/* Center Search Bar */}
         <form
-          className="flex-1 max-w-2xl mx-xl hidden md:flex"
-          onSubmit={(e) => { e.preventDefault(); setQuery(search); setOpenUid(null); }}
+          className="flex-1 max-w-xl mx-4 hidden md:flex"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setQuery(search);
+            setOpenUid(null);
+          }}
         >
           <div className="relative w-full">
-            <div className="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-outline">search</span>
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <Search className="w-4 h-4" />
             </div>
             <input
               data-testid="search-input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { setQuery(search); setOpenUid(null); } }}
-              placeholder="Search mail"
-              className="block w-full pl-xl pr-md py-sm rounded-full bg-surface-container-high border-none text-body-text text-on-surface focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors placeholder:text-on-surface-variant"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setQuery(search);
+                  setOpenUid(null);
+                }
+              }}
+              placeholder="Cari subjek, pengirim, atau isi pesan..."
+              className="block w-full pl-10 pr-9 py-2 rounded-xl bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-transparent focus:border-primary/40 focus:ring-2 focus:ring-primary/10 text-xs sm:text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:outline-none"
             />
-            <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
-              <button className="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors">
-                <span className="material-symbols-outlined text-[20px]">tune</span>
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setQuery('');
+                }}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
               </button>
-            </div>
+            )}
           </div>
         </form>
 
-        <div className="flex items-center gap-sm ml-auto">
-          <button data-testid="refresh" onClick={refresh} className="p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors hidden sm:flex" title="Refresh">
-            <span className="material-symbols-outlined">refresh</span>
+        {/* Right User Actions */}
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
+          <button
+            data-testid="refresh"
+            onClick={refresh}
+            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors hidden sm:flex items-center justify-center"
+            title="Muat Ulang"
+          >
+            <RefreshCw className={`w-4 h-4 ${list.isValidating ? 'animate-spin text-primary' : ''}`} />
           </button>
-          <button data-testid="nav-settings" onClick={() => router.push('/settings')} className="p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors hidden sm:flex" title="Settings">
-            <span className="material-symbols-outlined">settings</span>
+
+          <button
+            data-testid="nav-settings"
+            onClick={() => router.push('/settings')}
+            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors hidden sm:flex items-center justify-center"
+            title="Pengaturan Akun"
+          >
+            <Settings className="w-4 h-4" />
           </button>
-          <button data-testid="logout" onClick={() => { logout(); router.replace('/login'); }} className="ml-sm h-8 w-8 rounded-full overflow-hidden hover:ring-2 hover:ring-primary transition-all flex items-center justify-center bg-surface-variant" title="Logout">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">account_circle</span>
-          </button>
+
+          {/* User Pill */}
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-200/80">
+            <div className="flex flex-col text-right hidden sm:block">
+              <span className="text-xs font-semibold text-slate-800 leading-tight">
+                {user?.name || 'Customer'}
+              </span>
+              <span className="text-[10px] text-slate-500 truncate max-w-[140px]">
+                {user?.email || ''}
+              </span>
+            </div>
+
+            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center ring-2 ring-primary/20">
+              {initials(user?.name || user?.email || 'CU')}
+            </div>
+
+            <button
+              data-testid="logout"
+              onClick={() => {
+                logout();
+                router.replace('/login');
+              }}
+              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-0.5"
+              title="Keluar"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </header>
 
+      {/* Main Workspace Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile sidebar backdrop */}
+        {/* Mobile Backdrop */}
         {sidebar && (
-          <div data-testid="sidebar-backdrop" onClick={() => setSidebar(false)} className="md:hidden fixed inset-0 top-16 bg-black/40 z-10" />
+          <div
+            data-testid="sidebar-backdrop"
+            onClick={() => setSidebar(false)}
+            className="md:hidden fixed inset-0 top-16 bg-slate-900/40 backdrop-blur-[1px] z-40 transition-opacity"
+          />
         )}
 
         {/* Sidebar Navigation */}
         <aside
           data-testid="sidebar"
-          className={`${sidebar ? 'block' : 'hidden'} md:flex w-sidebar-width flex-shrink-0 bg-background border-r border-surface-variant z-20 flex-col h-full absolute md:relative top-16 md:top-0`}
+          className={`${
+            sidebar ? 'flex' : 'hidden md:flex'
+          } w-64 flex-shrink-0 bg-white md:bg-transparent border-r border-slate-200/90 z-50 md:z-10 flex-col h-full absolute md:relative top-0 shadow-lg md:shadow-none`}
         >
-          <div className="px-md mb-md">
+          {/* Compose Button */}
+          <div className="p-4 pb-3">
             <button
               data-testid="compose-open"
-              onClick={() => { setDraft({}); setSidebar(false); }}
-              className="flex items-center gap-sm bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container px-lg py-md rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95 w-full"
+              onClick={() => {
+                setDraft({});
+                setSidebar(false);
+              }}
+              className="w-full bg-gradient-to-r from-primary to-primary-container text-white py-2.5 px-4 rounded-2xl flex items-center justify-center gap-2 font-semibold text-xs shadow-md shadow-primary/20 hover:opacity-95 active:scale-[0.98] transition-all"
             >
-              <span className="material-symbols-outlined fill text-[20px]">edit</span>
-              <span className="font-label-button text-label-button">Compose</span>
+              <Mail className="w-4 h-4" />
+              <span>Tulis Email</span>
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-sm">
-            <ul className="flex flex-col gap-[2px]">
+          {/* Folder List */}
+          <nav className="flex-1 overflow-y-auto px-3 py-1">
+            <ul className="flex flex-col gap-1">
               {FOLDER_META.map((f) => {
                 const meta = folders.data?.data?.find((x) => x.folder === f.key);
-                const count = f.key === 'Starred' ? (meta?.total ?? 0) : (meta?.unread ?? 0);
+                const count = f.key === 'Starred' ? meta?.total ?? 0 : meta?.unread ?? 0;
                 const isActive = folder === f.key;
+                const IconComponent = f.icon;
                 return (
                   <li key={f.key}>
                     <button
                       data-testid={`folder-${f.key}`}
-                      onClick={() => { setFolder(f.key); setOpenUid(null); setQuery(''); setSearch(''); setSidebar(false); }}
-                      className={`w-full flex items-center gap-md px-lg py-sm rounded-r-full text-label-button font-label-button transition-all active:scale-95 ${
+                      onClick={() => {
+                        setFolder(f.key);
+                        setOpenUid(null);
+                        setQuery('');
+                        setSearch('');
+                        setSidebar(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                         isActive
-                          ? 'bg-secondary-container text-on-secondary-container font-bold'
-                          : 'text-on-surface-variant hover:bg-surface-variant/50'
+                          ? 'bg-primary/10 text-primary font-semibold shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                       }`}
                     >
-                      <span className={`material-symbols-outlined text-[20px] ${isActive ? 'fill' : ''}`}>{f.icon}</span>
+                      <IconComponent
+                        className={`w-4 h-4 shrink-0 ${
+                          isActive
+                            ? f.key === 'Starred'
+                              ? 'fill-amber-400 text-amber-400'
+                              : 'text-primary'
+                            : 'text-slate-500'
+                        }`}
+                      />
                       <span className="flex-1 text-left">{f.label}</span>
                       {count > 0 && (
-                        <span data-testid={`unread-${f.key}`} className="text-xs rounded-full px-2 py-0.5 font-bold bg-primary text-on-primary">
+                        <span
+                          data-testid={`unread-${f.key}`}
+                          className={`text-[11px] rounded-full px-2 py-0.5 font-bold transition-transform ${
+                            isActive
+                              ? 'bg-primary text-white'
+                              : 'bg-slate-200 text-slate-700'
+                          }`}
+                        >
                           {count}
                         </span>
                       )}
@@ -230,37 +367,81 @@ function Inbox_() {
               })}
             </ul>
           </nav>
+
+          {/* Sidebar Footer: Hostinger Storage Status */}
+          <div className="p-3.5 m-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600">
+            <div className="flex items-center justify-between mb-1.5 font-semibold text-slate-700">
+              <div className="flex items-center gap-1.5">
+                <HardDrive className="w-3.5 h-3.5 text-primary" />
+                <span>Penyimpanan</span>
+              </div>
+              <span className="font-mono text-[10px] text-emerald-600 font-bold">0% Terpakai</span>
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-1.5 mb-2 overflow-hidden">
+              <div className="bg-primary h-1.5 rounded-full" style={{ width: '1%' }} />
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-slate-500">
+              <span>21 KB / 1.00 GB</span>
+              <span className="text-emerald-600 font-medium flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Titan Mail Ready
+              </span>
+            </div>
+          </div>
         </aside>
 
-        {/* Email List Panel */}
-        <div className={`${openUid ? 'hidden lg:flex' : 'flex'} flex-col w-full md:w-[360px] lg:w-[420px] border-r border-surface-variant bg-surface overflow-hidden`}>
-          <div className="px-md py-sm flex items-center justify-between border-b border-surface-variant bg-surface sticky top-0 z-10">
-            <div className="flex items-center gap-xs">
-              <button className="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded flex items-center transition-colors">
-                <span className="material-symbols-outlined text-[20px]">check_box_outline_blank</span>
-              </button>
-              <button onClick={refresh} className="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded transition-colors">
-                <span className="material-symbols-outlined text-[20px]">refresh</span>
-              </button>
+        {/* Middle: Email List Pane */}
+        <div
+          className={`${
+            openUid ? 'hidden lg:flex' : 'flex'
+          } flex-col w-full md:w-[380px] lg:w-[440px] border-r border-slate-200/90 bg-white overflow-hidden shrink-0`}
+        >
+          {/* List Toolbar */}
+          <div className="px-4 py-2.5 flex items-center justify-between border-b border-slate-100 bg-white sticky top-0 z-10">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-800">
+                {FOLDER_META.find((f) => f.key === folder)?.label || folder}
+              </span>
+              {query && (
+                <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                  &quot;{query}&quot;
+                </span>
+              )}
             </div>
-            <div className="text-label-secondary text-on-surface-variant">
+            <div className="text-[11px] text-slate-500 font-medium">
               {messages.length > 0 && <span>{messages.length} email</span>}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto" data-testid="message-list">
+          {/* List Messages */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100" data-testid="message-list">
             {list.isLoading && (
-              <div className="p-md text-sm text-on-surface-variant">Memuat email...</div>
-            )}
-            {!list.isLoading && messages.length === 0 && (
-              <div data-testid="empty-state" className="p-10 text-center text-sm text-on-surface-variant">
-                {query ? `Tidak ada hasil untuk "${query}"` : 'Folder ini kosong'}
+              <div className="p-8 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
+                <RefreshCw className="w-5 h-5 animate-spin text-primary" />
+                <span>Memuat daftar email...</span>
               </div>
             )}
+
+            {!list.isLoading && messages.length === 0 && (
+              <div data-testid="empty-state" className="p-12 text-center flex flex-col items-center gap-2.5">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                  <MailQuestion className="w-6 h-6" />
+                </div>
+                <p className="text-xs font-semibold text-slate-700">
+                  {query ? `Tidak ada hasil untuk "${query}"` : 'Folder ini kosong'}
+                </p>
+                <p className="text-[11px] text-slate-500 max-w-[200px]">
+                  {query ? 'Coba gunakan kata kunci lain' : 'Belum ada email yang tersimpan di sini'}
+                </p>
+              </div>
+            )}
+
             {messages.map((m) => {
               const avatarClass = avatarColor(m.sender ?? m.recipients);
               const senderName = folder === 'Sent' ? m.recipients?.split(',')[0] : m.sender;
               const isActive = openUid === m.uid;
+              const hasAttachment = m.attachments && m.attachments.length > 0;
+
               return (
                 <div
                   key={m.id}
@@ -269,49 +450,77 @@ function Inbox_() {
                   tabIndex={0}
                   onClick={() => setOpenUid(m.uid)}
                   onKeyDown={(e) => e.key === 'Enter' && setOpenUid(m.uid)}
-                  className={`email-item flex items-center px-md py-sm border-b border-surface-variant cursor-pointer group relative transition-colors ${
-                    isActive ? 'bg-secondary-fixed-dim/20' : m.isRead ? 'bg-surface' : 'bg-surface-container-low'
+                  className={`flex items-start gap-3 px-4 py-3 cursor-pointer group relative transition-colors ${
+                    isActive
+                      ? 'bg-primary/5 border-l-4 border-l-primary'
+                      : m.isRead
+                      ? 'bg-white hover:bg-slate-50'
+                      : 'bg-red-50/20 hover:bg-red-50/30'
                   }`}
                 >
+                  {/* Unread indicator dot */}
                   {!m.isRead && (
-                    <div className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                    <div className="pointer-events-none absolute left-1.5 top-5 w-2 h-2 rounded-full bg-primary ring-2 ring-white" />
                   )}
-                  <div className="flex items-center gap-md w-full">
-                    <div className="flex items-center gap-sm flex-shrink-0">
-                      <button
-                        data-testid="row-star"
-                        onClick={(e) => { e.stopPropagation(); toggleStar(m); }}
-                        className="text-outline hover:text-primary transition-colors hidden sm:block"
+
+                  {/* Star Toggle */}
+                  <button
+                    data-testid="row-star"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStar(m);
+                    }}
+                    className="mt-1 text-slate-300 hover:text-amber-400 transition-colors shrink-0"
+                    title={m.isStarred ? 'Hapus bintang' : 'Beri bintang'}
+                  >
+                    <Star
+                      className={`w-4 h-4 transition-transform active:scale-125 ${
+                        m.isStarred ? 'fill-amber-400 text-amber-400' : 'text-slate-300'
+                      }`}
+                    />
+                  </button>
+
+                  {/* Sender Avatar */}
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${avatarClass}`}
+                  >
+                    {initials(senderName)}
+                  </div>
+
+                  {/* Content snippet */}
+                  <div className="flex-1 min-w-0 pr-1">
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <h4
+                        className={`text-xs truncate pr-2 ${
+                          m.isRead ? 'font-medium text-slate-700' : 'font-bold text-slate-900'
+                        }`}
                       >
-                        <Star className={`w-5 h-5 ${m.isStarred ? 'fill-amber-400 text-amber-400' : 'text-outline'}`} />
-                      </button>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${avatarClass}`}>
-                        {initials(senderName)}
-                      </div>
+                        {senderName ?? 'Unknown'}
+                      </h4>
+                      <span
+                        className={`text-[10px] whitespace-nowrap shrink-0 ${
+                          m.isRead ? 'text-slate-400' : 'text-primary font-bold'
+                        }`}
+                      >
+                        {formatDate(m.receivedAt)}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0 pr-2">
-                      <div className="flex justify-between items-baseline mb-0.5">
-                        <h4 className={`font-email-subject text-email-subject text-on-surface truncate pr-2 ${m.isRead ? '' : 'font-bold'}`}>
-                          {senderName ?? 'Unknown'}
-                        </h4>
-                        <span className={`email-date text-label-secondary text-label-secondary whitespace-nowrap transition-opacity ${m.isRead ? '' : 'text-primary font-bold'}`}>
-                          {formatDate(m.receivedAt)}
-                        </span>
-                        <div className="email-actions absolute right-md top-1/2 -translate-y-1/2 flex items-center gap-xs bg-surface pl-2 opacity-0 transition-opacity shadow-[-8px_0_8px_-4px_rgba(242,243,253,1)]">
-                          <button data-testid="row-unread" onClick={(e) => { e.stopPropagation(); markUnread(m); }} className="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50" title="Mark unread">
-                            <span className="material-symbols-outlined text-[20px]">mark_email_unread</span>
-                          </button>
-                          <button data-testid="row-delete" onClick={(e) => { e.stopPropagation(); remove(m); }} className="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50" title="Delete">
-                            <span className="material-symbols-outlined text-[20px]">delete</span>
-                          </button>
-                        </div>
-                      </div>
-                      <p className={`text-body-text text-body-text text-on-surface truncate mb-0.5 ${m.isRead ? '' : 'font-medium'}`}>
-                        {m.subject || '(tanpa subjek)'}
+
+                    <p
+                      className={`text-xs truncate mb-1 ${
+                        m.isRead ? 'text-slate-800' : 'font-semibold text-slate-950'
+                      }`}
+                    >
+                      {m.subject || '(tanpa subjek)'}
+                    </p>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-slate-500 truncate flex-1">
+                        {m.snippet || ''}
                       </p>
-                      <p className="text-body-text text-body-text text-on-surface-variant truncate text-sm">
-                        {m.snippet}
-                      </p>
+                      {hasAttachment && (
+                        <Paperclip className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -320,160 +529,268 @@ function Inbox_() {
           </div>
         </div>
 
-        {/* Reading Pane */}
+        {/* Right: Reading Pane */}
         {openUid ? (
           message ? (
-            <article data-testid="message-view" className="flex flex-1 flex-col bg-surface overflow-hidden">
-            <div className="px-lg py-sm flex items-center justify-between border-b border-surface-variant bg-surface z-10 sticky top-0">
-              <div className="flex items-center gap-xs">
-                <button data-testid="back" onClick={() => setOpenUid(null)} className="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Back">
-                  <span className="material-symbols-outlined">arrow_back</span>
-                </button>
-                <button data-testid="msg-star" onClick={() => toggleStar(message)} className="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Star">
-                  <span className={`material-symbols-outlined text-[20px] ${message.isStarred ? 'fill text-amber-500' : ''}`}>
-                    {message.isStarred ? 'star' : 'star_border'}
-                  </span>
-                </button>
-                <button data-testid="msg-unread" onClick={() => markUnread(message)} className="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Mark unread">
-                  <span className="material-symbols-outlined">mark_email_unread</span>
-                </button>
-                <button data-testid="msg-delete" onClick={() => remove(message)} className="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Delete">
-                  <span className="material-symbols-outlined">delete</span>
-                </button>
-              </div>
-              <div className="text-label-secondary text-on-surface-variant">
-                {messages.length > 0 && <span>{messages.length} email</span>}
-              </div>
-            </div>
+            <article data-testid="message-view" className="flex flex-1 flex-col bg-[#f8f9fa] overflow-hidden">
+              {/* Reading Action Toolbar */}
+              <div className="px-5 py-2.5 flex items-center justify-between border-b border-slate-200/90 bg-white z-10 sticky top-0 shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    data-testid="back"
+                    onClick={() => setOpenUid(null)}
+                    className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium"
+                    title="Kembali ke Daftar"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Kembali</span>
+                  </button>
 
-            <div className="flex-1 overflow-y-auto p-xl">
-              <div className="max-w-[800px] mx-auto">
-                <div className="flex items-start justify-between mb-lg gap-md">
-                  <h2 data-testid="msg-subject" className="text-[24px] leading-8 font-normal text-on-surface flex-1">
-                    {message.subject || '(tanpa subjek)'}
-                  </h2>
-                  <div className="flex gap-2 flex-shrink-0 mt-1">
-                    <span className="bg-surface-variant/50 text-on-surface-variant text-label-secondary px-2 py-1 rounded-md">{message.folder}</span>
-                  </div>
+                  <div className="h-4 w-px bg-slate-200 mx-1" />
+
+                  <button
+                    data-testid="msg-star"
+                    onClick={() => toggleStar(message)}
+                    className="p-1.5 text-slate-600 hover:text-amber-500 hover:bg-slate-100 rounded-lg transition-colors"
+                    title={message.isStarred ? 'Hapus bintang' : 'Beri bintang'}
+                  >
+                    <Star
+                      className={`w-4 h-4 ${
+                        message.isStarred ? 'fill-amber-400 text-amber-400' : 'text-slate-500'
+                      }`}
+                    />
+                  </button>
+
+                  <button
+                    data-testid="msg-unread"
+                    onClick={() => markUnread(message)}
+                    className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="Tandai Belum Dibaca"
+                  >
+                    <MailCheck className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    data-testid="msg-delete"
+                    onClick={() => remove(message)}
+                    className="p-1.5 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title={folder === 'Trash' ? 'Hapus Permanen' : 'Hapus ke Sampah'}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
 
-                <div className="flex items-center justify-between mb-xl">
-                  <div className="flex items-center gap-md">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-sm ${avatarColor(message.sender)}`}>
-                      {initials(message.sender)}
-                    </div>
-                    <div>
-                      <div className="flex items-baseline gap-2">
-                        <span data-testid="msg-sender" className="font-bold text-on-surface text-body-text-lg">{message.sender}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-label-secondary text-on-surface-variant">
-                        <span>to me</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-md text-label-secondary text-on-surface-variant">
-                    <span>{format(new Date(message.receivedAt), 'd MMM yyyy, HH:mm', { locale: localeId })}</span>
-                    <div className="flex gap-1">
-                      <button
-                        data-testid="reply"
-                        onClick={() => setDraft({ to: message.sender ?? '', subject: `Re: ${message.subject ?? ''}`, body: `\n\n--- Pesan asli dari ${message.sender} ---\n${message.bodyText ?? ''}` })}
-                        className="p-xs hover:bg-surface-variant/50 rounded-full transition-colors" title="Reply"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">reply</span>
-                      </button>
-                      <button
-                        data-testid="forward"
-                        onClick={() => setDraft({ subject: `Fwd: ${message.subject ?? ''}`, body: `\n\n--- Diteruskan dari ${message.sender} ---\n${message.bodyText ?? ''}` })}
-                        className="p-xs hover:bg-surface-variant/50 rounded-full transition-colors" title="Forward"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">forward</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    data-testid="reply"
+                    onClick={() =>
+                      setDraft({
+                        to: message.sender ?? '',
+                        subject: `Re: ${message.subject ?? ''}`,
+                        body: `\n\n--- Pesan asli dari ${message.sender} ---\n${message.bodyText ?? ''}`,
+                      })
+                    }
+                    className="flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-primary hover:bg-slate-100 px-2.5 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Reply className="w-3.5 h-3.5" />
+                    <span>Balas</span>
+                  </button>
 
-                <div className="text-body-text text-on-surface space-y-md leading-relaxed">
-                  {message.bodyHtml ? (
-                    <div data-testid="msg-body" dangerouslySetInnerHTML={{ __html: message.bodyHtml }} />
-                  ) : (
-                    <div data-testid="msg-body" className="whitespace-pre-wrap">{message.bodyText}</div>
+                  <button
+                    data-testid="forward"
+                    onClick={() =>
+                      setDraft({
+                        subject: `Fwd: ${message.subject ?? ''}`,
+                        body: `\n\n--- Diteruskan dari ${message.sender} ---\n${message.bodyText ?? ''}`,
+                      })
+                    }
+                    className="flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-primary hover:bg-slate-100 px-2.5 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Forward className="w-3.5 h-3.5" />
+                    <span>Teruskan</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Message Content Container */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-8">
+                  {/* Subject Title */}
+                  <div className="border-b border-slate-100 pb-5 mb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                        {message.folder}
+                      </span>
+                      {message.isStarred && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          Penting
+                        </span>
+                      )}
+                    </div>
+                    <h2 data-testid="msg-subject" className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
+                      {message.subject || '(tanpa subjek)'}
+                    </h2>
+                  </div>
+
+                  {/* Sender Details */}
+                  <div className="flex items-start justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shadow-xs ${avatarColor(
+                          message.sender
+                        )}`}
+                      >
+                        {initials(message.sender)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span data-testid="msg-sender" className="font-bold text-slate-900 text-sm">
+                            {message.sender}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Kepada: <span className="text-slate-700 font-medium">saya</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <span className="text-xs text-slate-500 font-medium shrink-0">
+                      {format(new Date(message.receivedAt), 'd MMMM yyyy, HH:mm', { locale: localeId })}
+                    </span>
+                  </div>
+
+                  {/* Email Body Rendering */}
+                  <div className="text-sm text-slate-800 leading-relaxed font-normal min-h-[140px]">
+                    {message.bodyHtml ? (
+                      <div
+                        data-testid="msg-body"
+                        className="prose prose-sm max-w-none text-slate-800"
+                        dangerouslySetInnerHTML={{ __html: message.bodyHtml }}
+                      />
+                    ) : (
+                      <div data-testid="msg-body" className="whitespace-pre-wrap">
+                        {message.bodyText}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Attachments Section */}
+                  {!!message.attachments?.length && (
+                    <div className="mt-8 pt-6 border-t border-slate-100">
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <Paperclip className="w-4 h-4 text-slate-500" />
+                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                          Lampiran Berkas ({message.attachments.length})
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {message.attachments.map((a) => (
+                          <a
+                            key={a.id}
+                            data-testid="attachment"
+                            href={`${api.defaults.baseURL}/email/attachment/${a.id}/download`}
+                            className="flex items-center justify-between p-3 rounded-xl border border-slate-200/80 hover:border-primary/40 bg-slate-50/60 hover:bg-white transition-all group shadow-xs"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-9 h-9 rounded-lg bg-red-50 text-primary border border-red-100 flex items-center justify-center shrink-0">
+                                <FileText className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">
+                                  {a.filename}
+                                </p>
+                                <p className="text-[10px] text-slate-400 font-mono">
+                                  {(a.size / 1024).toFixed(1)} KB
+                                </p>
+                              </div>
+                            </div>
+                            <div className="p-1.5 text-slate-400 group-hover:text-primary group-hover:bg-red-50 rounded-lg transition-colors shrink-0">
+                              <Download className="w-4 h-4" />
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                </div>
 
-                {!!message.attachments?.length && (
-                  <div className="mt-xl pt-lg border-t border-surface-variant">
-                    <h4 className="text-label-secondary text-on-surface-variant mb-md uppercase tracking-wider">
-                      {message.attachments.length} Attachment
-                    </h4>
-                    <div className="flex flex-wrap gap-md">
-                      {message.attachments.map((a) => (
-                        <a
-                          key={a.id}
-                          data-testid="attachment"
-                          href={`${api.defaults.baseURL}/email/attachment/${a.id}/download`}
-                          className="flex items-center gap-md p-md border border-surface-variant rounded-lg hover:bg-surface-variant/20 cursor-pointer transition-colors max-w-[240px] group"
-                        >
-                          <div className="w-10 h-10 bg-error/10 text-error rounded flex items-center justify-center">
-                            <span className="material-symbols-outlined">description</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-body-text text-on-surface truncate font-medium">{a.filename}</p>
-                            <p className="text-label-secondary text-on-surface-variant">{(a.size / 1024).toFixed(1)} KB</p>
-                          </div>
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="material-symbols-outlined text-outline text-[20px]">download</span>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
+                  {/* Bottom Quick Reply Trigger */}
+                  <div className="mt-8 pt-6 border-t border-slate-100 flex items-center gap-3">
+                    <button
+                      onClick={() =>
+                        setDraft({
+                          to: message.sender ?? '',
+                          subject: `Re: ${message.subject ?? ''}`,
+                          body: `\n\n--- Pesan asli dari ${message.sender} ---\n${message.bodyText ?? ''}`,
+                        })
+                      }
+                      className="bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors"
+                    >
+                      <Reply className="w-3.5 h-3.5" />
+                      <span>Balas Email Ini</span>
+                    </button>
+                    <button
+                      onClick={() =>
+                        setDraft({
+                          subject: `Fwd: ${message.subject ?? ''}`,
+                          body: `\n\n--- Diteruskan dari ${message.sender} ---\n${message.bodyText ?? ''}`,
+                        })
+                      }
+                      className="bg-slate-100 hover:bg-slate-200/80 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors"
+                    >
+                      <Forward className="w-3.5 h-3.5" />
+                      <span>Teruskan</span>
+                    </button>
                   </div>
-                )}
-
-                <div className="mt-xl pt-lg flex gap-md">
-                  <button
-                    onClick={() => setDraft({ to: message.sender ?? '', subject: `Re: ${message.subject ?? ''}`, body: `\n\n--- Pesan asli dari ${message.sender} ---\n${message.bodyText ?? ''}` })}
-                    className="bg-surface hover:bg-surface-variant/50 border border-outline px-lg py-sm rounded-full flex items-center gap-sm text-label-button text-on-surface transition-colors shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">reply</span> Reply
-                  </button>
-                  <button
-                    onClick={() => setDraft({ subject: `Fwd: ${message.subject ?? ''}`, body: `\n\n--- Diteruskan dari ${message.sender} ---\n${message.bodyText ?? ''}` })}
-                    className="bg-surface hover:bg-surface-variant/50 border border-outline px-lg py-sm rounded-full flex items-center gap-sm text-label-button text-on-surface transition-colors shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">forward</span> Forward
-                  </button>
                 </div>
               </div>
+            </article>
+          ) : (
+            <div className="flex flex-1 items-center justify-center bg-[#f8f9fa] p-8">
+              <div className="text-center text-slate-400 text-xs flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+                <span>Memuat detail pesan...</span>
+              </div>
             </div>
-          </article>
+          )
         ) : (
-          <div className="flex flex-1 items-center justify-center bg-surface p-xl">
-            <div className="text-center text-on-surface-variant text-sm flex items-center gap-2">
-              <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
-              <span>Memuat pesan...</span>
-            </div>
-          </div>
-        )) : (
-          <div className="hidden lg:flex flex-1 items-center justify-center bg-surface">
-            <div className="text-center">
-              <span className="material-symbols-outlined text-[64px] text-outline mb-4">mail</span>
-              <p className="text-body-text text-on-surface-variant">Pilih email untuk dibaca</p>
+          <div className="hidden lg:flex flex-1 items-center justify-center bg-[#f8f9fa] p-8">
+            <div className="text-center max-w-sm">
+              <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center mx-auto mb-4 text-slate-300">
+                <Mail className="w-8 h-8" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800 mb-1">Pilih email untuk dibaca</h3>
+              <p className="text-xs text-slate-500">
+                Klik salah satu email di panel kiri untuk membuka isi pesan lengkap dan lampiran.
+              </p>
             </div>
           </div>
         )}
       </div>
 
+      {/* Compose Modal */}
       {draft && (
         <ComposeModal
           draft={draft}
           onClose={() => setDraft(null)}
-          onSent={() => { setDraft(null); setToast('Email terkirim'); refresh(); }}
+          onSent={() => {
+            setDraft(null);
+            setToast('Email terkirim');
+            refresh();
+          }}
         />
       )}
 
+      {/* Toast Notification */}
       {toast && (
-        <div data-testid="toast" role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-on-surface text-surface-container-lowest text-sm px-4 py-2 rounded-lg shadow-lg z-50">
-          {toast}
+        <div
+          data-testid="toast"
+          role="status"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 flex items-center gap-2"
+        >
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span>{toast}</span>
         </div>
       )}
     </div>
