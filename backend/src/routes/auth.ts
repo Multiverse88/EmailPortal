@@ -126,7 +126,7 @@ export default (prisma: PrismaClient) => {
           const orderId = process.env.HOSTINGER_ORDER_ID
             || await resolveOrderResourceId().catch(() => undefined);
           if (!orderId) {
-            console.warn('register: HOSTINGER_ORDER_ID not set and order lookup failed — mailbox not provisioned on Hostinger');
+            throw new Error('Order ID Hostinger tidak ditemukan. Cantumkan HOSTINGER_ORDER_ID di backend/.env atau pastikan token memiliki akses ke order email.');
           } else {
             const mailbox = await createMailboxOnHostinger(orderId, localPart.toLowerCase(), tempPassword);
             await prisma.customer.update({

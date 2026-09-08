@@ -23,8 +23,13 @@ import axios from 'axios';
 // ponytail: when Hostinger adds createMailbox to the Mail API SDK, replace
 // this direct HTTP call with the SDK method.
 
-const HOSTINGER_API_TOKEN = process.env.HOSTINGER_API_TOKEN;   // hPanel token
-const HPanel_BASE = 'https://api.hostinger.com';
+export function getApiToken(): string | undefined {
+  return process.env.HOSTINGER_API_TOKEN || process.env.HOSTINGER_MAIL_API_KEY;
+}
+
+export function getBaseUrl(): string {
+  return process.env.HOSTINGER_API_BASE_URL || 'https://api.hostinger.com';
+}
 
 /**
  * Create a mailbox on Hostinger via hPanel API.
@@ -35,14 +40,16 @@ export async function createMailboxOnHostinger(orderId: string, localPart: strin
   address: string;
   status: string;
 }> {
-  if (!HOSTINGER_API_TOKEN) throw new Error('HOSTINGER_API_TOKEN not set');
+  const token = getApiToken();
+  if (!token) throw new Error('HOSTINGER_API_TOKEN or HOSTINGER_MAIL_API_KEY not set');
 
+  const domain = process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id';
   const res = await axios.post(
-    `${HPanel_BASE}/api/mail/v1/orders/${orderId}/mailboxes`,
+    `${getBaseUrl()}/api/mail/v1/orders/${orderId}/mailboxes`,
     { local_part: localPart, password },
     {
       headers: {
-        'Authorization': `Bearer ${HOSTINGER_API_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       timeout: 30000,
@@ -51,9 +58,9 @@ export async function createMailboxOnHostinger(orderId: string, localPart: strin
 
   const mailbox = res.data?.data ?? res.data;
   return {
-    id: mailbox.id,
-    address: mailbox.address,
-    status: mailbox.status ?? 'active',
+    id: mailbox?.id || mailbox?.resourceId || mailbox?.mailbox_id || '',
+    address: mailbox?.address || `${localPart}@${domain}`,
+    status: mailbox?.status ?? 'active',
   };
 }
 
@@ -61,9 +68,10 @@ export async function createMailboxOnHostinger(orderId: string, localPart: strin
  * Delete a mailbox on Hostinger via hPanel API.
  */
 export async function deleteMailboxOnHostinger(mailboxId: string): Promise<void> {
-  if (!HOSTINGER_API_TOKEN) throw new Error('HOSTINGER_API_TOKEN not set');
-  await axios.delete(`${HPanel_BASE}/api/mail/v1/mailboxes/${mailboxId}`, {
-    headers: { 'Authorization': `Bearer ${HOSTINGER_API_TOKEN}` },
+  const token = getApiToken();
+  if (!token) throw new Error('HOSTINGER_API_TOKEN not set');
+  await axios.delete(`${getBaseUrl()}/api/mail/v1/mailboxes/${mailboxId}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
     timeout: 30000,
   });
 }
@@ -72,21 +80,20 @@ export async function deleteMailboxOnHostinger(mailboxId: string): Promise<void>
  * Change a mailbox password on Hostinger via hPanel API.
  */
 export async function changeMailboxPasswordOnHostinger(mailboxId: string, newPassword: string): Promise<void> {
-  if (!HOSTINGER_API_TOKEN) throw new Error('HOSTINGER_API_TOKEN not set');
+  const token = getApiToken();
+  if (!token) throw new Error('HOSTINGER_API_TOKEN not set');
   await axios.patch(
-    `${HPanel_BASE}/api/mail/v1/mailboxes/${mailboxId}/password`,
+    `${getBaseUrl()}/api/mail/v1/mailboxes/${mailboxId}/password`,
     { password: newPassword },
     {
       headers: {
-        'Authorization': `Bearer ${HOSTINGER_API_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       timeout: 30000,
     },
   );
 }
-
-const HOSTINGER_MAIL_API_KEY = process.env.HOSTINGER_MAIL_API_KEY;
 
 let _config: Configuration | null = null;
 let _accountApi: AccountApi | null = null;
@@ -96,18 +103,19 @@ let _quotaApi: QuotaApi | null = null;
 
 function config(): Configuration {
   if (!_config) {
-    if (!HOSTINGER_MAIL_API_KEY) throw new Error('HOSTINGER_MAIL_API_KEY not set');
-    _config = new Configuration({ accessToken: HOSTINGER_MAIL_API_KEY });
+    const token = getApiToken();
+    if (!token) throw new Error('HOSTINGER_API_TOKEN or HOSTINGER_MAIL_API_KEY not set');
+    _config = new Configuration({ accessToken: token });
   }
   return _config;
 }
 
 export function isMailApiConfigured(): boolean {
-  return !!HOSTINGER_MAIL_API_KEY;
+  return !!getApiToken();
 }
 
 export function isProvisioningConfigured(): boolean {
-  return !!HOSTINGER_API_TOKEN;
+  return !!getApiToken();
 }
 
 export function accountApi(): AccountApi {
