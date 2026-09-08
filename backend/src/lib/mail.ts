@@ -1,6 +1,13 @@
 import nodemailer from 'nodemailer';
 
-export const smtpConfigured = () => !!process.env.HOSTINGER_SMTP_HOST;
+export const smtpConfigured = () =>
+  Boolean(
+    process.env.HOSTINGER_SMTP_HOST &&
+    process.env.HOSTINGER_SMTP_PASS &&
+    !process.env.HOSTINGER_SMTP_PASS.includes('your_') &&
+    process.env.HOSTINGER_SMTP_PASS !== 'your_smtp_password_here' &&
+    process.env.NODE_ENV !== 'test'
+  );
 
 export async function sendMail(opts: {
   user: string;
@@ -23,16 +30,24 @@ export async function sendMail(opts: {
     auth: { user: opts.user, pass: opts.pass },
   });
 
-  await transport.sendMail({
-    from: opts.user,
-    to: opts.to,
-    cc: opts.cc,
-    subject: opts.subject,
-    text: opts.text,
-    html: opts.html,
-    attachments: opts.attachments,
-  });
-  return { delivered: true };
+  try {
+    await transport.sendMail({
+      from: opts.user,
+      to: opts.to,
+      cc: opts.cc,
+      subject: opts.subject,
+      text: opts.text,
+      html: opts.html,
+      attachments: opts.attachments,
+    });
+    return { delivered: true };
+  } catch (error) {
+    console.error('SMTP send failed:', (error as Error).message);
+    if (process.env.NODE_ENV === 'development') {
+      return { delivered: false, reason: (error as Error).message };
+    }
+    throw error;
+  }
 }
 
 // FR-18: onboarding notice goes to the customer's *personal* address.

@@ -165,7 +165,11 @@ export default (prisma: PrismaClient) => {
         }
       }
 
-      await sendOnboardingNotice(personalEmail, mailboxAddress);
+      try {
+        await sendOnboardingNotice(personalEmail, mailboxAddress);
+      } catch (noticeErr) {
+        console.warn('register: onboarding notice failed:', (noticeErr as Error).message);
+      }
       await audit(prisma, req, 'mailbox.create', 'customer', customer.id, { mailboxAddress });
 
       res.status(201).json({

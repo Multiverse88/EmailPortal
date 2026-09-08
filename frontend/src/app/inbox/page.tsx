@@ -8,6 +8,7 @@ import { id as localeId } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { ComposeModal, Draft } from '@/components/compose';
+import { Star } from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
 
 interface Message {
@@ -272,7 +273,7 @@ function Inbox_() {
                   }`}
                 >
                   {!m.isRead && (
-                    <div className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                    <div className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
                   )}
                   <div className="flex items-center gap-md w-full">
                     <div className="flex items-center gap-sm flex-shrink-0">
@@ -281,9 +282,7 @@ function Inbox_() {
                         onClick={(e) => { e.stopPropagation(); toggleStar(m); }}
                         className="text-outline hover:text-primary transition-colors hidden sm:block"
                       >
-                        <span className={`material-symbols-outlined text-[20px] ${m.isStarred ? 'fill text-amber-500' : ''}`}>
-                          {m.isStarred ? 'star' : 'star_border'}
-                        </span>
+                        <Star className={`w-5 h-5 ${m.isStarred ? 'fill-amber-400 text-amber-400' : 'text-outline'}`} />
                       </button>
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${avatarClass}`}>
                         {initials(senderName)}
@@ -464,7 +463,7 @@ function Inbox_() {
       )}
 
       {toast && (
-        <div role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-on-surface text-surface-container-lowest text-sm px-4 py-2 rounded-lg shadow-lg z-50">
+        <div data-testid="toast" role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-on-surface text-surface-container-lowest text-sm px-4 py-2 rounded-lg shadow-lg z-50">
           {toast}
         </div>
       )}

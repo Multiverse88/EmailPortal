@@ -45,7 +45,7 @@ export default function LoginPage() {
             </span>
           </div>
           <h1 className="text-page-title font-page-title text-on-surface text-center mt-2">
-            MailPortal
+            Email Portal
           </h1>
           <p className="text-label-secondary text-on-surface-variant text-center text-sm">
             Masuk ke mailbox Anda
