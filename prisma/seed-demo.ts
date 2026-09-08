@@ -23,16 +23,20 @@ async function main() {
   console.log(`  - Password    : Admin123!`);
   console.log(`  - Total Mailbox: ${result.customersCount} customer (6 aktif, 2 nonaktif)`);
   console.log(`  - Audit Logs  : ${result.auditLogsCount} entri riwayat aktivitas admin\n`);
-  console.log(`Akun Customer Demo (Budi Setiawan - PT Maju Bersama Digital):`);
-  console.log(`  - URL         : http://localhost:3000/login (pilih tab Customer Mail)`);
-  console.log(`  - Email       : budi@${result.domain}`);
-  console.log(`  - Password    : Customer123!`);
-  console.log(`  - Folder Kotak Masuk (Inbox)  : ${result.inboxCount} email`);
-  console.log(`  - Folder Terkirim (Sent)      : ${result.sentCount} email`);
-  console.log(`  - Folder Draf (Drafts)        : ${result.draftCount} draf`);
-  console.log(`  - Folder Sampah (Trash)       : ${result.trashCount} email`);
-  console.log(`  - Lampiran File Nyata (.pdf, .xlsx, .png) siap diunduh!`);
-  console.log(`================================================================\n`);
+  console.log(`Akun Customer Demo (Budi Setiawan - PT Maju Bersama Digital):
+  - URL         : http://localhost:3000/login (pilih tab Customer Mail)
+  - Email       : budi@${result.domain}
+  - Password    : Customer123!
+  - Total Email : 21 email (12 inbox, 4 sent, 2 draf, 3 trash)
+  - Lampiran File Nyata (.pdf, .xlsx, .png) siap diunduh!
+
+Akun Trial Demo (Masa Percobaan 14 Hari):
+  - URL         : http://localhost:3000/login (pilih tab Customer Mail)
+  - Email       : trial@${result.domain}
+  - Password    : Customer123!
+  - Total Email : 9 email (5 inbox trial, 2 sent, 1 draf, 1 trash)
+  - Lampiran File Nyata: Panduan_Memulai_Trial.pdf & Penawaran_Paket_Tahunan.pdf
+===============================================================================\n`);
 }
 
 main()

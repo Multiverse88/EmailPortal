@@ -173,6 +173,13 @@ npm run seed:demo
 ```
 
 ### Kredensial Akun Demo untuk Pengecekan:
+- **Akun Trial (Masa Percobaan 14 Hari):**
+  - **Email:** `trial@clienteasylegal.co.id`
+  - **Password:** `Customer123!`
+  - **Fitur untuk dicek:**
+    - 5 Inbox bertema trial (Selamat Datang Trial 14 Hari, Reminder sisa 5 hari trial, Laporan Telemetri Kuota & Anti-Spam, Undangan Onboarding 1-on-1, Tips Keamanan Phishing).
+    - Lampiran PDF asli: `Panduan_Memulai_Trial_EasyLegal.pdf` & `Penawaran_Paket_Tahunan_EasyLegal.pdf`.
+    - 2 Terkirim (Sent), 1 Draf (Drafts), 1 Sampah (Trash).
 - **Customer Mailbox (Budi Setiawan - PT Maju Bersama Digital):**
   - **Email:** `budi@clienteasylegal.co.id`
   - **Password:** `Customer123!`

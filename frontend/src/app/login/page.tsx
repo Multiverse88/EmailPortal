@@ -186,6 +186,27 @@ export default function LoginPage() {
 
               <button
                 type="button"
+                data-testid="fill-demo-trial"
+                onClick={() => {
+                  setTab('customer');
+                  setEmail('trial@clienteasylegal.co.id');
+                  setPassword('Customer123!');
+                  setError('');
+                }}
+                className="text-left p-2.5 rounded-xl bg-slate-50 hover:bg-red-50/50 hover:border-red-200/60 border border-slate-200/80 transition-all flex items-center justify-between group"
+              >
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-primary">Akun Trial:</span>
+                    <span className="text-xs text-slate-700">trial@clienteasylegal.co.id</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500">Masa Percobaan 14 Hari • 5 Email Trial • Pass: Customer123!</span>
+                </div>
+                <CheckCircle2 className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
+              </button>
+
+              <button
+                type="button"
                 data-testid="fill-demo-admin"
                 onClick={() => {
                   setTab('admin');

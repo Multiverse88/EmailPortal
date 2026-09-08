@@ -13,7 +13,7 @@ const DUMMY_PDF = `%PDF-1.4
 BT
 /F1 14 Tf
 72 700 Td
-(EasyLegal Portal - Dokumen Dummy) Tj
+(EasyLegal Portal - Dokumen Resmi) Tj
 ET
 endstream
 endobj
@@ -42,6 +42,8 @@ export function ensureDummyStorageFiles(storageDir: string) {
     'invoice-2025-088.pdf',
     'perjanjian-kerjasama.pdf',
     'sk-kemenkumham-2026.pdf',
+    'panduan-trial.pdf',
+    'penawaran-paket-tahunan.pdf',
   ];
 
   for (const file of pdfFiles) {
@@ -504,6 +506,243 @@ export const TRASH_EMAILS = [
   },
 ];
 
+// ─── Trial Mailbox Specific Emails ──────────────────────────────
+export const TRIAL_INBOX_EMAILS = [
+  {
+    subject: '🎉 Selamat Datang di Masa Percobaan (Trial 14 Hari) EasyLegal',
+    sender: 'onboarding@easylegal.co.id',
+    bodyText:
+      'Halo Pengguna Trial, selamat datang di layanan email bisnis resmi EasyLegal. Akun percobaan Anda aktif selama 14 hari dengan fasilitas lengkap.',
+    bodyHtml: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 640px;">
+        <div style="background: linear-gradient(135deg, #680003, #930006); color: white; padding: 22px; border-radius: 12px; margin-bottom: 20px;">
+          <h2 style="margin: 0 0 6px 0; font-size: 20px;">Akun Trial 14 Hari Anda Aktif</h2>
+          <p style="margin: 0; opacity: 0.9; font-size: 13px;">EasyLegal Business Mail • Domain clienteasylegal.co.id</p>
+        </div>
+        <p>Yth. <strong>Pengguna Layanan Percobaan</strong>,</p>
+        <p>Terima kasih telah mencoba portal email profesional EasyLegal. Selama periode uji coba 14 hari ini, Anda dapat mengevaluasi seluruh keunggulan kami:</p>
+        <ul>
+          <li><strong>Domain Korporat:</strong> Identitas email bisnis resmi terverifikasi Hostinger Titan Mail.</li>
+          <li><strong>Keamanan Enkripsi:</strong> Penyimpanan data terenkripsi AES-256-GCM dan koneksi SSL/TLS.</li>
+          <li><strong>Pengiriman Dokumen:</strong> Kirim dan terima lampiran berkas resmi hingga 10 MB.</li>
+          <li><strong>Dukungan Support Prioritas:</strong> Tim helpdesk siap mendampingi konfigurasi domain Anda.</li>
+        </ul>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 16px 0;">
+          <p style="margin: 0; font-size: 13px; color: #475569;">
+            💡 <em>Panduan orientasi fitur dan konfigurasi IMAP/SMTP terlampir dalam file PDF di bawah ini.</em>
+          </p>
+        </div>
+        <p>Salam sukses dan selamat beraktivitas,<br/><strong>Tim Onboarding EasyLegal</strong></p>
+      </div>
+    `,
+    isRead: false,
+    isStarred: true,
+    hoursAgo: 2,
+    attachment: {
+      filename: 'Panduan_Memulai_Trial_EasyLegal.pdf',
+      mimeType: 'application/pdf',
+      size: 1024 * 120,
+      path: 'panduan-trial.pdf',
+    },
+  },
+  {
+    subject: '⏳ Pengingat: Masa Percobaan (Trial) Anda Tersisa 5 Hari Lagi',
+    sender: 'billing@easylegal.co.id',
+    bodyText:
+      'Halo, periode trial 14 hari Anda akan berakhir dalam 5 hari. Dapatkan penawaran khusus diskon 20% untuk perpanjangan ke paket bisnis tahunan.',
+    bodyHtml: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 640px;">
+        <div style="border-left: 4px solid #f59e0b; background: #fffbeb; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 4px 0; color: #92400e;">Pemberitahuan Status Masa Percobaan</h3>
+          <p style="margin: 0; font-size: 13px; color: #b45309;">Sisa waktu trial: <strong>5 Hari</strong> (Jatuh tempo: 13 September 2026)</p>
+        </div>
+        <p>Halo Pengguna Trial,</p>
+        <p>Kami harap Anda menikmati kemudahan dan reliabilitas portal email EasyLegal. Agar operasional dan alamat email bisnis Anda tidak terputus, Anda dapat meng-upgrade akun ke <strong>Paket Bisnis Tahunan</strong> dengan penawaran istimewa:</p>
+        <div style="background: #f1f5f9; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <div style="font-weight: bold; color: #0f172a; font-size: 14px; margin-bottom: 6px;">Promo Konversi Trial ke Tahunan:</div>
+          <p style="margin: 0; font-size: 13px; color: #334155;">Diskon <strong>20%</strong> untuk langganan tahun pertama + Bebas biaya konfigurasi MX DNS dan konsultasi awal perizinan PT.</p>
+        </div>
+        <p>Rincian invoice proforma dan formulir perpanjangan terlampir dalam file PDF berikut.</p>
+        <br/>
+        <p>Salam sukses,<br/><strong>Divisi Penjualan & Billing EasyLegal</strong></p>
+      </div>
+    `,
+    isRead: false,
+    isStarred: true,
+    hoursAgo: 10,
+    attachment: {
+      filename: 'Penawaran_Paket_Tahunan_EasyLegal.pdf',
+      mimeType: 'application/pdf',
+      size: 1024 * 210,
+      path: 'penawaran-paket-tahunan.pdf',
+    },
+  },
+  {
+    subject: '📊 Ringkasan Pemakaian Kuota & Kinerja Mailbox Trial',
+    sender: 'system@clienteasylegal.co.id',
+    bodyText:
+      'Laporan metrik mingguan: Kuota terpakai 120 KB dari 1 GB. Skor reputasi pengiriman 100%. DKIM dan SPF aktif normal.',
+    bodyHtml: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 640px;">
+        <h3 style="color: #680003; margin-top: 0;">Laporan Kesehatan Akun Percobaan</h3>
+        <p>Berikut rangkuman kinerja mailbox trial Anda selama 7 hari terakhir:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px;">
+          <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;"><td style="padding: 8px 12px;"><strong>Kuota Penyimpanan:</strong></td><td style="padding: 8px 12px; text-align: right;">120 KB / 1.00 GB (0.01%)</td></tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px 12px;"><strong>Penyaringan Spam:</strong></td><td style="padding: 8px 12px; text-align: right; color: #16a34a; font-weight: bold;">Aktif (0 Ancaman)</td></tr>
+          <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;"><td style="padding: 8px 12px;"><strong>Status Enkripsi TLS:</strong></td><td style="padding: 8px 12px; text-align: right; color: #16a34a;">Valid (TLS 1.3)</td></tr>
+        </table>
+        <p style="font-size: 12px; color: #64748b;">Dihasilkan otomatis oleh Hostinger Mail Telemetry Engine.</p>
+      </div>
+    `,
+    isRead: true,
+    isStarred: false,
+    hoursAgo: 24,
+  },
+  {
+    subject: 'Jadwal Sesi Konsultasi Onboarding 1-on-1 dengan Tim Legal',
+    sender: 'consultant@easylegal.co.id',
+    bodyText:
+      'Halo, sebagai bagian dari program trial EasyLegal, Anda berhak mendapatkan sesi konsultasi 30 menit mengenai kepatuhan hukum usaha Anda.',
+    bodyHtml: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 640px;">
+        <p>Halo Pengguna Trial,</p>
+        <p>Sebagai fasilitas evaluasi pelanggan baru, kami mengundang Anda untuk mengikuti sesi konsultasi privat 1-on-1 selama 30 menit bersama konsultan hukum korporat EasyLegal.</p>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 16px 0;">
+          <strong>Topik yang dapat dikonsultasikan:</strong>
+          <ul style="margin: 6px 0 0 0; padding-left: 18px; font-size: 13px;">
+            <li>Struktur Anggaran Dasar dan Pembagian Saham Perusahaan</li>
+            <li>Perizinan Berusaha Berbasis Risiko (OSS-RBA)</li>
+            <li>Perlindungan Hak Merek Dagang & Hak Cipta Perangkat Lunak</li>
+          </ul>
+        </div>
+        <p>Silakan balas email ini dengan preferensi hari dan jam Anda (Senin - Jumat, 09.00 - 17.00 WIB).</p>
+        <br/>
+        <p>Hormat kami,<br/><strong>Tim Konsultasi Legalitas EasyLegal</strong></p>
+      </div>
+    `,
+    isRead: true,
+    isStarred: false,
+    hoursAgo: 48,
+  },
+  {
+    subject: '🔐 Panduan Praktis: Mengamankan Mailbox Bisnis dari Serangan Phishing',
+    sender: 'security@easylegal.co.id',
+    bodyText:
+      'Tips penting menjaga kerahasiaan korespondensi korporat: kenali tautan mencurigakan, aktifkan password yang kuat, dan jangan bagikan kredensial.',
+    bodyHtml: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 640px;">
+        <h4 style="color: #1e293b;">Security Bulletin • EasyLegal Information Security</h4>
+        <p>Halo,</p>
+        <p>Keamanan data korespondensi adalah prioritas utama kami. Berikut 3 langkah mudah menjaga keamanan email bisnis Anda:</p>
+        <ol style="font-size: 13px;">
+          <li><strong>Ganti Password Berkala:</strong> Manfaatkan menu Pengaturan Akun di pojok kanan atas untuk memperbarui password Anda.</li>
+          <li><strong>Verifikasi Pengirim:</strong> Selalu periksa domain pengirim sebelum mengunduh lampiran yang tidak dikenal.</li>
+          <li><strong>Jangan Bagikan Kredensial:</strong> Tim teknis EasyLegal tidak akan pernah meminta kata sandi Anda via email.</li>
+        </ol>
+      </div>
+    `,
+    isRead: true,
+    isStarred: false,
+    hoursAgo: 72,
+  },
+];
+
+export const TRIAL_SENT_EMAILS = [
+  {
+    subject: 'Pertanyaan Upgrade Akun Percobaan ke Paket Bisnis',
+    recipients: 'billing@easylegal.co.id',
+    bodyText:
+      'Selamat siang Tim Billing EasyLegal, kami tertarik dengan penawaran paket tahunan diskon 20%. Apakah pembayaran bisa menggunakan transfer m-Banking BCA atau kartu korporat?',
+    bodyHtml:
+      '<p>Selamat siang Tim Billing EasyLegal,</p><p>Kami tertarik dengan penawaran paket tahunan diskon 20% yang ditawarkan. Apakah pembayaran invoice dapat menggunakan transfer via m-Banking BCA atau kartu kredit korporat?</p><br/><p>Salam hormat,<br/><strong>User Trial</strong></p>',
+    hoursAgo: 6,
+  },
+  {
+    subject: 'Konfirmasi Jadwal Sesi Onboarding Trial',
+    recipients: 'consultant@easylegal.co.id',
+    bodyText:
+      'Halo Tim Legal, kami ingin mengambil jadwal konsultasi hari Kamis jam 14.00 WIB. Topik utama yang ingin kami diskusikan adalah perizinan KBLI di OSS.',
+    bodyHtml:
+      '<p>Halo Tim Legal,</p><p>Terima kasih atas undangannya. Kami memilih jadwal <strong>Kamis jam 14.00 WIB</strong> via Google Meet. Topik yang ingin kami konsultasikan adalah perizinan sektor digital OSS.</p><br/><p>Salam,<br/><strong>User Trial</strong></p>',
+    hoursAgo: 30,
+  },
+];
+
+export const TRIAL_DRAFT_EMAILS = [
+  {
+    subject: '[Draf] Permohonan Draf Perjanjian Kerahasiaan (NDA) Rekanan',
+    recipients: 'legal@easylegal.co.id',
+    bodyText:
+      'Dengan hormat, sehubungan dengan kerjasama vendor baru, kami ingin meminta templat NDA baku dari EasyLegal...',
+    bodyHtml:
+      '<p>Dengan hormat,</p><p>Sehubungan dengan kerjasama vendor baru, kami ingin meminta templat NDA standar...</p>',
+    hoursAgo: 12,
+  },
+];
+
+export const TRIAL_TRASH_EMAILS = [
+  {
+    subject: '[Promo] Penawaran Sewa Ruang Kantor & Co-Working Space Murah',
+    sender: 'marketing@officepromo.id',
+    bodyText:
+      'Dapatkan diskon sewa meja kantor harian dan mingguan khusus startup baru.',
+    bodyHtml:
+      '<p>Diskon khusus ruangan kantor representatif di Jakarta Selatan.</p>',
+    hoursAgo: 100,
+  },
+];
+
+// ─── Additional Active Customers Emails ──────────────────────────────
+export const HENDRA_EMAILS = [
+  {
+    subject: 'Notifikasi Penerimaan Dokumen Ekspor & Sertifikat Asal (COO)',
+    sender: 'trade@kemendag.go.id',
+    bodyText:
+      'Pengajuan Surat Keterangan Asal (SKA / COO) untuk pengiriman komponen elektronik telah diverifikasi dan disetujui.',
+    bodyHtml:
+      '<p>Yth. <strong>Hendra Wijaya</strong> (PT Sinar Terang),</p><p>Pengajuan SKA/COO Form D Anda telah disetujui sistem e-SKA Kementerian Perdagangan RI dengan nomor registrasi <strong>COO-ID-2026-9901</strong>.</p>',
+    isRead: false,
+    isStarred: true,
+    hoursAgo: 4,
+  },
+  {
+    subject: 'Penagihan Pajak Penghasilan Badan Pasal 25 Periode Agustus',
+    sender: 'billing@taxpartner.id',
+    bodyText:
+      'Pengingat pembayaran angsuran PPh 25 badan usaha masa Agustus 2026 telah siap dibayarkan sebelum tanggal 15.',
+    bodyHtml:
+      '<p>Halo Pak Hendra,</p><p>Billing kode bayar angsuran PPh Pasal 25 masa pajak Agustus telah kami terbitkan melalui DJP Online.</p>',
+    isRead: true,
+    isStarred: false,
+    hoursAgo: 26,
+  },
+];
+
+export const DEWI_EMAILS = [
+  {
+    subject: 'Pendaftaran Merek Dagang & Hak Cipta Perangkat Lunak Selesai',
+    sender: 'ipr@dgip.go.id',
+    bodyText:
+      'Sertifikat Merek Dagang Kelas 42 dan Surat Pencatatan Ciptaan software ERP telah resmi diterbitkan oleh DJKI Kemenkumham.',
+    bodyHtml:
+      '<p>Yth. Ibu <strong>Dewi Lestari</strong> (PT Digital Solusi),</p><p>Direktorat Jenderal Kekayaan Intelektual menginformasikan bahwa sertifikat merek dagang Anda telah terbit dan dapat diunduh.</p>',
+    isRead: false,
+    isStarred: true,
+    hoursAgo: 5,
+  },
+  {
+    subject: 'Undangan Sosialisasi Kebijakan Kepatuhan Perlindungan Data Pribadi (UU PDP)',
+    sender: 'event@kominfo.go.id',
+    bodyText:
+      'Kementerian Kominfo mengundang direksi perusahaan teknologi informasi dalam workshop kepatuhan UU PDP 2026.',
+    bodyHtml:
+      '<p>Kepada Yth. Pimpinan PT Digital Solusi Nusantara,</p><p>Kami mengundang Anda hadir pada lokakarya implementasi standar kepatuhan pengendali data pribadi.</p>',
+    isRead: true,
+    isStarred: false,
+    hoursAgo: 32,
+  },
+];
+
 export const CUSTOMERS_DATA = [
   {
     name: 'Budi Setiawan',
@@ -511,6 +750,13 @@ export const CUSTOMERS_DATA = [
     localPart: 'budi',
     status: 'active',
     lastLoginMinutesAgo: 15,
+  },
+  {
+    name: 'Pengguna Trial EasyLegal',
+    personalEmail: 'trial.user@solusidigital.id',
+    localPart: 'trial',
+    status: 'active',
+    lastLoginMinutesAgo: 5,
   },
   {
     name: 'Siti Rahayu',
@@ -607,109 +853,256 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
     createdCustomers[c.localPart] = cust;
   }
 
-  const budi = createdCustomers['budi'];
-
-  // 4. Masukkan Email INBOX untuk Budi
   let uidCounter = 2000;
-  for (const email of INBOX_EMAILS) {
-    uidCounter++;
-    await prisma.messageCache.create({
-      data: {
-        mailboxId: budi.id,
-        uid: String(uidCounter),
-        folder: 'INBOX',
-        subject: email.subject,
-        sender: email.sender,
-        recipients: budi.mailboxAddress,
-        snippet: email.bodyText.slice(0, 140),
-        bodyText: email.bodyText,
-        bodyHtml: email.bodyHtml,
-        isRead: email.isRead,
-        isStarred: email.isStarred,
-        isDeleted: false,
-        receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
-        attachments: email.attachment
-          ? {
-              create: [email.attachment],
-            }
-          : undefined,
-      },
-    });
+
+  // ─── 4. Seed Emails for Budi Setiawan ──────────────────────────────
+  const budi = createdCustomers['budi'];
+  if (budi) {
+    for (const email of INBOX_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: budi.id,
+          uid: String(uidCounter),
+          folder: 'INBOX',
+          subject: email.subject,
+          sender: email.sender,
+          recipients: budi.mailboxAddress,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: email.isRead,
+          isStarred: email.isStarred,
+          isDeleted: false,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+          attachments: email.attachment
+            ? {
+                create: [email.attachment],
+              }
+            : undefined,
+        },
+      });
+    }
+
+    for (const email of SENT_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: budi.id,
+          uid: `sent-${uidCounter}`,
+          folder: 'Sent',
+          subject: email.subject,
+          sender: budi.mailboxAddress,
+          recipients: email.recipients,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: true,
+          isStarred: false,
+          isDeleted: false,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+          attachments: email.attachment
+            ? {
+                create: [email.attachment],
+              }
+            : undefined,
+        },
+      });
+    }
+
+    for (const email of DRAFT_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: budi.id,
+          uid: `draft-${uidCounter}`,
+          folder: 'Drafts',
+          subject: email.subject,
+          sender: budi.mailboxAddress,
+          recipients: email.recipients,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: true,
+          isStarred: false,
+          isDeleted: false,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+        },
+      });
+    }
+
+    for (const email of TRASH_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: budi.id,
+          uid: `trash-${uidCounter}`,
+          folder: 'Trash',
+          subject: email.subject,
+          sender: email.sender,
+          recipients: budi.mailboxAddress,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: true,
+          isStarred: false,
+          isDeleted: true,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+        },
+      });
+    }
   }
 
-  // 5. Masukkan Email SENT untuk Budi
-  for (const email of SENT_EMAILS) {
-    uidCounter++;
-    await prisma.messageCache.create({
-      data: {
-        mailboxId: budi.id,
-        uid: `sent-${uidCounter}`,
-        folder: 'Sent',
-        subject: email.subject,
-        sender: budi.mailboxAddress,
-        recipients: email.recipients,
-        snippet: email.bodyText.slice(0, 140),
-        bodyText: email.bodyText,
-        bodyHtml: email.bodyHtml,
-        isRead: true,
-        isStarred: false,
-        isDeleted: false,
-        receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
-        attachments: email.attachment
-          ? {
-              create: [email.attachment],
-            }
-          : undefined,
-      },
-    });
+  // ─── 5. Seed Emails for Trial User ──────────────────────────────
+  const trial = createdCustomers['trial'];
+  if (trial) {
+    for (const email of TRIAL_INBOX_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: trial.id,
+          uid: `trial-${uidCounter}`,
+          folder: 'INBOX',
+          subject: email.subject,
+          sender: email.sender,
+          recipients: trial.mailboxAddress,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: email.isRead,
+          isStarred: email.isStarred,
+          isDeleted: false,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+          attachments: email.attachment
+            ? {
+                create: [email.attachment],
+              }
+            : undefined,
+        },
+      });
+    }
+
+    for (const email of TRIAL_SENT_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: trial.id,
+          uid: `trial-sent-${uidCounter}`,
+          folder: 'Sent',
+          subject: email.subject,
+          sender: trial.mailboxAddress,
+          recipients: email.recipients,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: true,
+          isStarred: false,
+          isDeleted: false,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+        },
+      });
+    }
+
+    for (const email of TRIAL_DRAFT_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: trial.id,
+          uid: `trial-draft-${uidCounter}`,
+          folder: 'Drafts',
+          subject: email.subject,
+          sender: trial.mailboxAddress,
+          recipients: email.recipients,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: true,
+          isStarred: false,
+          isDeleted: false,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+        },
+      });
+    }
+
+    for (const email of TRIAL_TRASH_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: trial.id,
+          uid: `trial-trash-${uidCounter}`,
+          folder: 'Trash',
+          subject: email.subject,
+          sender: email.sender,
+          recipients: trial.mailboxAddress,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: true,
+          isStarred: false,
+          isDeleted: true,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+        },
+      });
+    }
   }
 
-  // 6. Masukkan Email DRAFT untuk Budi
-  for (const email of DRAFT_EMAILS) {
-    uidCounter++;
-    await prisma.messageCache.create({
-      data: {
-        mailboxId: budi.id,
-        uid: `draft-${uidCounter}`,
-        folder: 'Drafts',
-        subject: email.subject,
-        sender: budi.mailboxAddress,
-        recipients: email.recipients,
-        snippet: email.bodyText.slice(0, 140),
-        bodyText: email.bodyText,
-        bodyHtml: email.bodyHtml,
-        isRead: true,
-        isStarred: false,
-        isDeleted: false,
-        receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
-      },
-    });
+  // ─── 6. Seed Emails for Hendra & Dewi ──────────────────────────────
+  const hendra = createdCustomers['hendra'];
+  if (hendra) {
+    for (const email of HENDRA_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: hendra.id,
+          uid: `hendra-${uidCounter}`,
+          folder: 'INBOX',
+          subject: email.subject,
+          sender: email.sender,
+          recipients: hendra.mailboxAddress,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: email.isRead,
+          isStarred: email.isStarred,
+          isDeleted: false,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+        },
+      });
+    }
   }
 
-  // 7. Masukkan Email TRASH untuk Budi
-  for (const email of TRASH_EMAILS) {
-    uidCounter++;
-    await prisma.messageCache.create({
-      data: {
-        mailboxId: budi.id,
-        uid: `trash-${uidCounter}`,
-        folder: 'Trash',
-        subject: email.subject,
-        sender: email.sender,
-        recipients: budi.mailboxAddress,
-        snippet: email.bodyText.slice(0, 140),
-        bodyText: email.bodyText,
-        bodyHtml: email.bodyHtml,
-        isRead: true,
-        isStarred: false,
-        isDeleted: true,
-        receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
-      },
-    });
+  const dewi = createdCustomers['dewi'];
+  if (dewi) {
+    for (const email of DEWI_EMAILS) {
+      uidCounter++;
+      await prisma.messageCache.create({
+        data: {
+          mailboxId: dewi.id,
+          uid: `dewi-${uidCounter}`,
+          folder: 'INBOX',
+          subject: email.subject,
+          sender: email.sender,
+          recipients: dewi.mailboxAddress,
+          snippet: email.bodyText.slice(0, 140),
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          isRead: email.isRead,
+          isStarred: email.isStarred,
+          isDeleted: false,
+          receivedAt: new Date(Date.now() - email.hoursAgo * 3600_000),
+        },
+      });
+    }
   }
 
-  // 8. Masukkan Audit Logs
+  // ─── 7. Masukkan Audit Logs ──────────────────────────────
   const auditEntries = [
+    {
+      action: 'mailbox.create',
+      target: 'trial',
+      daysAgo: 14,
+      details: { mailboxAddress: `trial@${domain}`, initiatedBy: 'Self-Service Trial Portal' },
+    },
     {
       action: 'mailbox.create',
       target: 'budi',
@@ -776,14 +1169,13 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
     });
   }
 
+  const totalEmails = await prisma.messageCache.count();
+
   return {
     domain,
     adminEmail: admin.email,
     customersCount: CUSTOMERS_DATA.length,
-    inboxCount: INBOX_EMAILS.length,
-    sentCount: SENT_EMAILS.length,
-    draftCount: DRAFT_EMAILS.length,
-    trashCount: TRASH_EMAILS.length,
+    totalEmails,
     auditLogsCount: auditEntries.length,
   };
 }
