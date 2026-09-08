@@ -31,6 +31,7 @@ import {
   ShieldCheck,
   ChevronDown,
   HardDrive,
+  Loader2,
 } from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
 
@@ -104,6 +105,42 @@ function Inbox_() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [sidebar, setSidebar] = useState(false);
   const [toast, setToast] = useState('');
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Prevent browser default file drop behavior (which attempts navigation to file:///)
+  useEffect(() => {
+    const prevent = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('dragover', prevent);
+    window.addEventListener('drop', prevent);
+    return () => {
+      window.removeEventListener('dragover', prevent);
+      window.removeEventListener('drop', prevent);
+    };
+  }, []);
+
+  const handleDownloadAttachment = async (e: React.MouseEvent, a: { id: string; filename: string }) => {
+    e.preventDefault();
+    setDownloadingId(a.id);
+    try {
+      const res = await api.get(`/email/attachment/${a.id}/download`, {
+        responseType: 'blob',
+      });
+      const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', a.filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      setToast(errMsg(err, 'Gagal mengunduh berkas'));
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const listKey = `/email?folder=${encodeURIComponent(folder)}&limit=50${query ? `&q=${encodeURIComponent(query)}` : ''}`;
   const list = useSWR<{ data: Message[] }>(listKey, fetcher, { refreshInterval: 15000 });
@@ -691,11 +728,16 @@ function Inbox_() {
                             key={a.id}
                             data-testid="attachment"
                             href={`${api.defaults.baseURL}/email/attachment/${a.id}/download`}
-                            className="flex items-center justify-between p-3 rounded-xl border border-slate-200/80 hover:border-primary/40 bg-slate-50/60 hover:bg-white transition-all group shadow-xs"
+                            onClick={(e) => handleDownloadAttachment(e, a)}
+                            className="flex items-center justify-between p-3 rounded-xl border border-slate-200/80 hover:border-primary/40 bg-slate-50/60 hover:bg-white transition-all group shadow-xs cursor-pointer"
                           >
                             <div className="flex items-center gap-3 min-w-0">
                               <div className="w-9 h-9 rounded-lg bg-red-50 text-primary border border-red-100 flex items-center justify-center shrink-0">
-                                <FileText className="w-5 h-5" />
+                                {downloadingId === a.id ? (
+                                  <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                  <FileText className="w-5 h-5" />
+                                )}
                               </div>
                               <div className="min-w-0">
                                 <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">
@@ -707,7 +749,11 @@ function Inbox_() {
                               </div>
                             </div>
                             <div className="p-1.5 text-slate-400 group-hover:text-primary group-hover:bg-red-50 rounded-lg transition-colors shrink-0">
-                              <Download className="w-4 h-4" />
+                              {downloadingId === a.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
                             </div>
                           </a>
                         ))}

@@ -28,12 +28,16 @@ export const authenticateCustomer = async (
 ) => {
   try {
     const authHeader = req.headers.authorization;
+    let token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
 
-    if (!authHeader?.startsWith('Bearer ')) {
+    if (!token && typeof req.query.token === 'string') {
+      token = req.query.token;
+    }
+
+    if (!token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
 
     if (payload.type !== 'customer') {
