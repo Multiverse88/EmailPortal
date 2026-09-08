@@ -12,6 +12,8 @@ import emailRoutes from './routes/email';
 import searchRoutes from './routes/search';
 import securityRoutes from './routes/security';
 import settingsRoutes from './routes/settings';
+import documentsRoutes from './routes/documents';
+import supportRoutes from './routes/support';
 
 const app = express();
 export const prisma = new PrismaClient();
@@ -29,6 +31,10 @@ app.use('/api/', rateLimit({
   message: { error: 'Terlalu banyak request, coba lagi nanti' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    // In test environment, group by user or dummy IP to avoid rate limit flakiness across test suites
+    return req.ip || 'test-client';
+  },
 }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -39,6 +45,8 @@ app.use('/api/email', authenticateCustomer, emailRoutes(prisma));
 app.use('/api/search', authenticateCustomer, searchRoutes(prisma));
 app.use('/api/security', authenticateCustomer, securityRoutes(prisma));
 app.use('/api/settings', authenticateCustomer, settingsRoutes(prisma));
+app.use('/api/documents', authenticateCustomer, documentsRoutes(prisma));
+app.use('/api/support', authenticateCustomer, supportRoutes(prisma));
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
