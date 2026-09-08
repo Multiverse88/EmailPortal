@@ -1,60 +1,356 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, Mail, Shield, KeyRound, Check, LogOut, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  Loader2,
+  ArrowLeft,
+  Mail,
+  Shield,
+  KeyRound,
+  Check,
+  LogOut,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Laptop,
+  Smartphone,
+  Monitor,
+  SlidersHorizontal,
+  User as UserIcon,
+  Bell,
+  MapPin,
+  Clock,
+  Building,
+  HardDrive,
+  Info,
+  ShieldAlert,
+  FileSignature,
+  Globe,
+  RefreshCw,
+} from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
+import { AppLauncher } from '@/components/app-launcher';
+
+type SettingsTab = 'general' | 'profile' | 'security' | 'notifications';
+
+interface LoginSessionItem {
+  id: string;
+  customerId: string;
+  deviceName: string;
+  deviceType: string;
+  browser: string;
+  ipAddress: string;
+  location: string;
+  isCurrent: boolean;
+  lastActiveAt: string;
+  createdAt: string;
+}
+
+interface UserProfile {
+  id?: string;
+  name?: string;
+  mailboxAddress?: string;
+  personalEmail?: string;
+  status?: string;
+  twoFactorEnabled?: boolean;
+  createdAt?: string;
+  lastLoginAt?: string;
+}
 
 export default function SettingsPage() {
   return (
     <AuthGuard type="customer">
-      <Settings_ />
+      <Suspense fallback={<SettingsLoadingFallback />}>
+        <SettingsContent />
+      </Suspense>
     </AuthGuard>
   );
 }
 
-function Settings_() {
+function SettingsLoadingFallback() {
+  return (
+    <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <span className="text-sm font-medium text-slate-500">Memuat Pengaturan...</span>
+      </div>
+    </div>
+  );
+}
+
+function SettingsContent() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Tab State
+  const initialTabParam = searchParams.get('tab');
+  const getValidTab = (tab: string | null): SettingsTab => {
+    if (tab === 'general') return 'general';
+    if (tab === 'profile') return 'profile';
+    if (tab === 'notifications') return 'notifications';
+    if (tab === 'security') return 'security';
+    // Default to security if requested or general otherwise
+    return 'security';
+  };
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => getValidTab(initialTabParam));
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'security' || tabParam === 'general' || tabParam === 'profile' || tabParam === 'notifications') {
+      setActiveTab(tabParam as SettingsTab);
+    }
+  }, [searchParams]);
+
+  const switchTab = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', tab);
+    router.replace(`/settings?${params.toString()}`, { scroll: false });
+  };
+
+  // General tab states
+  const [language, setLanguage] = useState<'id' | 'en'>('id');
+  const [timezone, setTimezone] = useState<string>('Asia/Jakarta');
+  const [signature, setSignature] = useState<string>('');
+  const [generalSaving, setGeneralSaving] = useState(false);
+  const [generalOk, setGeneralOk] = useState('');
+  const [generalErr, setGeneralErr] = useState('');
+
+  // Notifications tab states
+  const [notifyEmail, setNotifyEmail] = useState(true);
+  const [notifySound, setNotifySound] = useState(true);
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [notifOk, setNotifOk] = useState('');
+  const [notifErr, setNotifErr] = useState('');
+
+  // Security tab states
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean>(false);
+  const [toggling2FA, setToggling2FA] = useState(false);
+  const [twoFactorFeedback, setTwoFactorFeedback] = useState<string>('');
+
   const [currentPassword, setCurrent] = useState('');
   const [newPassword, setNew] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
-  const [ok, setOk] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwOk, setPwOk] = useState('');
 
-  const submit = async (e: React.FormEvent) => {
+  // Sessions list
+  const [sessions, setSessions] = useState<LoginSessionItem[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [terminatingOthers, setTerminatingOthers] = useState(false);
+  const [terminateMsg, setTerminateMsg] = useState('');
+
+  // Profile data from backend
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
+
+  // Fetch settings & sessions
+  const fetchSettings = async () => {
+    try {
+      const res = await api.get('/settings');
+      if (res.data) {
+        if (res.data.user) {
+          setProfileData(res.data.user);
+          setTwoFactorEnabled(!!res.data.user.twoFactorEnabled);
+        }
+        if (res.data.preferences) {
+          const p = res.data.preferences;
+          if (p.language) setLanguage(p.language === 'en' ? 'en' : 'id');
+          if (p.timezone) setTimezone(p.timezone);
+          if (p.signature !== undefined) setSignature(p.signature);
+          if (p.notifyEmail !== undefined) setNotifyEmail(!!p.notifyEmail);
+          if (p.notifySound !== undefined) setNotifySound(!!p.notifySound);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load settings:', err);
+    }
+  };
+
+  const fetchSessions = async () => {
+    setLoadingSessions(true);
+    try {
+      const res = await api.get('/security/sessions');
+      if (res.data?.sessions) {
+        setSessions(res.data.sessions);
+      }
+    } catch (err) {
+      console.error('Failed to load sessions:', err);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    fetchSessions();
+  }, []);
+
+  // Save General Preferences
+  const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setOk('');
-    if (newPassword !== confirm) return setError('Konfirmasi password tidak cocok');
-    setSaving(true);
+    setGeneralErr('');
+    setGeneralOk('');
+    setGeneralSaving(true);
+    try {
+      await api.put('/settings/preferences', {
+        preferences: {
+          language,
+          timezone,
+          signature,
+        },
+      });
+      setGeneralOk('Preferensi umum berhasil disimpan');
+      setTimeout(() => setGeneralOk(''), 4000);
+    } catch (err) {
+      setGeneralErr(errMsg(err, 'Gagal menyimpan preferensi umum'));
+    } finally {
+      setGeneralSaving(false);
+    }
+  };
+
+  // Save Notification Preferences
+  const handleSaveNotifications = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotifErr('');
+    setNotifOk('');
+    setNotifSaving(true);
+    try {
+      await api.put('/settings/preferences', {
+        preferences: {
+          notifyEmail,
+          notifySound,
+        },
+      });
+      setNotifOk('Preferensi notifikasi berhasil disimpan');
+      setTimeout(() => setNotifOk(''), 4000);
+    } catch (err) {
+      setNotifErr(errMsg(err, 'Gagal menyimpan preferensi notifikasi'));
+    } finally {
+      setNotifSaving(false);
+    }
+  };
+
+  // 2FA Toggle
+  const handleToggle2FA = async () => {
+    setToggling2FA(true);
+    setTwoFactorFeedback('');
+    try {
+      const nextState = !twoFactorEnabled;
+      const res = await api.post('/security/2fa/toggle', { enabled: nextState });
+      const active = !!res.data.twoFactorEnabled;
+      setTwoFactorEnabled(active);
+      setTwoFactorFeedback(active ? '2FA telah aktif terlindungi' : '2FA telah dinonaktifkan');
+      setTimeout(() => setTwoFactorFeedback(''), 4000);
+    } catch (err) {
+      setTwoFactorFeedback(errMsg(err, 'Gagal mengubah status 2FA'));
+    } finally {
+      setToggling2FA(false);
+    }
+  };
+
+  // Terminate Other Sessions
+  const handleTerminateOthers = async () => {
+    if (!window.confirm('Hentikan semua sesi login di perangkat lain? Anda akan tetap masuk di perangkat ini.')) {
+      return;
+    }
+    setTerminatingOthers(true);
+    setTerminateMsg('');
+    try {
+      const res = await api.post('/security/sessions/terminate-others');
+      const count = res.data?.terminatedCount;
+      const successMsg =
+        typeof count === 'number' && count > 0
+          ? `${count} sesi perangkat lain berhasil dihentikan`
+          : 'Sesi perangkat lain berhasil dihentikan';
+      setTerminateMsg(successMsg);
+      await fetchSessions();
+      setTimeout(() => setTerminateMsg(''), 5000);
+    } catch (err) {
+      setTerminateMsg(errMsg(err, 'Gagal menghentikan sesi perangkat lain'));
+    } finally {
+      setTerminatingOthers(false);
+    }
+  };
+
+  // Change Password
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwError('');
+    setPwOk('');
+
+    if (newPassword !== confirm) {
+      return setPwError('Konfirmasi password tidak cocok');
+    }
+    if (newPassword.length < 8) {
+      return setPwError('Password baru minimal 8 karakter');
+    }
+
+    setPwSaving(true);
     try {
       await api.post('/auth/change-password', { currentPassword, newPassword });
-      setOk('Password berhasil diubah');
+      setPwOk('Password berhasil diubah');
       setCurrent('');
       setNew('');
       setConfirm('');
     } catch (err) {
-      setError(errMsg(err, 'Gagal mengubah password'));
+      setPwError(errMsg(err, 'Gagal mengubah password'));
     } finally {
-      setSaving(false);
+      setPwSaving(false);
     }
   };
 
   const initials = (name: string | null | undefined) => {
-    if (!name) return '?';
+    if (!name) return 'EL';
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();
   };
 
+  const getDeviceIcon = (deviceType: string) => {
+    const t = (deviceType || '').toLowerCase();
+    if (t === 'mobile' || t === 'smartphone' || t.includes('phone')) return Smartphone;
+    if (t === 'desktop' || t === 'pc' || t.includes('desktop')) return Monitor;
+    return Laptop;
+  };
+
+  const formatSessionTime = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Password Requirements Checklist
+  const hasMinLength = newPassword.length >= 8;
+  const hasUpper = /[A-Z]/.test(newPassword);
+  const hasNumberOrSpecial = /[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(newPassword);
+
+  const displayEmail = profileData?.mailboxAddress || user?.email || '-';
+  const displayName = profileData?.name || user?.name || 'Customer';
+
   return (
-    <main className="min-h-screen bg-[#f8f9fa] flex flex-col">
-      {/* Top Header */}
-      <header className="bg-white border-b border-slate-200/90 h-16 flex items-center px-4 sm:px-6 sticky top-0 z-30 shrink-0 select-none">
+    <main className="min-h-screen bg-[#f8f9fa] flex flex-col font-inter antialiased">
+      {/* Top Header Navigation */}
+      <header className="bg-white border-b border-[#DADCE0] h-16 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shrink-0 select-none shadow-xs">
         <div className="flex items-center gap-3">
           <button
             data-testid="back-inbox"
@@ -63,36 +359,59 @@ function Settings_() {
             title="Kembali ke Kotak Masuk"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Kotak Masuk</span>
+            <span className="hidden sm:inline">Kotak Masuk</span>
           </button>
 
           <div className="h-4 w-px bg-slate-200 mx-1" />
 
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold shadow-xs">
               <Mail className="w-4 h-4" />
             </div>
-            <span className="text-sm font-bold text-slate-900">Pengaturan Akun</span>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-slate-900 tracking-tight">EasyLegal</span>
+                <span className="text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.2 rounded">
+                  Hub
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-500 font-medium block leading-none">
+                Pengaturan Akun &amp; Keamanan
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
+        {/* Trailing Header Actions */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Quick tab switch shortcut */}
           <button
             data-testid="nav-settings"
-            onClick={() => router.push('/settings')}
-            className="p-2 text-primary bg-primary/10 rounded-xl text-xs font-semibold hidden sm:flex items-center gap-1.5"
+            onClick={() => switchTab('security')}
+            className={`p-2 rounded-xl text-xs font-semibold hidden sm:flex items-center gap-1.5 transition-colors ${
+              activeTab === 'security'
+                ? 'text-primary bg-primary/10'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+            title="Keamanan Akun"
           >
             <Shield className="w-4 h-4" />
             <span>Keamanan</span>
           </button>
 
+          {/* Google-style 9-dots App Launcher */}
+          <AppLauncher currentApp="settings" />
+
+          <div className="h-4 w-px bg-slate-200 mx-0.5" />
+
+          {/* Logout Button */}
           <button
             data-testid="logout"
             onClick={() => {
               logout();
               router.replace('/login');
             }}
-            className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors text-xs font-medium flex items-center gap-1"
+            className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors text-xs font-medium flex items-center gap-1.5"
             title="Keluar"
           >
             <LogOut className="w-4 h-4" />
@@ -101,152 +420,797 @@ function Settings_() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Container */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          
-          {/* Header Title */}
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Profil & Keamanan Akun
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Kelola informasi identitas mailbox dan setelan keamanan kata sandi Anda.
-            </p>
+        <div className="max-w-4xl mx-auto space-y-6">
+
+          {/* Account Profile Summary Banner */}
+          <section className="bg-white rounded-2xl border border-[#DADCE0] p-5 sm:p-6 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#680003] to-[#930006] text-white font-bold text-lg flex items-center justify-center shadow-md shadow-primary/20 shrink-0">
+                  {initials(displayName)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                      {displayName}
+                    </h1>
+                    <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full font-medium inline-flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Mailbox Aktif
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
+                    <span data-testid="account-email" className="font-mono text-primary font-semibold">
+                      {displayEmail}
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="font-mono text-slate-500">Hostinger Titan Mail Enterprise</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Storage Indicator */}
+              <div className="sm:text-right bg-slate-50 border border-slate-100 p-3 rounded-xl min-w-[200px]">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-slate-500 font-medium">Kapasitas Mailbox</span>
+                  <span className="font-semibold text-slate-700">4.2 GB / 15 GB</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-primary h-1.5 rounded-full w-[28%]" />
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1">28% digunakan</div>
+              </div>
+            </div>
+          </section>
+
+          {/* Navigation Tabs Bar */}
+          <div className="flex border-b border-[#DADCE0] overflow-x-auto no-scrollbar gap-2 sm:gap-6 bg-white px-4 rounded-xl shadow-xs">
+            <button
+              data-testid="tab-general"
+              onClick={() => switchTab('general')}
+              className={`py-3.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 flex items-center gap-2 transition-all ${
+                activeTab === 'general'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              <span>General</span>
+            </button>
+
+            <button
+              data-testid="tab-profile"
+              onClick={() => switchTab('profile')}
+              className={`py-3.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 flex items-center gap-2 transition-all ${
+                activeTab === 'profile'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <UserIcon className="w-4 h-4" />
+              <span>Profile</span>
+            </button>
+
+            <button
+              data-testid="tab-security"
+              onClick={() => switchTab('security')}
+              className={`py-3.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 flex items-center gap-2 transition-all ${
+                activeTab === 'security'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              <span>Security &amp; Activity</span>
+            </button>
+
+            <button
+              data-testid="tab-notifications"
+              onClick={() => switchTab('notifications')}
+              className={`py-3.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 flex items-center gap-2 transition-all ${
+                activeTab === 'notifications'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Bell className="w-4 h-4" />
+              <span>Notifications</span>
+            </button>
           </div>
 
-          {/* Account Profile Card */}
-          <section className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-xs">
-            <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-container text-white font-bold text-lg flex items-center justify-center shadow-md shadow-primary/20 shrink-0">
-                {initials(user?.name || user?.email)}
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-slate-900">{user?.name || 'Customer'}</h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Mailbox Aktif
-                  </span>
-                  <span className="text-xs text-slate-400">•</span>
-                  <span className="text-xs text-slate-500 font-mono">Hostinger Titan Mail</span>
+          {/* TAB 1: GENERAL PREFERENCES */}
+          {activeTab === 'general' && (
+            <div className="space-y-6">
+              <section className="bg-white rounded-2xl border border-[#DADCE0] p-6 sm:p-7 shadow-xs">
+                <div className="mb-6">
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-primary" />
+                    Preferensi Akun &amp; Antarmuka
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Atur konfigurasi bahasa, zona waktu lokal, dan tanda tangan resmi pada email keluar.
+                  </p>
                 </div>
-              </div>
+
+                {generalOk && (
+                  <div
+                    data-testid="general-success"
+                    role="status"
+                    className="mb-5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-in fade-in"
+                  >
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>{generalOk}</span>
+                  </div>
+                )}
+
+                {generalErr && (
+                  <div
+                    data-testid="general-error"
+                    role="alert"
+                    className="mb-5 bg-red-50 text-red-700 border border-red-200 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-in fade-in"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span>{generalErr}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveGeneral} className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {/* Bahasa Dropdown */}
+                    <div>
+                      <label htmlFor="language-select" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        <Globe className="w-3.5 h-3.5 inline mr-1 text-slate-400" />
+                        Bahasa Antarmuka
+                      </label>
+                      <select
+                        id="language-select"
+                        data-testid="select-language"
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value as 'id' | 'en')}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-white focus:bg-white rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+                      >
+                        <option value="id">Bahasa Indonesia (ID)</option>
+                        <option value="en">English (US)</option>
+                      </select>
+                      <p className="text-[11px] text-slate-400 mt-1">Bahasa default tampilan menu &amp; bantuan</p>
+                    </div>
+
+                    {/* Zona Waktu Dropdown */}
+                    <div>
+                      <label htmlFor="timezone-select" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        <Clock className="w-3.5 h-3.5 inline mr-1 text-slate-400" />
+                        Zona Waktu
+                      </label>
+                      <select
+                        id="timezone-select"
+                        data-testid="select-timezone"
+                        value={timezone}
+                        onChange={(e) => setTimezone(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-white focus:bg-white rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+                      >
+                        <option value="Asia/Jakarta">WIB (Jakarta, Surabaya, Medan - UTC+7)</option>
+                        <option value="Asia/Makassar">WITA (Makassar, Denpasar, Balikpapan - UTC+8)</option>
+                        <option value="Asia/Jayapura">WIT (Jayapura, Ambon - UTC+9)</option>
+                      </select>
+                      <p className="text-[11px] text-slate-400 mt-1">Digunakan untuk penanda waktu terima pesan</p>
+                    </div>
+                  </div>
+
+                  {/* Rich Email Signature Editor & Live Preview */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <label htmlFor="email-signature" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                        <FileSignature className="w-4 h-4 text-primary" />
+                        Tanda Tangan Email Resmi (Signature)
+                      </label>
+                      <span className="text-[11px] text-slate-400">Otomatis disisipkan di email baru</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Editor Textarea */}
+                      <div>
+                        <textarea
+                          id="email-signature"
+                          data-testid="input-signature"
+                          rows={6}
+                          value={signature}
+                          onChange={(e) => setSignature(e.target.value)}
+                          placeholder="Hormat kami,&#10;Nama Anda / Posisi&#10;PT Solusi Hukum Indonesia&#10;www.easylegal.co.id"
+                          className="w-full px-3.5 py-3 bg-slate-50 hover:bg-white focus:bg-white rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-mono leading-relaxed"
+                        />
+                      </div>
+
+                      {/* Live Preview Card */}
+                      <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                            Live Preview Tanda Tangan
+                          </span>
+                          <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-800 leading-relaxed shadow-xs">
+                            <div className="whitespace-pre-line text-xs font-sans text-slate-700">
+                              {signature || (
+                                <span className="text-slate-400 italic">
+                                  Belum ada tanda tangan yang dikonfigurasi...
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2">
+                              <span className="text-[9px] font-bold text-primary tracking-wide">EASYLEGAL CLIENT MAIL</span>
+                              <span className="text-[9px] text-slate-400">• Confirmed Safe Sender</span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-2">
+                          Pratinjau ini akan tampil tepat di bawah isi pesan email yang Anda kirim.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      data-testid="save-general-prefs"
+                      disabled={generalSaving}
+                      className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:opacity-95 disabled:opacity-60 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+                    >
+                      {generalSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                      <span>Simpan Preferensi</span>
+                    </button>
+                  </div>
+                </form>
+              </section>
             </div>
+          )}
 
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5 text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-                <dt className="text-slate-400 font-medium mb-1">Nama Lengkap</dt>
-                <dd className="text-slate-900 font-semibold text-sm">{user?.name || '-'}</dd>
-              </div>
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-                <dt className="text-slate-400 font-medium mb-1">Alamat Email Mailbox</dt>
-                <dd data-testid="account-email" className="text-primary font-semibold text-sm font-mono truncate">
-                  {user?.email || '-'}
-                </dd>
-              </div>
-            </dl>
-          </section>
+          {/* TAB 2: PROFILE TAB */}
+          {activeTab === 'profile' && (
+            <div className="space-y-6">
+              <section className="bg-white rounded-2xl border border-[#DADCE0] p-6 sm:p-7 shadow-xs">
+                <div className="flex items-center gap-3 pb-6 border-b border-slate-100">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-base">
+                    <UserIcon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">Rincian Identitas Mailbox</h2>
+                    <p className="text-xs text-slate-500">
+                      Informasi pelanggan dan langganan akun yang terdaftar pada sistem EasyLegal.
+                    </p>
+                  </div>
+                </div>
 
-          {/* Change Password Card */}
-          <section className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-xs">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                <KeyRound className="w-4 h-4" />
-              </div>
-              <h2 className="text-base font-bold text-slate-900">Ubah Kata Sandi</h2>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5 text-xs">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <dt className="text-slate-400 font-medium mb-1">Nama Lengkap Pemilik</dt>
+                    <dd className="text-slate-900 font-semibold text-sm">{displayName}</dd>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <dt className="text-slate-400 font-medium mb-1">Alamat Email Mailbox Aktif</dt>
+                    <dd className="text-primary font-semibold text-sm font-mono truncate">
+                      {displayEmail}
+                    </dd>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <dt className="text-slate-400 font-medium mb-1">Email Pemulihan / Pribadi</dt>
+                    <dd className="text-slate-700 font-medium text-sm font-mono">
+                      {profileData?.personalEmail || '-'}
+                    </dd>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <dt className="text-slate-400 font-medium mb-1">Organisasi / Perusahaan</dt>
+                    <dd className="text-slate-900 font-semibold text-sm flex items-center gap-1.5">
+                      <Building className="w-3.5 h-3.5 text-slate-400" />
+                      PT Solusi Hukum Indonesia
+                    </dd>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <dt className="text-slate-400 font-medium mb-1">Paket Layanan Mailbox</dt>
+                    <dd className="text-slate-800 font-semibold text-sm">
+                      EasyLegal Enterprise Suite (15 GB)
+                    </dd>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <dt className="text-slate-400 font-medium mb-1">Status Keamanan 2FA</dt>
+                    <dd className="text-sm">
+                      {twoFactorEnabled ? (
+                        <span className="text-emerald-700 font-semibold inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Aktif Terlindungi
+                        </span>
+                      ) : (
+                        <span className="text-slate-500 font-medium">Non-aktif</span>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+
+                {/* Storage usage breakdown */}
+                <div className="mt-6 p-4 rounded-xl bg-slate-50/70 border border-slate-200">
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="w-4 h-4 text-primary" />
+                      <span className="font-semibold text-slate-800">Penyimpanan Cloud Dokumen &amp; Pesan</span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-slate-700">4.2 GB / 15.0 GB</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-2">
+                    <div className="bg-primary h-2 rounded-full w-[28%]" />
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Kapasitas mencakup seluruh pesan inbox, folder berkas legal, serta lampiran terenkripsi.
+                  </p>
+                </div>
+              </section>
             </div>
-            
-            <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-              Pastikan kata sandi baru memenuhi standar keamanan: minimal 8 karakter, kombinasi huruf besar, huruf kecil, dan angka.
-            </p>
+          )}
 
-            {error && (
-              <div
-                data-testid="pw-error"
-                role="alert"
-                className="mb-5 bg-red-50 text-red-700 border border-red-200 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-in fade-in"
-              >
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {ok && (
-              <div
-                data-testid="pw-success"
-                role="status"
-                className="mb-5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-in fade-in"
-              >
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                <span>{ok}</span>
-              </div>
-            )}
-
-            <form onSubmit={submit} className="space-y-4">
-              <div>
-                <label htmlFor="current" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Password Saat Ini
-                </label>
-                <input
-                  id="current"
-                  data-testid="pw-current"
-                  type="password"
-                  required
-                  value={currentPassword}
-                  onChange={(e) => setCurrent(e.target.value)}
-                  placeholder="Masukkan password saat ini"
-                  className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="new" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Password Baru
-                  </label>
-                  <input
-                    id="new"
-                    data-testid="pw-new"
-                    type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNew(e.target.value)}
-                    placeholder="Minimal 8 karakter"
-                    className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  />
+          {/* TAB 3: SECURITY & LOGIN ACTIVITY */}
+          {activeTab === 'security' && (
+            <div className="space-y-6">
+              
+              {/* Security Health & 2FA Card */}
+              <section className="bg-white rounded-2xl border border-[#DADCE0] overflow-hidden shadow-xs">
+                <div className="p-4 sm:p-5 border-b border-slate-100 bg-[#f8f9fa] flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Shield className="w-5 h-5 text-primary" />
+                    <h3 className="text-sm font-bold text-slate-900">Security Health</h3>
+                  </div>
+                  <span className="text-[11px] text-slate-500">Kesehatan Keamanan Akun</span>
                 </div>
 
-                <div>
-                  <label htmlFor="confirm" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Konfirmasi Password Baru
-                  </label>
-                  <input
-                    id="confirm"
-                    data-testid="pw-confirm"
-                    type="password"
-                    required
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    placeholder="Ulangi password baru"
-                    className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  />
-                </div>
-              </div>
+                <div className="p-6 sm:p-7 space-y-6">
+                  {/* Feedback Banner */}
+                  {twoFactorFeedback && (
+                    <div className="p-3.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-medium flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{twoFactorFeedback}</span>
+                    </div>
+                  )}
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  data-testid="pw-submit"
-                  disabled={saving}
-                  className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:opacity-95 disabled:opacity-60 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
-                >
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>Simpan Perubahan Password</span>
-                </button>
-              </div>
-            </form>
-          </section>
+                  {/* 2FA Card */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-900">Two-Factor Authentication (2FA)</h4>
+                        {twoFactorEnabled ? (
+                          <span
+                            data-testid="badge-2fa-on"
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[11px] font-semibold"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Active Protected
+                          </span>
+                        ) : (
+                          <span
+                            data-testid="badge-2fa-off"
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-full text-[11px] font-medium"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                            Currently OFF
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1 max-w-xl leading-relaxed">
+                        Tambahkan lapisan perlindungan ekstra pada akun Anda dengan mewajibkan verifikasi kode OTP setiap kali masuk dari perangkat baru.
+                      </p>
+                    </div>
+
+                    {/* Toggle Switch */}
+                    <button
+                      type="button"
+                      data-testid="toggle-2fa"
+                      onClick={handleToggle2FA}
+                      disabled={toggling2FA}
+                      aria-label="Toggle Two Factor Authentication"
+                      className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                        twoFactorEnabled ? 'bg-primary' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                          twoFactorEnabled ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <hr className="border-slate-100" />
+
+                  {/* Emergency Sign-out Card */}
+                  <div className="bg-red-50/60 border border-red-200/90 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
+                        <ShieldAlert className="w-4 h-4 text-red-600 shrink-0" />
+                        <h4>Sign out of all other sessions</h4>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1 max-w-lg leading-relaxed">
+                        Jika Anda mendeteksi aktivitas mencurigakan atau meninggalkan akun di perangkat publik, segera putuskan sesi login di seluruh perangkat lain kecuali perangkat ini.
+                      </p>
+                      {terminateMsg && (
+                        <p data-testid="terminate-msg" className="text-xs font-semibold text-red-700 mt-2 flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5" />
+                          {terminateMsg}
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      data-testid="terminate-sessions-btn"
+                      onClick={handleTerminateOthers}
+                      disabled={terminatingOthers}
+                      className="whitespace-nowrap px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 disabled:opacity-60"
+                    >
+                      {terminatingOthers ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <LogOut className="w-4 h-4" />
+                      )}
+                      <span>Terminate Sessions</span>
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              {/* Change Password Card */}
+              <section className="bg-white rounded-2xl border border-[#DADCE0] p-6 sm:p-7 shadow-xs">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <KeyRound className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900">Ubah Kata Sandi</h3>
+                </div>
+                
+                <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+                  Pastikan kata sandi baru Anda unik dan memenuhi standar keamanan akun perbankan / legal.
+                </p>
+
+                {pwError && (
+                  <div
+                    data-testid="pw-error"
+                    role="alert"
+                    className="mb-5 bg-red-50 text-red-700 border border-red-200 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-in fade-in"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span>{pwError}</span>
+                  </div>
+                )}
+
+                {pwOk && (
+                  <div
+                    data-testid="pw-success"
+                    role="status"
+                    className="mb-5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-in fade-in"
+                  >
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>{pwOk}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  {/* Current Password */}
+                  <div>
+                    <label htmlFor="current" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Password Saat Ini
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="current"
+                        data-testid="pw-current"
+                        type={showCurrentPw ? 'text' : 'password'}
+                        required
+                        value={currentPassword}
+                        onChange={(e) => setCurrent(e.target.value)}
+                        placeholder="Masukkan password saat ini"
+                        className="w-full px-3.5 py-2.5 pr-10 bg-slate-50/70 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPw(!showCurrentPw)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        tabIndex={-1}
+                      >
+                        {showCurrentPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* New Password */}
+                    <div>
+                      <label htmlFor="new" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Password Baru
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="new"
+                          data-testid="pw-new"
+                          type={showNewPw ? 'text' : 'password'}
+                          required
+                          value={newPassword}
+                          onChange={(e) => setNew(e.target.value)}
+                          placeholder="Minimal 8 karakter"
+                          className="w-full px-3.5 py-2.5 pr-10 bg-slate-50/70 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPw(!showNewPw)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          tabIndex={-1}
+                        >
+                          {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                      <label htmlFor="confirm" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Konfirmasi Password Baru
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="confirm"
+                          data-testid="pw-confirm"
+                          type={showConfirmPw ? 'text' : 'password'}
+                          required
+                          value={confirm}
+                          onChange={(e) => setConfirm(e.target.value)}
+                          placeholder="Ulangi password baru"
+                          className="w-full px-3.5 py-2.5 pr-10 bg-slate-50/70 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPw(!showConfirmPw)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          tabIndex={-1}
+                        >
+                          {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password Requirements Checklist */}
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
+                    <div className="flex items-center gap-1.5 text-slate-700 font-semibold mb-2">
+                      <Info className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Standar Keamanan Kata Sandi</span>
+                    </div>
+                    <ul className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-slate-600">
+                      <li className={`flex items-center gap-1.5 ${hasMinLength ? 'text-emerald-700 font-medium' : ''}`}>
+                        {hasMinLength ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 ml-1 mr-1" />
+                        )}
+                        <span>Min. 8 karakter</span>
+                      </li>
+                      <li className={`flex items-center gap-1.5 ${hasUpper ? 'text-emerald-700 font-medium' : ''}`}>
+                        {hasUpper ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 ml-1 mr-1" />
+                        )}
+                        <span>Huruf besar (A-Z)</span>
+                      </li>
+                      <li className={`flex items-center gap-1.5 ${hasNumberOrSpecial ? 'text-emerald-700 font-medium' : ''}`}>
+                        {hasNumberOrSpecial ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 ml-1 mr-1" />
+                        )}
+                        <span>Angka atau simbol</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      data-testid="pw-submit"
+                      disabled={pwSaving}
+                      className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:opacity-95 disabled:opacity-60 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+                    >
+                      {pwSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                      <span>Simpan Perubahan Password</span>
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              {/* Recent Login Activity Card */}
+              <section className="bg-white rounded-2xl border border-[#DADCE0] overflow-hidden shadow-xs">
+                <div className="p-4 sm:p-5 border-b border-slate-100 bg-[#f8f9fa] flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Monitor className="w-5 h-5 text-slate-700" />
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Recent Login Activity</h3>
+                      <p className="text-[11px] text-slate-500">Daftar sesi dan perangkat yang terhubung ke akun Anda</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={fetchSessions}
+                    className="p-1.5 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-200/60 transition-colors"
+                    title="Segarkan daftar sesi"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingSessions ? 'animate-spin text-primary' : ''}`} />
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {loadingSessions && sessions.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span>Memuat riwayat sesi login...</span>
+                    </div>
+                  ) : sessions.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-xs">
+                      Tidak ada riwayat sesi login tercatat.
+                    </div>
+                  ) : (
+                    sessions.map((session) => {
+                      const DeviceIconComp = getDeviceIcon(session.deviceType);
+                      return (
+                        <div
+                          key={session.id}
+                          className={`p-4 sm:p-5 flex items-start gap-4 transition-colors hover:bg-slate-50/70 relative ${
+                            session.isCurrent ? 'border-l-4 border-l-primary bg-primary/[0.02]' : ''
+                          }`}
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                            <DeviceIconComp className="w-5 h-5" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-sm font-bold text-slate-900 truncate">
+                                {session.deviceName}
+                              </span>
+                              {session.isCurrent && (
+                                <span className="inline-flex items-center px-2 py-0.5 bg-[#FFDAD6] text-[#680003] border border-[#ffb4aa] rounded text-[10px] font-bold uppercase tracking-wider">
+                                  Current Session
+                                </span>
+                              )}
+                              <span className="text-xs text-slate-400 font-mono">
+                                ({session.browser})
+                              </span>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                                {session.location} ({session.ipAddress})
+                              </span>
+                              <span className="hidden sm:inline text-slate-300">•</span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                {session.isCurrent ? (
+                                  <span className="text-emerald-700 font-semibold">Active now</span>
+                                ) : (
+                                  formatSessionTime(session.lastActiveAt)
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* TAB 4: NOTIFICATIONS */}
+          {activeTab === 'notifications' && (
+            <div className="space-y-6">
+              <section className="bg-white rounded-2xl border border-[#DADCE0] p-6 sm:p-7 shadow-xs">
+                <div className="mb-6">
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-primary" />
+                    Pengaturan Notifikasi &amp; Peringatan
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Sesuaikan cara EasyLegal memberi tahu Anda tentang pesan penting dan aktivitas akun.
+                  </p>
+                </div>
+
+                {notifOk && (
+                  <div
+                    data-testid="notif-success"
+                    role="status"
+                    className="mb-5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-in fade-in"
+                  >
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>{notifOk}</span>
+                  </div>
+                )}
+
+                {notifErr && (
+                  <div
+                    data-testid="notif-error"
+                    role="alert"
+                    className="mb-5 bg-red-50 text-red-700 border border-red-200 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-in fade-in"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span>{notifErr}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveNotifications} className="space-y-6">
+                  {/* Desktop Push Alert Toggle */}
+                  <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-slate-50/70 border border-slate-100">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-800">Notifikasi Desktop Browser</h4>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                        Tampilkan banner pop-up browser secara real-time saat email baru masuk ke kotak masuk Anda.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      data-testid="toggle-notify-email"
+                      onClick={() => setNotifyEmail(!notifyEmail)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        notifyEmail ? 'bg-primary' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          notifyEmail ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Audio Chime Alert Toggle */}
+                  <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-slate-50/70 border border-slate-100">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-800">Peringatan Suara (Audio Chime)</h4>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                        Mainkan nada notifikasi yang halus dan elegan ketika email atau dokumen legal baru diterima.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      data-testid="toggle-notify-sound"
+                      onClick={() => setNotifySound(!notifySound)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        notifySound ? 'bg-primary' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          notifySound ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      data-testid="save-notification-prefs"
+                      disabled={notifSaving}
+                      className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:opacity-95 disabled:opacity-60 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+                    >
+                      {notifSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                      <span>Simpan Preferensi Notifikasi</span>
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </div>
+          )}
+
         </div>
       </div>
     </main>
