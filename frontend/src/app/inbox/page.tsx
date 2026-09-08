@@ -8,6 +8,7 @@ import { id as localeId } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { ComposeModal, Draft } from '@/components/compose';
+import { AppLauncher } from '@/components/app-launcher';
 import {
   Star,
   Mail,
@@ -32,6 +33,7 @@ import {
   ChevronDown,
   HardDrive,
   Loader2,
+  Ticket,
 } from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
 
@@ -288,6 +290,9 @@ function Inbox_() {
             <Settings className="w-4 h-4" />
           </button>
 
+          {/* Google-style 9-dots App Launcher */}
+          <AppLauncher currentApp="mail" />
+
           {/* User Pill */}
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200/80">
             <div className="flex flex-col text-right hidden sm:block">
@@ -403,6 +408,57 @@ function Inbox_() {
                 );
               })}
             </ul>
+
+            {/* Quick Cross-App Navigation */}
+            <div className="pt-3 mt-3 border-t border-slate-200/80">
+              <div className="px-3.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Aplikasi EasyLegal
+              </div>
+              <ul className="flex flex-col gap-0.5">
+                <li>
+                  <button
+                    type="button"
+                    data-testid="nav-sidebar-documents"
+                    onClick={() => {
+                      setSidebar(false);
+                      router.push('/documents');
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 transition-all group"
+                  >
+                    <FileText className="w-4 h-4 text-slate-500 group-hover:text-blue-600 transition-colors shrink-0" />
+                    <span className="flex-1 text-left">Legal Documents</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    data-testid="nav-sidebar-support"
+                    onClick={() => {
+                      setSidebar(false);
+                      router.push('/support');
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 transition-all group"
+                  >
+                    <Ticket className="w-4 h-4 text-slate-500 group-hover:text-emerald-600 transition-colors shrink-0" />
+                    <span className="flex-1 text-left">Support Desk</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    data-testid="nav-sidebar-settings"
+                    onClick={() => {
+                      setSidebar(false);
+                      router.push('/settings');
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 transition-all group"
+                  >
+                    <Settings className="w-4 h-4 text-slate-500 group-hover:text-slate-900 transition-colors shrink-0" />
+                    <span className="flex-1 text-left">Pengaturan Akun</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
           </nav>
 
           {/* Sidebar Footer: Hostinger Storage Status */}
