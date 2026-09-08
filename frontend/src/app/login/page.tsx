@@ -117,6 +117,45 @@ export default function LoginPage() {
             {loading ? 'Memproses...' : 'Masuk'}
           </button>
         </form>
+
+        {/* Quick Demo Credentials Helper */}
+        <div className="w-full mt-lg pt-md border-t border-surface-container-highest flex flex-col gap-2">
+          <p className="text-xs text-on-surface-variant text-center font-medium">Akun Demo (Klik untuk isi cepat):</p>
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              data-testid="fill-demo-customer"
+              onClick={() => {
+                setTab('customer');
+                setEmail('budi@clienteasylegal.co.id');
+                setPassword('Customer123!');
+                setError('');
+              }}
+              className="text-left text-xs p-2 rounded-lg bg-surface hover:bg-surface-container transition-colors border border-outline-variant/50 flex items-center justify-between"
+            >
+              <div>
+                <span className="font-semibold text-primary">Customer:</span> budi@clienteasylegal.co.id
+              </div>
+              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">Auto-fill</span>
+            </button>
+            <button
+              type="button"
+              data-testid="fill-demo-admin"
+              onClick={() => {
+                setTab('admin');
+                setEmail('admin@clienteasylegal.co.id');
+                setPassword('Admin123!');
+                setError('');
+              }}
+              className="text-left text-xs p-2 rounded-lg bg-surface hover:bg-surface-container transition-colors border border-outline-variant/50 flex items-center justify-between"
+            >
+              <div>
+                <span className="font-semibold text-primary">Admin:</span> admin@clienteasylegal.co.id
+              </div>
+              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">Auto-fill</span>
+            </button>
+          </div>
+        </div>
       </div>
     </main>
   );
