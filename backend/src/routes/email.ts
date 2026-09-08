@@ -25,7 +25,7 @@ export default (prisma: PrismaClient) => {
   router.get('/folders', async (req: Request, res: Response) => {
     try {
       const mailboxId = req.user!.id;
-      const folders = await Promise.all(
+      const folders: Array<{ folder: string; total: number; unread: number }> = await Promise.all(
         FOLDERS.map(async (folder) => {
           const where = { mailboxId, folder, isDeleted: folder === 'Trash' };
           const [total, unread] = await Promise.all([
@@ -35,6 +35,10 @@ export default (prisma: PrismaClient) => {
           return { folder, total, unread };
         })
       );
+      const starredCount = await prisma.messageCache.count({
+        where: { mailboxId, isStarred: true, isDeleted: false },
+      });
+      folders.push({ folder: 'Starred', total: starredCount, unread: 0 });
       res.json({ data: folders });
     } catch (error) {
       console.error('Folders error:', error);
@@ -51,7 +55,9 @@ export default (prisma: PrismaClient) => {
       const folder = (req.query.folder as string) || 'INBOX';
       const q = (req.query.q as string)?.trim();
 
-      const where: any = { mailboxId, folder, isDeleted: folder === 'Trash' };
+      const where: any = folder === 'Starred'
+        ? { mailboxId, isStarred: true, isDeleted: false }
+        : { mailboxId, folder, isDeleted: folder === 'Trash' };
       if (q) {
         where.OR = [
           { subject: { contains: q } },

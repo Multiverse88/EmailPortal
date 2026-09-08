@@ -29,6 +29,7 @@ interface Message {
 
 const FOLDER_META = [
   { key: 'INBOX', label: 'Inbox', icon: 'inbox' },
+  { key: 'Starred', label: 'Berbintang', icon: 'star' },
   { key: 'Sent', label: 'Sent', icon: 'send' },
   { key: 'Drafts', label: 'Drafts', icon: 'draft' },
   { key: 'Trash', label: 'Trash', icon: 'delete' },
@@ -203,7 +204,7 @@ function Inbox_() {
             <ul className="flex flex-col gap-[2px]">
               {FOLDER_META.map((f) => {
                 const meta = folders.data?.data?.find((x) => x.folder === f.key);
-                const unread = meta?.unread ?? 0;
+                const count = f.key === 'Starred' ? (meta?.total ?? 0) : (meta?.unread ?? 0);
                 const isActive = folder === f.key;
                 return (
                   <li key={f.key}>
@@ -218,9 +219,9 @@ function Inbox_() {
                     >
                       <span className={`material-symbols-outlined text-[20px] ${isActive ? 'fill' : ''}`}>{f.icon}</span>
                       <span className="flex-1 text-left">{f.label}</span>
-                      {unread > 0 && (
+                      {count > 0 && (
                         <span data-testid={`unread-${f.key}`} className="text-xs rounded-full px-2 py-0.5 font-bold bg-primary text-on-primary">
-                          {unread}
+                          {count}
                         </span>
                       )}
                     </button>
