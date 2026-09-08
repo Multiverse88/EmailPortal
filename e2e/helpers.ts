@@ -1,8 +1,8 @@
 import { execSync } from 'node:child_process';
 import { Page, expect } from '@playwright/test';
 
-export const CUSTOMER = { email: 'budi@easylegal.co.id', password: 'Customer123!' };
-export const ADMIN = { email: 'admin@easylegal.co.id', password: 'Admin123!' };
+export const CUSTOMER = { email: 'budi@clienteasylegal.co.id', password: 'Customer123!' };
+export const ADMIN = { email: 'admin@clienteasylegal.co.id', password: 'Admin123!' };
 
 // Specs share one SQLite file and mutate it (send, delete, mark read). Each spec
 // file resets to the seed so counts are asserted against a known dataset.

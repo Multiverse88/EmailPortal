@@ -143,7 +143,7 @@ pm2 start frontend/.next/production --name email-frontend  # or use nginx
 # Nginx config example:
 # server {
 #     listen 80;
-#     server_name mail.easylegal.co.id;
+#     server_name mail.clienteasylegal.co.id;
 #     location / {
 #         proxy_pass http://localhost:3000;
 #     }

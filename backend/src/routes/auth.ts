@@ -101,7 +101,7 @@ export default (prisma: PrismaClient) => {
         return res.status(409).json({ error: `Kuota mailbox penuh (${used}/${quota}). Upgrade paket dulu.` });
       }
 
-      const domain = process.env.HOSTINGER_DOMAIN || 'easylegal.co.id';
+      const domain = process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id';
       const mailboxAddress = `${localPart.toLowerCase()}@${domain}`;
 
       if (await prisma.customer.findUnique({ where: { mailboxAddress } })) {

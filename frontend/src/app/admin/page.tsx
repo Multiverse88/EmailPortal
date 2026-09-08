@@ -329,7 +329,7 @@ function NewMailboxForm({
                 className="flex-1 px-md py-sm bg-surface rounded-l-xl border border-outline-variant text-body-text text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
               />
               <span className="px-md py-sm bg-surface-container border border-l-0 border-outline-variant rounded-r-xl text-sm text-on-surface-variant">
-                @easylegal.co.id
+                @{process.env.NEXT_PUBLIC_HOSTINGER_DOMAIN || 'clienteasylegal.co.id'}
               </span>
             </div>
           </div>

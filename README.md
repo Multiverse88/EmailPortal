@@ -71,7 +71,7 @@ npm run test:e2e        # Playwright, build + jalankan kedua server otomatis
 npm run seed            # reset database ke data contoh
 ```
 
-Akun contoh: `admin@easylegal.co.id / Admin123!` dan `budi@easylegal.co.id / Customer123!`
+Akun contoh: `admin@clienteasylegal.co.id / Admin123!` dan `budi@clienteasylegal.co.id / Customer123!`
 
 ## Catatan implementasi
 

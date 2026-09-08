@@ -26,10 +26,12 @@ async function main() {
   await prisma.customer.deleteMany();
   await prisma.adminUser.deleteMany();
 
+  const domain = process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id';
+
   await prisma.adminUser.create({
     data: {
       name: 'Admin Utama',
-      email: 'admin@easylegal.co.id',
+      email: `admin@${domain}`,
       passwordHash: await bcrypt.hash('Admin123!', 10),
       role: 'superadmin',
     },
@@ -39,7 +41,7 @@ async function main() {
     data: {
       name: 'Budi Setiawan',
       personalEmail: 'budi.pribadi@gmail.com',
-      mailboxAddress: 'budi@easylegal.co.id',
+      mailboxAddress: `budi@${domain}`,
       passwordEnc: encrypt('Customer123!'),
       status: 'active',
     },
@@ -49,7 +51,7 @@ async function main() {
     data: {
       name: 'Siti Rahayu',
       personalEmail: 'siti.pribadi@gmail.com',
-      mailboxAddress: 'siti@easylegal.co.id',
+      mailboxAddress: `siti@${domain}`,
       passwordEnc: encrypt('Customer123!'),
       status: 'inactive',
     },
@@ -87,7 +89,7 @@ async function main() {
     },
   });
 
-  console.log('✓ Seeded: admin@easylegal.co.id / Admin123!  |  budi@easylegal.co.id / Customer123!');
+  console.log(`✓ Seeded: admin@${domain} / Admin123!  |  budi@${domain} / Customer123!`);
 }
 
 main().finally(() => prisma.$disconnect());

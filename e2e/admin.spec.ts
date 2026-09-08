@@ -21,7 +21,7 @@ test.describe('Admin mailbox', () => {
     await page.getByTestId('form-localpart').fill(local);
     await page.getByTestId('form-submit').click();
 
-    await expect(page.getByTestId('created-credentials')).toContainText(`${local}@easylegal.co.id`);
+    await expect(page.getByTestId('created-credentials')).toContainText(`${local}@clienteasylegal.co.id`);
     await expect(page.getByTestId('temp-password')).not.toBeEmpty();
     await expect(page.getByTestId('mailbox-row').filter({ hasText: local })).toHaveCount(1);
   });
@@ -45,7 +45,7 @@ test.describe('Admin mailbox', () => {
   });
 
   test('nonaktifkan lalu aktifkan kembali mailbox', async ({ page }) => {
-    const row = page.getByTestId('mailbox-row').filter({ hasText: 'budi@easylegal.co.id' });
+    const row = page.getByTestId('mailbox-row').filter({ hasText: 'budi@clienteasylegal.co.id' });
     await row.getByTestId('deactivate').click();
     await expect(row).toContainText('inactive');
     await row.getByTestId('reactivate').click();
@@ -57,7 +57,7 @@ test.describe('Admin mailbox', () => {
     // user straight back to their dashboard — so drop the session first.
     await page.getByTestId('logout').click();
     await expect(page).toHaveURL(/\/login/);
-    await page.getByTestId('email').fill('siti@easylegal.co.id');
+    await page.getByTestId('email').fill('siti@clienteasylegal.co.id');
     await page.getByTestId('password').fill('Customer123!');
     await page.getByTestId('submit').click();
     await expect(page.getByTestId('login-error')).toBeVisible();
