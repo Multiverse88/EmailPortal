@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EasyLegal - Support &amp; Help Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#680003",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-dim": "#d9dadb",
+                        "surface": "#f8f9fa",
+                        "secondary-fixed-dim": "#c8c6c3",
+                        "on-tertiary-container": "#b5b4b8",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#191c1d",
+                        "inverse-primary": "#ffb4aa",
+                        "on-primary-container": "#ff998c",
+                        "secondary": "#5e5e5c",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed": "#410001",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#2f3033",
+                        "on-secondary-container": "#636360",
+                        "tertiary-container": "#46464a",
+                        "on-secondary-fixed-variant": "#474744",
+                        "surface-container-low": "#f3f4f5",
+                        "on-secondary-fixed": "#1b1c1a",
+                        "primary-container": "#930006",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed-dim": "#ffb4aa",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#930006",
+                        "on-error-container": "#93000a",
+                        "border-subtle": "#DADCE0",
+                        "surface-bright": "#f8f9fa",
+                        "secondary-fixed": "#e4e2de",
+                        "inverse-surface": "#2e3132",
+                        "legal-red-container": "#FFDAD6",
+                        "surface-variant": "#e1e3e4",
+                        "background": "#f8f9fa",
+                        "on-background": "#191c1d",
+                        "on-surface-variant": "#5b403d",
+                        "tertiary-fixed-dim": "#c7c6ca",
+                        "surface-tint": "#b6231c",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-tertiary-fixed-variant": "#46474a",
+                        "primary-fixed": "#ffdad5",
+                        "surface-cream": "#FDFCFB",
+                        "outline-variant": "#e3beb9",
+                        "tertiary-fixed": "#e3e2e6",
+                        "on-tertiary-fixed": "#1a1b1e",
+                        "secondary-container": "#e1dfdc",
+                        "inverse-on-surface": "#f0f1f2",
+                        "surface-container": "#edeeef",
+                        "outline": "#8f706c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-width": "256px",
+                        "xl": "32px",
+                        "lg": "24px",
+                        "gutter": "16px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "base": "8px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "body-text-lg": ["Inter"],
+                        "email-subject": ["Inter"],
+                        "label-button": ["Inter"],
+                        "body-text": ["Inter"],
+                        "page-title": ["Inter"],
+                        "label-secondary": ["Inter"],
+                        "page-title-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-text-lg": ["15px", { "lineHeight": "26px", "fontWeight": "400" }],
+                        "email-subject": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "label-button": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-text": ["14px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "page-title": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-secondary": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "page-title-mobile": ["20px", { "lineHeight": "26px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-text flex h-screen overflow-hidden antialiased">
+<!-- SideNavBar (Suppressed as this is a focused support screen context, but keeping it visible to follow MailPortal/EasyLegal global nav requirement unless specified as pure transaction. Assuming Support is a main area or accessed via global nav, but user intent is a sub-page. Wait, rule says: "Automatic Suppression: You MUST exclude the navigation shell if the page intent is Task-Focused". A support center could be a main destination. Let's include it but map it correctly.) -->
+<nav aria-label="Sidebar Navigation" class="hidden md:flex flex-col gap-xs py-md pr-md w-sidebar_width h-full bg-background dark:bg-background border-r border-border-subtle">
+<!-- Logo/Header Area -->
+<div class="px-md mb-lg flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+<span class="text-page-title font-page-title text-primary">EasyLegal</span>
+</div>
+<!-- Compose CTA -->
+<div class="px-sm mb-md">
+<button class="flex items-center gap-sm bg-primary-container text-on-primary-container px-lg py-md rounded-lg shadow-sm hover:shadow-md transition-shadow w-full">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+<span class="font-label-button text-label-button">New Ticket</span>
+</button>
+</div>
+<!-- Navigation Links -->
+<ul class="flex flex-col gap-xs px-sm flex-grow">
+<li>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">inbox</span>
+<span class="font-label-button text-label-button">Inbox</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container rounded-r-full font-bold transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">support_agent</span>
+<span class="font-label-button text-label-button">Support</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-button text-label-button">Documents</span>
+</a>
+</li>
+</ul>
+<!-- Footer Navigation Links -->
+<ul class="flex flex-col gap-xs px-sm mt-auto pb-md">
+<li>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-button text-label-button">Settings</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full bg-surface-bright overflow-y-auto">
+<!-- TopNavBar (Mobile only or Global Search area) -->
+<header class="flex md:hidden items-center justify-between px-md py-sm w-full h-16 bg-background border-b border-border-subtle sticky top-0 z-10">
+<div class="flex items-center gap-sm">
+<button class="text-on-surface-variant p-sm rounded-full hover:bg-surface-variant/50 transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="text-page-title-mobile font-page-title-mobile text-on-surface">Support</span>
+</div>
+<div class="flex items-center gap-sm">
+<button class="text-on-surface-variant p-sm rounded-full hover:bg-surface-variant/50 transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+<img alt="User profile" class="w-8 h-8 rounded-full object-cover border border-border-subtle" data-alt="A small circular profile picture of a professional user in a legal software context, neutral lighting, corporate minimalist style, ensuring high contrast against a light background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCv24h3NEcTrE5zc49Sj_vCJjzDy5TNLbxyD-fR6XeGgzBM0TohQemyogqi8HWrgr28mZyyYYCLYmM9yhAbQU2u7euMfYAFvcP9bLkOWjBt8CyEC7JJbfVpopUECByJT_3ixkOJ4seNLICa9o9XdI_c0snVZTGYmc3uRJFRKSqnVpdTflu1__ckWmIPAXWgQh4pc2pThtTXjBF2qh1KPj0kGHv3lXHd_5j0Tk-ysBhVtJbHPnae1fXK-Q"/>
+</div>
+</header>
+<!-- Page Header (Desktop) -->
+<div class="hidden md:flex items-center justify-between px-xl py-lg sticky top-0 bg-surface-bright/90 backdrop-blur-md z-10 border-b border-border-subtle">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface">Support &amp; Help Center</h1>
+<p class="font-body-text text-body-text text-on-surface-variant mt-1">Manage your inquiries and find answers.</p>
+</div>
+<div class="flex items-center gap-md">
+<div class="relative max-w-md w-full">
+<span class="material-symbols-outlined absolute left-sm top-1/2 transform -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-xl pr-md py-sm bg-surface-container-low border border-border-subtle rounded-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-text text-body-text text-on-surface transition-colors placeholder:text-on-surface-variant/70" placeholder="Search knowledge base..." type="text"/>
+</div>
+</div>
+</div>
+<!-- Content Canvas -->
+<div class="p-md md:p-xl flex-1 flex flex-col gap-lg max-w-6xl mx-auto w-full">
+<!-- Quick Actions Banner -->
+<section class="bg-surface-container-lowest border border-border-subtle rounded-xl p-lg flex flex-col md:flex-row items-center justify-between gap-md shadow-sm">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-legal-red-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">forum</span>
+</div>
+<div>
+<h2 class="font-email-subject text-email-subject text-on-surface">Need immediate assistance?</h2>
+<p class="font-body-text text-body-text text-on-surface-variant">Our legal support team is available 24/7.</p>
+</div>
+</div>
+<button class="bg-primary text-on-primary font-label-button text-label-button px-lg py-sm rounded-full hover:bg-primary-container transition-colors shadow-sm whitespace-nowrap w-full md:w-auto">
+                    Contact Live Support
+                </button>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<!-- Active Tickets List -->
+<section class="lg:col-span-2 flex flex-col gap-md">
+<div class="flex items-center justify-between">
+<h2 class="font-email-subject text-email-subject text-on-surface uppercase tracking-wider">Active Tickets</h2>
+<button class="text-primary font-label-button text-label-button hover:text-primary-container transition-colors flex items-center gap-xs">
+                            View All <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl overflow-hidden shadow-sm">
+<!-- Ticket Item 1 -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between p-md border-b border-border-subtle hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start gap-md mb-sm sm:mb-0">
+<div class="w-1 h-12 bg-primary rounded-full hidden sm:block"></div>
+<div>
+<div class="flex items-center gap-sm mb-xs">
+<span class="font-email-subject text-email-subject text-on-surface group-hover:text-primary transition-colors">Document Review Delay</span>
+<span class="px-sm py-0.5 rounded-full bg-legal-red-container text-on-primary-fixed-variant font-label-secondary text-label-secondary">Open</span>
+</div>
+<p class="font-body-text text-body-text text-on-surface-variant truncate max-w-md">Inquiry regarding the timeline for the NDA review submitted on Oct 24.</p>
+</div>
+</div>
+<div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center w-full sm:w-auto text-on-surface-variant">
+<span class="font-label-secondary text-label-secondary">Ticket #4920</span>
+<span class="font-label-secondary text-label-secondary">Updated 2h ago</span>
+</div>
+</div>
+<!-- Ticket Item 2 -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between p-md border-b border-border-subtle hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start gap-md mb-sm sm:mb-0">
+<div class="w-1 h-12 bg-surface-dim rounded-full hidden sm:block"></div>
+<div>
+<div class="flex items-center gap-sm mb-xs">
+<span class="font-email-subject text-email-subject text-on-surface">Billing Discrepancy - Invoice Q3</span>
+<span class="px-sm py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-secondary text-label-secondary">Resolved</span>
+</div>
+<p class="font-body-text text-body-text text-on-surface-variant truncate max-w-md">Clarification needed on line item 4 for consulting hours.</p>
+</div>
+</div>
+<div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center w-full sm:w-auto text-on-surface-variant">
+<span class="font-label-secondary text-label-secondary">Ticket #4811</span>
+<span class="font-label-secondary text-label-secondary">Oct 20, 2023</span>
+</div>
+</div>
+<!-- Ticket Item 3 -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between p-md hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start gap-md mb-sm sm:mb-0">
+<div class="w-1 h-12 bg-primary rounded-full hidden sm:block"></div>
+<div>
+<div class="flex items-center gap-sm mb-xs">
+<span class="font-email-subject text-email-subject text-on-surface group-hover:text-primary transition-colors">Access Revocation Error</span>
+<span class="px-sm py-0.5 rounded-full bg-legal-red-container text-on-primary-fixed-variant font-label-secondary text-label-secondary">Open</span>
+<span class="px-sm py-0.5 rounded-full border border-primary text-primary font-label-secondary text-label-secondary">Urgent</span>
+</div>
+<p class="font-body-text text-body-text text-on-surface-variant truncate max-w-md">Former employee still has access to shared corporate governance folders.</p>
+</div>
+</div>
+<div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center w-full sm:w-auto text-on-surface-variant">
+<span class="font-label-secondary text-label-secondary">Ticket #4925</span>
+<span class="font-label-secondary text-label-secondary">10 mins ago</span>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Sidebar Section -->
+<aside class="lg:col-span-1 flex flex-col gap-md">
+<h2 class="font-email-subject text-email-subject text-on-surface uppercase tracking-wider">Frequently Asked Questions</h2>
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-md shadow-sm flex flex-col gap-sm">
+<!-- FAQ Item 1 -->
+<details class="group border-b border-border-subtle pb-sm last:border-0 last:pb-0">
+<summary class="flex items-center justify-between font-email-subject text-email-subject text-on-surface cursor-pointer list-none py-sm hover:text-primary transition-colors">
+                                How do I securely share documents?
+                                <span class="material-symbols-outlined text-on-surface-variant group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<p class="font-body-text text-body-text text-on-surface-variant mt-sm pb-sm">
+                                Navigate to the 'Documents' tab, select the file, and use the 'Share via Secure Link' option to generate an encrypted access portal.
+                            </p>
+</details>
+<!-- FAQ Item 2 -->
+<details class="group border-b border-border-subtle pb-sm last:border-0 last:pb-0">
+<summary class="flex items-center justify-between font-email-subject text-email-subject text-on-surface cursor-pointer list-none py-sm hover:text-primary transition-colors">
+                                What is the typical response time?
+                                <span class="material-symbols-outlined text-on-surface-variant group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<p class="font-body-text text-body-text text-on-surface-variant mt-sm pb-sm">
+                                Standard inquiries are addressed within 24 business hours. Urgent tickets marked appropriately receive attention within 4 hours.
+                            </p>
+</details>
+<!-- FAQ Item 3 -->
+<details class="group border-b border-border-subtle pb-sm last:border-0 last:pb-0">
+<summary class="flex items-center justify-between font-email-subject text-email-subject text-on-surface cursor-pointer list-none py-sm hover:text-primary transition-colors">
+                                Can I update a resolved ticket?
+                                <span class="material-symbols-outlined text-on-surface-variant group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<p class="font-body-text text-body-text text-on-surface-variant mt-sm pb-sm">
+                                Resolved tickets cannot be edited. Please create a new ticket and reference the old ticket number if the issue persists.
+                            </p>
+</details>
+</div>
+<!-- Promo/Resource Card -->
+<div class="mt-sm rounded-xl overflow-hidden relative min-h-[160px] flex flex-col justify-end p-md border border-border-subtle">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full z-0 opacity-20" data-alt="A modern minimalist office interior with a desk, blurred background, corporate legal aesthetic, soft natural lighting coming from a window, high quality architectural photography." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDFo5W6PcvqDznQb77F3hYFh7PUBlrOL3x-OHXgb_oC_OZp2yqgbmQfNKIm2NMV_1SP--OhfLr0cwwlvMeeY9tcsIr7wwoib_wXS6Djz798CeiwkUMygoZJUiw5DTI_axwlLHn7zR1Q8s9h9Zjv4BQcbFHSL_pjNi6dZWsoMHQsQcqTSjUgam6KGwfeoZLdzU0aNifrrjM070tIxKGz65v-jyIs7D9nS9T0XXBaOuaQLHweupRJ5v44yw')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent z-0"></div>
+<div class="relative z-10">
+<h3 class="font-email-subject text-email-subject text-on-surface mb-xs">Knowledge Base</h3>
+<p class="font-label-secondary text-label-secondary text-on-surface-variant mb-sm">Browse our comprehensive library of articles and tutorials.</p>
+<button class="bg-surface-cream border border-primary text-primary font-label-button text-label-button px-md py-sm rounded-lg hover:bg-legal-red-container transition-colors w-full">
+                                Browse Articles
+                            </button>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</main>
+</body></html>

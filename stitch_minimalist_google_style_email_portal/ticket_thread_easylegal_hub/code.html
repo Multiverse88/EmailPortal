@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Support Ticket - Billing Discrepancy</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed": "#ffdad5",
+                      "surface-bright": "#f8f9fa",
+                      "secondary-fixed": "#e4e2de",
+                      "primary": "#680003",
+                      "on-background": "#191c1d",
+                      "on-tertiary-fixed-variant": "#46474a",
+                      "surface-container-highest": "#e1e3e4",
+                      "on-error-container": "#93000a",
+                      "background": "#f8f9fa",
+                      "on-surface": "#191c1d",
+                      "secondary-container": "#e1dfdc",
+                      "legal-red-container": "#FFDAD6",
+                      "error-container": "#ffdad6",
+                      "surface-container-high": "#e7e8e9",
+                      "secondary-fixed-dim": "#c8c6c3",
+                      "inverse-on-surface": "#f0f1f2",
+                      "on-secondary-fixed-variant": "#474744",
+                      "on-secondary": "#ffffff",
+                      "outline": "#8f706c",
+                      "on-tertiary": "#ffffff",
+                      "border-subtle": "#DADCE0",
+                      "secondary": "#5e5e5c",
+                      "surface-cream": "#FDFCFB",
+                      "on-primary-fixed-variant": "#930006",
+                      "primary-fixed-dim": "#ffb4aa",
+                      "tertiary-fixed": "#e3e2e6",
+                      "on-tertiary-fixed": "#1a1b1e",
+                      "surface-container-low": "#f3f4f5",
+                      "on-tertiary-container": "#b5b4b8",
+                      "on-secondary-container": "#636360",
+                      "surface-container": "#edeeef",
+                      "on-surface-variant": "#5b403d",
+                      "outline-variant": "#e3beb9",
+                      "surface-variant": "#e1e3e4",
+                      "surface-dim": "#d9dadb",
+                      "on-secondary-fixed": "#1b1c1a",
+                      "surface-tint": "#b6231c",
+                      "on-primary-fixed": "#410001",
+                      "primary-container": "#930006",
+                      "inverse-surface": "#2e3132",
+                      "tertiary-fixed-dim": "#c7c6ca",
+                      "inverse-primary": "#ffb4aa",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary-container": "#ff998c",
+                      "on-primary": "#ffffff",
+                      "surface": "#f8f9fa",
+                      "tertiary-container": "#46464a",
+                      "tertiary": "#2f3033",
+                      "on-error": "#ffffff",
+                      "error": "#ba1a1a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "sidebar-width": "256px",
+                      "md": "16px",
+                      "base": "8px",
+                      "xl": "32px",
+                      "sm": "8px",
+                      "gutter": "16px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "email-subject": [
+                              "Inter"
+                      ],
+                      "body-text": [
+                              "Inter"
+                      ],
+                      "page-title": [
+                              "Inter"
+                      ],
+                      "body-text-lg": [
+                              "Inter"
+                      ],
+                      "label-secondary": [
+                              "Inter"
+                      ],
+                      "label-button": [
+                              "Inter"
+                      ],
+                      "page-title-mobile": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "email-subject": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-text": [
+                              "14px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "page-title": [
+                              "22px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-text-lg": [
+                              "15px",
+                              {
+                                      "lineHeight": "26px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-secondary": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "page-title-mobile": [
+                              "20px",
+                              {
+                                      "lineHeight": "26px",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-surface h-full flex flex-col md:flex-row antialiased overflow-hidden">
+<!-- TopNavBar (Mobile) -->
+<header class="md:hidden flex items-center justify-between px-md py-sm w-full h-16 bg-background border-b border-border-subtle z-50">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer active:opacity-80">menu</span>
+<span class="text-page-title-mobile font-page-title-mobile text-on-surface">MailPortal</span>
+</div>
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer active:opacity-80">search</span>
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A small, professional portrait photograph of a confident individual in a minimalist, well-lit studio environment. The lighting is soft and neutral, enhancing features without harsh shadows, consistent with a high-end corporate identity. The background is a clean, muted white. The mood is approachable yet authoritative." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDW9Sx-b04WFtu6MAm3B7lFwNmAy_JNl_8XXnHknAgAJ-OumakDdTXc8g8223PvFxaULd5MuQ42OAYDy5ZbwMS3phOiDO1ksbmvrpqY8Q6SNCF8hZ-28jGCWTcBNTavyiag1izlfIz-hrSS1-yQCg7KQ29S8gYaEOwGPoenN-C9329DUeZYAr9NlmdjxcaFYAOc6fUxa8ExDazPD3id40lb5s-8RiSMBaf0G1a2dQuVd-JavYYN5NWzTA"/>
+</div>
+</header>
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex flex-col gap-xs py-md pr-md w-sidebar_width h-screen bg-background border-r border-border-subtle flex-shrink-0">
+<!-- Brand / Search -->
+<div class="px-lg pb-md flex flex-col gap-md">
+<div class="text-page-title font-page-title text-primary">MailPortal</div>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-xl pr-sm py-sm bg-surface-container rounded-full text-body-text font-body-text focus:outline-none focus:ring-1 focus:ring-primary border-transparent border transition-all" placeholder="Search..." type="text"/>
+</div>
+</div>
+<!-- Compose CTA -->
+<div class="px-md pb-md">
+<button class="w-full flex items-center justify-center gap-sm bg-primary-container text-on-primary-container rounded-full py-sm font-label-button text-label-button shadow-sm hover:shadow transition-shadow">
+<span class="material-symbols-outlined">edit</span>
+                Compose
+            </button>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex-1 overflow-y-auto">
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">inbox</span>
+                Inbox
+            </a>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">star</span>
+                Starred
+            </a>
+<a class="flex items-center gap-md px-lg py-sm bg-secondary-container text-on-secondary-container rounded-r-full font-label-button text-label-button font-bold transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">forum</span>
+                Support Tickets
+            </a>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">schedule</span>
+                Snoozed
+            </a>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">send</span>
+                Sent
+            </a>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">draft</span>
+                Drafts
+            </a>
+</div>
+<!-- Footer Tabs -->
+<div class="pt-md border-t border-border-subtle">
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">label</span>
+                Labels
+            </a>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-[calc(100vh-64px)] md:h-screen bg-surface-cream relative">
+<!-- Ticket Header -->
+<header class="flex items-start justify-between px-md md:px-xl py-lg bg-surface-cream border-b border-border-subtle sticky top-0 z-10">
+<div class="flex flex-col gap-xs">
+<div class="flex items-center gap-sm">
+<span class="bg-error-container text-on-error-container font-label-secondary text-label-secondary px-2 py-1 rounded-full uppercase tracking-wide font-semibold shadow-sm">Urgent</span>
+<span class="bg-surface-container-high text-on-surface font-label-secondary text-label-secondary px-2 py-1 rounded-full uppercase tracking-wide border border-border-subtle">Open</span>
+<span class="text-on-surface-variant font-label-secondary text-label-secondary ml-sm">Ticket #TK-9824</span>
+</div>
+<h1 class="text-page-title-mobile md:text-page-title font-page-title-mobile md:font-page-title text-on-surface mt-sm">Billing Discrepancy - Invoice Q3</h1>
+<p class="text-body-text font-body-text text-on-surface-variant">Last updated: 10 mins ago</p>
+</div>
+<div class="flex items-center gap-md">
+<button class="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface-variant" title="Print">
+<span class="material-symbols-outlined">print</span>
+</button>
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface-variant" title="More Options">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+<button class="hidden md:flex items-center gap-sm px-md py-sm bg-surface-container rounded-lg font-label-button text-label-button text-on-surface hover:bg-surface-variant transition-colors border border-border-subtle">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                    Close Ticket
+                </button>
+</div>
+</header>
+<!-- Conversation Thread -->
+<div class="flex-1 overflow-y-auto px-md md:px-xl py-lg flex flex-col gap-lg bg-surface-cream">
+<!-- Customer Message -->
+<div class="flex items-start gap-md max-w-3xl">
+<img class="w-10 h-10 rounded-full object-cover shadow-sm flex-shrink-0 mt-1" data-alt="A small, professional portrait photograph of a confident individual in a minimalist, well-lit studio environment. The lighting is soft and neutral, enhancing features without harsh shadows, consistent with a high-end corporate identity. The background is a clean, muted white. The mood is approachable yet authoritative." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyfwEe5tyBC5QZ9LfDreffYB57FylAKa3DHcwPogDxbB37OAu_tUha4ohzABZvtrYJ9j-o92R_Z2GLP4wfVr16F2mWDLINJ1Jzj0Y1oqoT6HdvAyElZ520xQaHbbePybgbOdNnEC0TrtwmX3PoSg-7aK_OnHHXpguqxysmeJDyrIRRAw9yZEN0h0i3nqWI6bKAH6kcUm9HFbaXptspGKCv_xFRLANgLEW48m2Tj7qTpk8E-06wH0Gn5A"/>
+<div class="flex flex-col gap-xs">
+<div class="flex items-baseline gap-sm">
+<span class="font-label-button text-label-button text-on-surface font-semibold">Sarah Jenkins</span>
+<span class="font-label-secondary text-label-secondary text-on-surface-variant">Client</span>
+<span class="font-label-secondary text-label-secondary text-on-surface-variant ml-auto md:ml-md">Oct 24, 09:15 AM</span>
+</div>
+<div class="bg-surface-container-lowest p-md rounded-lg rounded-tl-none shadow-sm border border-border-subtle text-body-text font-body-text text-on-surface">
+<p>Hi Support Team,</p>
+<p class="mt-sm">I'm reviewing our Q3 invoice (INV-2023-402) and I noticed a discrepancy regarding the retainer hours billed for September. We were billed for 45 hours, but our internal tracking shows we only utilized 32 hours. Could someone please look into this and provide a detailed breakdown?</p>
+<p class="mt-sm">Thanks,<br/>Sarah</p>
+</div>
+</div>
+</div>
+<!-- Agent Reply -->
+<div class="flex items-start gap-md max-w-3xl ml-auto flex-row-reverse">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+<span class="material-symbols-outlined">support_agent</span>
+</div>
+<div class="flex flex-col gap-xs items-end">
+<div class="flex items-baseline gap-sm flex-row-reverse">
+<span class="font-label-button text-label-button text-on-surface font-semibold">Michael Chen</span>
+<span class="font-label-secondary text-label-secondary text-primary font-medium">Support Agent</span>
+<span class="font-label-secondary text-label-secondary text-on-surface-variant mr-auto md:mr-md">Oct 24, 10:30 AM</span>
+</div>
+<div class="bg-surface-container-low p-md rounded-lg rounded-tr-none shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-border-subtle text-body-text font-body-text text-on-surface w-full">
+<p>Hello Sarah,</p>
+<p class="mt-sm">Thank you for bringing this to our attention. I understand your concern regarding the Q3 invoice (INV-2023-402).</p>
+<p class="mt-sm">I've pulled the timesheets for September and escalated this to our billing department for a thorough review. It appears there might be some overlap with hours logged in late August that carried over into the September billing cycle.</p>
+<p class="mt-sm">I will provide you with a detailed breakdown by end of day today. Let me know if you need anything else in the meantime.</p>
+<p class="mt-sm">Best,<br/>Michael</p>
+</div>
+</div>
+</div>
+<!-- Internal Note (Agent only view simulation) -->
+<div class="flex items-start gap-md max-w-3xl ml-auto flex-row-reverse opacity-90">
+<div class="w-10 h-10 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center flex-shrink-0 mt-1">
+<span class="material-symbols-outlined">lock</span>
+</div>
+<div class="flex flex-col gap-xs items-end w-full">
+<div class="flex items-baseline gap-sm flex-row-reverse">
+<span class="font-label-button text-label-button text-on-surface-variant font-semibold">System Note</span>
+<span class="font-label-secondary text-label-secondary text-on-surface-variant mr-auto md:mr-md">Oct 24, 10:32 AM</span>
+</div>
+<div class="bg-secondary-fixed-dim/20 p-sm rounded-lg border border-dashed border-secondary-fixed-dim text-label-secondary font-label-secondary text-on-surface-variant w-full max-w-md">
+<span class="font-semibold text-secondary">Internal:</span> Ticket escalated to Billing Dept. Awaiting confirmation on August rollover hours.
+                    </div>
+</div>
+</div>
+<!-- Customer Reply -->
+<div class="flex items-start gap-md max-w-3xl">
+<img class="w-10 h-10 rounded-full object-cover shadow-sm flex-shrink-0 mt-1" data-alt="A small, professional portrait photograph of a confident individual in a minimalist, well-lit studio environment. The lighting is soft and neutral, enhancing features without harsh shadows, consistent with a high-end corporate identity. The background is a clean, muted white. The mood is approachable yet authoritative." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1bV1MiiMjoHaAuABKkxWjhZFXtjhU8VTC6h2l1y0Tb5pMs3em16fYtZCRa4UiDqguk9tuo4nY9ldeWJPIWGGtRpr8rHQAnYbBgSnBIzzOQ5sTzgxoVfY0IVKmCPunx-xojbHfCxuV3S4_IpzM4_0pAOGTAvyNr5LWwviMZBo0blNxK8FpOm9GMQXN4cK6aYmH7IC_Tu6tTKkZT4ikOyTSgDsNuo7C98m8D1Jbkd6zA_ZRbMZ_cOoRAw"/>
+<div class="flex flex-col gap-xs">
+<div class="flex items-baseline gap-sm">
+<span class="font-label-button text-label-button text-on-surface font-semibold">Sarah Jenkins</span>
+<span class="font-label-secondary text-label-secondary text-on-surface-variant">Client</span>
+<span class="font-label-secondary text-label-secondary text-on-surface-variant ml-auto md:ml-md">Oct 24, 11:05 AM</span>
+</div>
+<div class="bg-surface-container-lowest p-md rounded-lg rounded-tl-none shadow-sm border border-border-subtle text-body-text font-body-text text-on-surface">
+<p>Hi Michael,</p>
+<p class="mt-sm">That makes sense regarding the rollover hours. I'll wait for the detailed breakdown before we process the payment.</p>
+<p class="mt-sm">Appreciate the quick response!</p>
+</div>
+</div>
+</div>
+<!-- Spacer for bottom padding -->
+<div class="h-8"></div>
+</div>
+<!-- Reply Editor area -->
+<div class="p-md md:p-xl bg-surface border-t border-border-subtle sticky bottom-0 z-10 flex flex-col gap-sm">
+<div class="bg-surface-container-lowest border border-border-subtle rounded-lg focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all shadow-sm">
+<!-- Toolbar -->
+<div class="flex items-center gap-xs p-xs border-b border-border-subtle bg-surface-container-low rounded-t-lg">
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-variant/50 text-on-surface-variant transition-colors" title="Bold">
+<span class="material-symbols-outlined text-[18px]">format_bold</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-variant/50 text-on-surface-variant transition-colors" title="Italic">
+<span class="material-symbols-outlined text-[18px]">format_italic</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-variant/50 text-on-surface-variant transition-colors" title="Underline">
+<span class="material-symbols-outlined text-[18px]">format_underlined</span>
+</button>
+<div class="w-px h-4 bg-border-subtle mx-xs"></div>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-variant/50 text-on-surface-variant transition-colors" title="Attach File">
+<span class="material-symbols-outlined text-[18px]">attach_file</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-variant/50 text-on-surface-variant transition-colors" title="Insert Link">
+<span class="material-symbols-outlined text-[18px]">link</span>
+</button>
+</div>
+<!-- Textarea -->
+<textarea class="w-full p-md bg-transparent border-none focus:ring-0 text-body-text font-body-text text-on-surface resize-none" placeholder="Type your reply here..." rows="3"></textarea>
+</div>
+<div class="flex items-center justify-between mt-xs">
+<div class="flex items-center gap-md">
+<button class="md:hidden flex items-center gap-sm px-md py-sm bg-surface-container rounded-full font-label-button text-label-button text-on-surface hover:bg-surface-variant transition-colors border border-border-subtle text-sm">
+                        Close Ticket
+                    </button>
+</div>
+<div class="flex items-center gap-md">
+<button class="hidden md:flex items-center gap-sm text-on-surface-variant hover:text-on-surface font-label-button text-label-button transition-colors px-md py-sm">
+                        Save Draft
+                    </button>
+<button class="flex items-center gap-sm px-xl py-sm bg-primary-container text-on-primary-container rounded-full font-label-button text-label-button font-medium shadow-sm hover:shadow hover:bg-primary hover:text-on-primary transition-all">
+<span class="material-symbols-outlined text-[18px]">send</span>
+                        Send Message
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

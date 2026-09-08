@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Change Password - MailPortal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-primary-container": "#ff998c",
+                "on-secondary-fixed": "#1b1c1a",
+                "tertiary-container": "#46464a",
+                "secondary-fixed": "#e4e2de",
+                "primary-container": "#930006",
+                "error-container": "#ffdad6",
+                "surface-dim": "#d9dadb",
+                "on-error": "#ffffff",
+                "inverse-primary": "#ffb4aa",
+                "on-primary": "#ffffff",
+                "on-primary-fixed": "#410001",
+                "outline-variant": "#e3beb9",
+                "on-tertiary-container": "#b5b4b8",
+                "secondary": "#5e5e5c",
+                "surface-cream": "#FDFCFB",
+                "surface-container-lowest": "#ffffff",
+                "surface-container": "#edeeef",
+                "background": "#f8f9fa",
+                "surface-tint": "#b6231c",
+                "surface-variant": "#e1e3e4",
+                "surface-container-high": "#e7e8e9",
+                "on-tertiary-fixed": "#1a1b1e",
+                "tertiary-fixed-dim": "#c7c6ca",
+                "primary-fixed": "#ffdad5",
+                "outline": "#8f706c",
+                "surface": "#f8f9fa",
+                "primary-fixed-dim": "#ffb4aa",
+                "on-error-container": "#93000a",
+                "tertiary": "#2f3033",
+                "inverse-on-surface": "#f0f1f2",
+                "on-surface": "#191c1d",
+                "on-tertiary-fixed-variant": "#46474a",
+                "surface-bright": "#f8f9fa",
+                "on-secondary-container": "#636360",
+                "on-secondary-fixed-variant": "#474744",
+                "error": "#ba1a1a",
+                "primary": "#680003",
+                "surface-container-highest": "#e1e3e4",
+                "on-background": "#191c1d",
+                "legal-red-container": "#FFDAD6",
+                "secondary-container": "#e1dfdc",
+                "tertiary-fixed": "#e3e2e6",
+                "on-tertiary": "#ffffff",
+                "on-surface-variant": "#5b403d",
+                "surface-container-low": "#f3f4f5",
+                "border-subtle": "#DADCE0",
+                "inverse-surface": "#2e3132",
+                "on-primary-fixed-variant": "#930006",
+                "secondary-fixed-dim": "#c8c6c3",
+                "on-secondary": "#ffffff"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "xl": "32px",
+                "sm": "8px",
+                "md": "16px",
+                "xs": "4px",
+                "sidebar-width": "256px",
+                "base": "8px",
+                "lg": "24px",
+                "gutter": "16px"
+        },
+        "fontFamily": {
+                "email-subject": [
+                        "Inter"
+                ],
+                "label-button": [
+                        "Inter"
+                ],
+                "body-text-lg": [
+                        "Inter"
+                ],
+                "body-text": [
+                        "Inter"
+                ],
+                "page-title-mobile": [
+                        "Inter"
+                ],
+                "page-title": [
+                        "Inter"
+                ],
+                "label-secondary": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "email-subject": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-button": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-text-lg": [
+                        "15px",
+                        {
+                                "lineHeight": "26px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-text": [
+                        "14px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "page-title-mobile": [
+                        "20px",
+                        {
+                                "lineHeight": "26px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "page-title": [
+                        "22px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "label-secondary": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-text antialiased overflow-x-hidden min-h-screen flex flex-col">
+<!-- TopNavBar (Shared Component) -->
+<nav class="bg-background dark:bg-background docked full-width top-0 z-50">
+<div class="flex items-center justify-between px-md py-sm w-full h-16 border-b border-surface-variant/50">
+<!-- Brand & Search Container -->
+<div class="flex items-center flex-1 gap-xl">
+<!-- Hamburger Menu (Mobile/Tablet) -->
+<button aria-label="Menu" class="md:hidden p-xs rounded-full hover:bg-surface-variant/50 text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[24px]">menu</span>
+</button>
+<!-- Brand Logo -->
+<div class="text-page-title font-page-title text-on-surface dark:text-surface-bright flex items-center gap-sm cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">mail</span>
+<span>MailPortal</span>
+</div>
+<!-- Search Bar -->
+<div class="hidden md:flex flex-1 max-w-[720px] bg-surface-container-high rounded-full px-md py-sm items-center gap-sm transition-shadow focus-within:shadow-sm focus-within:bg-surface-container-lowest border border-transparent focus-within:border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-body-text font-body-text text-on-surface placeholder:text-on-surface-variant outline-none" placeholder="Search in mail" type="text"/>
+<button aria-label="Search options" class="hover:bg-surface-variant rounded-full p-[2px] transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">tune</span>
+</button>
+</div>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-sm md:gap-md shrink-0 ml-md">
+<button aria-label="Help" class="p-xs rounded-full hover:bg-surface-variant/50 transition-colors cursor-pointer active:opacity-80 text-on-surface-variant hidden sm:block">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button aria-label="Settings" class="p-xs rounded-full bg-surface-variant/50 transition-colors cursor-pointer active:opacity-80 text-primary hidden sm:block">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button aria-label="Apps" class="p-xs rounded-full hover:bg-surface-variant/50 transition-colors cursor-pointer active:opacity-80 text-on-surface-variant hidden sm:block">
+<span class="material-symbols-outlined" data-icon="apps">apps</span>
+</button>
+<!-- Profile Image -->
+<button class="ml-xs rounded-full overflow-hidden hover:ring-2 hover:ring-primary-container transition-all cursor-pointer active:opacity-80">
+<img alt="User profile" class="w-[32px] h-[32px] object-cover" data-alt="A small, professional headshot photo of a person smiling softly. The photo is well-lit with a bright, clean, light-mode corporate aesthetic, typical of a professional email profile avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXU3kwEDkQtYl_-xHi4cbYbWSd_8DMVr3AtJUy1_LvE-RpTY3mVAGFzC_quHW03CF088HKr30XDPfxBaiGWNN4pH6II-Ba_mtfC0iI7kAlV1YnjMS4TO4oo-QAW0bAkIgdAaeTlHHKkiGN4H28s7eyZjRo9NJe8_lYvmGsqVgElqmv3VzDONB5_GKUSxMDArnDgyTgxuvMeUJxwvhs87ViCd6QuN6r01cHS_ncBZhqfoan-e-a1zL4mQ"/>
+</button>
+</div>
+</div>
+</nav>
+<!-- Main Layout -->
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar (Shared Component) - Hidden on mobile, visible on md+ -->
+<aside class="hidden md:flex flex-col gap-xs py-md pr-md w-sidebar_width h-full bg-background dark:bg-background flex-shrink-0 border-r border-surface-variant/50">
+<!-- Compose CTA -->
+<div class="px-md mb-md">
+<button class="flex items-center gap-md bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container px-lg py-md rounded-xl transition-all shadow-[0_1px_3px_rgba(0,0,0,0.12)] hover:shadow-md active:scale-95 group w-auto">
+<span class="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform duration-300">edit</span>
+<span class="font-label-button text-label-button">Compose</span>
+</button>
+</div>
+<!-- Primary Navigation -->
+<nav class="flex-1 flex flex-col gap-[2px]">
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="inbox">inbox</span>
+<span class="font-label-button text-label-button flex-1">Inbox</span>
+</a>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="star">star</span>
+<span class="font-label-button text-label-button flex-1">Starred</span>
+</a>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="schedule">schedule</span>
+<span class="font-label-button text-label-button flex-1">Snoozed</span>
+</a>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="send">send</span>
+<span class="font-label-button text-label-button flex-1">Sent</span>
+</a>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="draft">draft</span>
+<span class="font-label-button text-label-button flex-1">Drafts</span>
+</a>
+</nav>
+<!-- Secondary Navigation (Footer Labels) -->
+<div class="mt-auto flex flex-col gap-[2px]">
+<div class="px-lg py-xs text-on-surface-variant font-label-secondary text-label-secondary mt-sm">Labels</div>
+<a class="flex items-center gap-md px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="label">label</span>
+<span class="font-label-button text-label-button flex-1">Labels</span>
+</a>
+<!-- Settings is active based on context -->
+<a class="flex items-center gap-md px-lg py-sm bg-secondary-container text-on-secondary-container rounded-r-full font-bold hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label-button text-label-button flex-1">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 bg-surface-container-lowest overflow-y-auto w-full relative h-[calc(100vh-64px)] rounded-tl-xl border-t border-l border-surface-variant/50 shadow-sm md:m-sm md:mb-0 md:mr-0">
+<!-- Page Header -->
+<div class="px-xl py-lg flex items-center justify-between sticky top-0 bg-surface-container-lowest/90 backdrop-blur-sm z-10 border-b border-surface-variant/30">
+<div class="flex items-center gap-sm">
+<a class="text-on-surface-variant hover:bg-surface-variant/50 p-xs rounded-full transition-colors inline-flex md:hidden mr-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+</a>
+<h1 class="font-page-title text-page-title text-on-surface">Account Settings</h1>
+</div>
+</div>
+<!-- Settings Content Container -->
+<div class="max-w-3xl mx-auto px-md py-xl md:px-xl">
+<!-- Settings Tabs (Contextual) -->
+<div class="flex gap-lg border-b border-surface-variant/50 mb-xl overflow-x-auto no-scrollbar">
+<a class="pb-sm text-on-surface-variant hover:text-on-surface font-label-button text-label-button whitespace-nowrap border-b-2 border-transparent transition-colors" href="#">General</a>
+<a class="pb-sm text-on-surface-variant hover:text-on-surface font-label-button text-label-button whitespace-nowrap border-b-2 border-transparent transition-colors" href="#">Profile</a>
+<a class="pb-sm text-primary font-label-button text-label-button whitespace-nowrap border-b-2 border-primary" href="#">Security</a>
+<a class="pb-sm text-on-surface-variant hover:text-on-surface font-label-button text-label-button whitespace-nowrap border-b-2 border-transparent transition-colors" href="#">Notifications</a>
+</div>
+<!-- Form Card -->
+<div class="bg-surface-container-lowest rounded-lg border border-surface-variant/50 p-lg md:p-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+<div class="mb-lg">
+<h2 class="font-email-subject text-email-subject text-on-surface text-lg">Change Password</h2>
+<p class="font-body-text text-body-text text-on-surface-variant mt-xs">Ensure your account is using a long, random password to stay secure.</p>
+</div>
+<form class="flex flex-col gap-lg max-w-md">
+<!-- Current Password -->
+<div class="flex flex-col gap-xs relative">
+<label class="font-label-button text-label-button text-on-surface" for="current_password">Current Password</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-DEFAULT px-md py-[10px] font-body-text text-body-text text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow placeholder:text-outline/50" id="current_password" name="current_password" required="" type="password"/>
+<button class="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility_off</span>
+</button>
+</div>
+</div>
+<hr class="border-surface-variant/50 my-sm"/>
+<!-- New Password -->
+<div class="flex flex-col gap-xs relative">
+<label class="font-label-button text-label-button text-on-surface" for="new_password">New Password</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-DEFAULT px-md py-[10px] font-body-text text-body-text text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow placeholder:text-outline/50" id="new_password" name="new_password" required="" type="password"/>
+<button class="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility_off</span>
+</button>
+</div>
+</div>
+<!-- Confirm New Password -->
+<div class="flex flex-col gap-xs relative">
+<label class="font-label-button text-label-button text-on-surface" for="confirm_password">Confirm New Password</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-DEFAULT px-md py-[10px] font-body-text text-body-text text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow placeholder:text-outline/50" id="confirm_password" name="confirm_password" required="" type="password"/>
+<button class="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility_off</span>
+</button>
+</div>
+</div>
+<!-- Action Area -->
+<div class="mt-md flex items-center justify-end gap-md">
+<button class="px-lg py-[10px] font-label-button text-label-button text-primary hover:bg-primary/5 rounded-full transition-colors" type="button">Cancel</button>
+<button class="px-lg py-[10px] bg-primary hover:bg-primary/90 text-on-primary font-label-button text-label-button rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.12)] transition-all active:scale-95" type="submit">Save Changes</button>
+</div>
+</form>
+</div>
+<!-- Password Requirements Card (Decorative/Informational) -->
+<div class="mt-lg bg-surface-container rounded-lg p-md flex items-start gap-md">
+<span class="material-symbols-outlined text-secondary mt-[2px]">info</span>
+<div>
+<h3 class="font-label-button text-label-button text-on-surface mb-xs">Password Requirements</h3>
+<ul class="font-body-text text-body-text text-on-surface-variant list-disc pl-lg space-y-[2px]">
+<li>Minimum 8 characters long</li>
+<li>At least one uppercase character</li>
+<li>At least one number or special character</li>
+</ul>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

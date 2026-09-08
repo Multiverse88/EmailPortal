@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Billing and Subscriptions</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary": "#680003",
+                      "error": "#ba1a1a",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container-high": "#e7e8e9",
+                      "surface-dim": "#d9dadb",
+                      "surface": "#f8f9fa",
+                      "secondary-fixed-dim": "#c8c6c3",
+                      "on-tertiary-container": "#b5b4b8",
+                      "on-primary": "#ffffff",
+                      "on-surface": "#191c1d",
+                      "inverse-primary": "#ffb4aa",
+                      "on-primary-container": "#ff998c",
+                      "secondary": "#5e5e5c",
+                      "on-error": "#ffffff",
+                      "on-primary-fixed": "#410001",
+                      "on-secondary": "#ffffff",
+                      "tertiary": "#2f3033",
+                      "on-secondary-container": "#636360",
+                      "tertiary-container": "#46464a",
+                      "on-secondary-fixed-variant": "#474744",
+                      "surface-container-low": "#f3f4f5",
+                      "on-secondary-fixed": "#1b1c1a",
+                      "primary-container": "#930006",
+                      "on-tertiary": "#ffffff",
+                      "primary-fixed-dim": "#ffb4aa",
+                      "error-container": "#ffdad6",
+                      "on-primary-fixed-variant": "#930006",
+                      "on-error-container": "#93000a",
+                      "border-subtle": "#DADCE0",
+                      "surface-bright": "#f8f9fa",
+                      "secondary-fixed": "#e4e2de",
+                      "inverse-surface": "#2e3132",
+                      "legal-red-container": "#FFDAD6",
+                      "surface-variant": "#e1e3e4",
+                      "background": "#f8f9fa",
+                      "on-background": "#191c1d",
+                      "on-surface-variant": "#5b403d",
+                      "tertiary-fixed-dim": "#c7c6ca",
+                      "surface-tint": "#b6231c",
+                      "surface-container-highest": "#e1e3e4",
+                      "on-tertiary-fixed-variant": "#46474a",
+                      "primary-fixed": "#ffdad5",
+                      "surface-cream": "#FDFCFB",
+                      "outline-variant": "#e3beb9",
+                      "tertiary-fixed": "#e3e2e6",
+                      "on-tertiary-fixed": "#1a1b1e",
+                      "secondary-container": "#e1dfdc",
+                      "inverse-on-surface": "#f0f1f2",
+                      "surface-container": "#edeeef",
+                      "outline": "#8f706c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sidebar-width": "256px",
+                      "xl": "32px",
+                      "lg": "24px",
+                      "gutter": "16px",
+                      "xs": "4px",
+                      "sm": "8px",
+                      "base": "8px",
+                      "md": "16px"
+              },
+              "fontFamily": {
+                      "body-text-lg": ["Inter"],
+                      "email-subject": ["Inter"],
+                      "label-button": ["Inter"],
+                      "body-text": ["Inter"],
+                      "page-title": ["Inter"],
+                      "label-secondary": ["Inter"],
+                      "page-title-mobile": ["Inter"]
+              },
+              "fontSize": {
+                      "body-text-lg": ["15px", {"lineHeight": "26px", "fontWeight": "400"}],
+                      "email-subject": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                      "label-button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                      "body-text": ["14px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "page-title": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                      "label-secondary": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "page-title-mobile": ["20px", {"lineHeight": "26px", "fontWeight": "500"}]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-text h-full flex overflow-hidden selection:bg-primary/20 selection:text-primary">
+<!-- SideNavBar Component -->
+<nav class="docked w-sidebar-width h-screen left-0 bg-background border-r border-subtle flex flex-col gap-xs py-md pr-md hidden md:flex z-10 shrink-0">
+<div class="px-md mb-lg">
+<h1 class="text-page-title font-page-title text-primary">MailPortal</h1>
+</div>
+<div class="px-md mb-md">
+<button class="bg-primary-container text-on-primary w-full py-md px-lg rounded-full font-label-button text-label-button flex items-center gap-sm shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:bg-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">edit</span>
+                Compose
+            </button>
+</div>
+<div class="flex flex-col gap-xs flex-1">
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-all duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">inbox</span>
+                Inbox
+            </a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-all duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">star</span>
+                Starred
+            </a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-all duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">schedule</span>
+                Snoozed
+            </a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-all duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">send</span>
+                Sent
+            </a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-all duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">draft</span>
+                Drafts
+            </a>
+</div>
+<div class="flex flex-col gap-xs mt-auto pt-md border-t border-subtle">
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-all duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">label</span>
+                Labels
+            </a>
+<a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container rounded-r-full font-label-button text-label-button font-bold transition-all duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col h-full overflow-hidden relative">
+<!-- TopNavBar Component (Mobile & Header) -->
+<header class="docked full-width top-0 bg-background flex items-center justify-between px-md py-sm w-full h-16 border-b border-subtle md:border-none z-20 shrink-0">
+<div class="flex items-center gap-md md:hidden">
+<button class="text-on-surface-variant p-sm rounded-full hover:bg-surface-variant/50 transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="text-page-title-mobile font-page-title-mobile text-on-surface">MailPortal</h1>
+</div>
+<div class="hidden md:flex flex-1 max-w-2xl mx-auto px-lg">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-high border-none rounded-full py-sm pl-[40px] pr-md text-body-text font-body-text focus:ring-2 focus:ring-primary focus:bg-surface transition-colors placeholder:text-on-surface-variant" placeholder="Search" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors hidden md:block">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-sm text-primary font-bold hover:bg-surface-variant/50 rounded-full transition-colors hidden md:block">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors hidden md:block">
+<span class="material-symbols-outlined">apps</span>
+</button>
+<img alt="User profile" class="w-8 h-8 rounded-full object-cover border border-subtle ml-sm" data-alt="A professional headshot of a legal professional in a light, modern office setting, wearing a dark suit. The lighting is soft and natural, conveying trust and authority." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8BnKJfoncI2rlbCSoaMB6d6xdGOP2JICx15Eh86_3wirSOG49-ioEq89ConJopjerQcd25ucqEMU8TPbOpFGzcJD8-TghO_pl4faDG9iLwei_qgbOkd8oH34fdNaSB2BlEoJQWQw8m6EBJ1Ul_9Y9fysh9HG2-ATrJs-zgFNy3CJXhstPNRaI2uvJOdRa1MYdyj3asbjPDBUuf-5XMUXt7a2nq2hGmrgYGyduOEDcFiPiBugswCGLbg"/>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 overflow-y-auto p-md md:p-xl lg:px-[10%] xl:px-[15%]">
+<div class="max-w-4xl mx-auto">
+<h2 class="text-page-title font-page-title text-on-surface mb-lg">Billing &amp; Subscriptions</h2>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-md md:gap-lg">
+<!-- Current Plan Bento Card -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-subtle p-md md:p-lg flex flex-col justify-between relative overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] group">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -z-10 transition-transform group-hover:scale-110"></div>
+<div>
+<div class="flex justify-between items-start mb-sm">
+<div>
+<h3 class="text-body-text-lg font-body-text-lg font-semibold text-on-surface">Professional Mail</h3>
+<p class="text-body-text font-body-text text-on-surface-variant mt-xs">Billed annually on Oct 12, 2024</p>
+</div>
+<span class="bg-legal-red-container text-on-primary-fixed-variant px-sm py-[2px] rounded-full text-label-secondary font-label-secondary font-medium border border-primary/20">Active</span>
+</div>
+<div class="mt-md flex items-end gap-xs">
+<span class="text-3xl font-page-title font-semibold text-on-surface">$24</span>
+<span class="text-body-text font-body-text text-on-surface-variant mb-1">/ user / month</span>
+</div>
+</div>
+<div class="mt-xl flex flex-wrap gap-sm">
+<button class="bg-primary-container text-on-primary px-lg py-sm rounded-full font-label-button text-label-button hover:bg-primary transition-colors shadow-sm">
+                                Upgrade Plan
+                            </button>
+<button class="bg-surface-cream text-primary border border-outline-variant px-lg py-sm rounded-lg font-label-button text-label-button hover:bg-surface-variant/50 transition-colors">
+                                Cancel Subscription
+                            </button>
+</div>
+</div>
+<!-- Storage Usage Bento Card -->
+<div class="bg-surface-container-lowest rounded-xl border border-subtle p-md md:p-lg shadow-[0_1px_3px_rgba(0,0,0,0.08)] flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-sm mb-md text-on-surface-variant">
+<span class="material-symbols-outlined">cloud</span>
+<h3 class="font-body-text-lg text-body-text-lg font-semibold text-on-surface">Storage</h3>
+</div>
+<div class="mb-xs flex justify-between items-end">
+<span class="text-body-text font-body-text font-semibold text-on-surface">45 GB <span class="text-on-surface-variant font-normal">used</span></span>
+<span class="text-label-secondary font-label-secondary text-on-surface-variant">100 GB total</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-2 mb-sm overflow-hidden">
+<div class="bg-primary h-2 rounded-full" style="width: 45%"></div>
+</div>
+<p class="text-label-secondary font-label-secondary text-on-surface-variant">You have used 45% of your included storage.</p>
+</div>
+<button class="mt-lg w-full bg-surface-cream text-primary border border-outline-variant px-md py-sm rounded-lg font-label-button text-label-button hover:bg-surface-variant/50 transition-colors flex justify-center items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                            Get more storage
+                        </button>
+</div>
+<!-- Payment Methods Bento Card -->
+<div class="lg:col-span-1 bg-surface-container-lowest rounded-xl border border-subtle p-md md:p-lg shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<div class="flex justify-between items-center mb-md">
+<h3 class="text-body-text-lg font-body-text-lg font-semibold text-on-surface">Payment Method</h3>
+<button class="text-primary hover:bg-surface-variant/50 p-xs rounded-full transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<div class="flex items-center gap-md p-md border border-subtle rounded-lg bg-surface-bright">
+<div class="w-10 h-6 bg-surface-variant rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">credit_card</span>
+</div>
+<div class="flex-1">
+<p class="text-body-text font-body-text font-medium text-on-surface">Visa ending in 4242</p>
+<p class="text-label-secondary font-label-secondary text-on-surface-variant">Expires 12/25</p>
+</div>
+</div>
+<button class="mt-md text-primary font-label-button text-label-button hover:underline w-full text-left">
+                            + Add Payment Method
+                        </button>
+</div>
+<!-- Invoice History List -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-subtle shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+<div class="p-md md:px-lg border-b border-subtle flex justify-between items-center bg-surface-bright">
+<h3 class="text-body-text-lg font-body-text-lg font-semibold text-on-surface">Recent Invoices</h3>
+<button class="text-primary font-label-button text-label-button hover:underline">View All</button>
+</div>
+<div class="flex flex-col">
+<!-- List Item 1 -->
+<div class="flex items-center justify-between p-md md:px-lg border-b border-subtle hover:bg-surface-variant/20 transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<div>
+<p class="text-email-subject font-email-subject text-on-surface">Invoice #INV-2023-010</p>
+<p class="text-label-secondary font-label-secondary text-on-surface-variant">Oct 12, 2023</p>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<div class="text-right hidden sm:block">
+<p class="text-body-text font-body-text font-medium text-on-surface">$288.00</p>
+<span class="text-label-secondary font-label-secondary text-primary px-2 py-0.5 bg-primary/5 rounded-full inline-block mt-0.5">Paid</span>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-sm rounded-full hover:bg-surface-variant/50">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="flex items-center justify-between p-md md:px-lg border-b border-subtle hover:bg-surface-variant/20 transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<div>
+<p class="text-email-subject font-email-subject text-on-surface">Invoice #INV-2022-010</p>
+<p class="text-label-secondary font-label-secondary text-on-surface-variant">Oct 12, 2022</p>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<div class="text-right hidden sm:block">
+<p class="text-body-text font-body-text font-medium text-on-surface">$288.00</p>
+<span class="text-label-secondary font-label-secondary text-primary px-2 py-0.5 bg-primary/5 rounded-full inline-block mt-0.5">Paid</span>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-sm rounded-full hover:bg-surface-variant/50">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="flex items-center justify-between p-md md:px-lg hover:bg-surface-variant/20 transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<div>
+<p class="text-email-subject font-email-subject text-on-surface">Invoice #INV-2021-010</p>
+<p class="text-label-secondary font-label-secondary text-on-surface-variant">Oct 12, 2021</p>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<div class="text-right hidden sm:block">
+<p class="text-body-text font-body-text font-medium text-on-surface">$288.00</p>
+<span class="text-label-secondary font-label-secondary text-primary px-2 py-0.5 bg-primary/5 rounded-full inline-block mt-0.5">Paid</span>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-sm rounded-full hover:bg-surface-variant/50">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login Activity &amp; Security - MailPortal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#ffdad5",
+                        "surface-bright": "#f8f9fa",
+                        "secondary-fixed": "#e4e2de",
+                        "primary": "#680003",
+                        "on-background": "#191c1d",
+                        "on-tertiary-fixed-variant": "#46474a",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-error-container": "#93000a",
+                        "background": "#f8f9fa",
+                        "on-surface": "#191c1d",
+                        "secondary-container": "#e1dfdc",
+                        "legal-red-container": "#FFDAD6",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e7e8e9",
+                        "secondary-fixed-dim": "#c8c6c3",
+                        "inverse-on-surface": "#f0f1f2",
+                        "on-secondary-fixed-variant": "#474744",
+                        "on-secondary": "#ffffff",
+                        "outline": "#8f706c",
+                        "on-tertiary": "#ffffff",
+                        "border-subtle": "#DADCE0",
+                        "secondary": "#5e5e5c",
+                        "surface-cream": "#FDFCFB",
+                        "on-primary-fixed-variant": "#930006",
+                        "primary-fixed-dim": "#ffb4aa",
+                        "tertiary-fixed": "#e3e2e6",
+                        "on-tertiary-fixed": "#1a1b1e",
+                        "surface-container-low": "#f3f4f5",
+                        "on-tertiary-container": "#b5b4b8",
+                        "on-secondary-container": "#636360",
+                        "surface-container": "#edeeef",
+                        "on-surface-variant": "#5b403d",
+                        "outline-variant": "#e3beb9",
+                        "surface-variant": "#e1e3e4",
+                        "surface-dim": "#d9dadb",
+                        "on-secondary-fixed": "#1b1c1a",
+                        "surface-tint": "#b6231c",
+                        "on-primary-fixed": "#410001",
+                        "primary-container": "#930006",
+                        "inverse-surface": "#2e3132",
+                        "tertiary-fixed-dim": "#c7c6ca",
+                        "inverse-primary": "#ffb4aa",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#ff998c",
+                        "on-primary": "#ffffff",
+                        "surface": "#f8f9fa",
+                        "tertiary-container": "#46464a",
+                        "tertiary": "#2f3033",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "sidebar-width": "256px",
+                        "md": "16px",
+                        "base": "8px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "gutter": "16px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "email-subject": ["Inter"],
+                        "body-text": ["Inter"],
+                        "page-title": ["Inter"],
+                        "body-text-lg": ["Inter"],
+                        "label-secondary": ["Inter"],
+                        "label-button": ["Inter"],
+                        "page-title-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "email-subject": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "body-text": ["14px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "page-title": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "body-text-lg": ["15px", { "lineHeight": "26px", "fontWeight": "400" }],
+                        "label-secondary": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "label-button": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "page-title-mobile": ["20px", { "lineHeight": "26px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-text antialiased min-h-screen flex flex-col md:flex-row overflow-x-hidden">
+<!-- SideNavBar (Hidden on Mobile, Visible on Desktop) -->
+<nav class="hidden md:flex flex-col gap-xs py-md pr-md w-sidebar-width h-screen sticky top-0 bg-background border-r border-border-subtle shrink-0">
+<div class="px-md mb-md flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">mail</span>
+</div>
+<div>
+<h1 class="text-page-title font-page-title text-primary">MailPortal</h1>
+<p class="text-label-secondary font-label-secondary text-on-surface-variant">v1.0</p>
+</div>
+</div>
+<div class="px-md mb-lg">
+<button class="w-full bg-primary-container text-on-primary-container hover:bg-primary-container/90 transition-all duration-200 active:scale-95 py-sm px-md rounded-full flex items-center justify-center gap-sm font-label-button shadow-sm">
+<span class="material-symbols-outlined">edit</span>
+                Compose
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto">
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-all duration-200 rounded-r-full font-label-button group" href="#">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary transition-colors">inbox</span>
+<span>Inbox</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-all duration-200 rounded-r-full font-label-button group" href="#">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary transition-colors">star</span>
+<span>Starred</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-all duration-200 rounded-r-full font-label-button group" href="#">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary transition-colors">schedule</span>
+<span>Snoozed</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-all duration-200 rounded-r-full font-label-button group" href="#">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary transition-colors">send</span>
+<span>Sent</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-all duration-200 rounded-r-full font-label-button group" href="#">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary transition-colors">draft</span>
+<span>Drafts</span>
+</a>
+</div>
+<div class="mt-auto pt-md border-t border-border-subtle">
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-all duration-200 rounded-r-full font-label-button group" href="#">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary transition-colors">label</span>
+<span>Labels</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container rounded-r-full font-bold font-label-button transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col w-full max-w-full">
+<!-- TopNavBar (Responsive adaptation) -->
+<header class="flex items-center justify-between px-md py-sm w-full h-16 bg-background border-b border-border-subtle sticky top-0 z-10">
+<!-- Mobile Menu Trigger -->
+<button class="md:hidden p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<!-- Mobile Brand (Hidden on Desktop where SideNav handles it) -->
+<div class="md:hidden flex items-center gap-sm">
+<h1 class="text-page-title-mobile font-page-title-mobile text-on-surface font-bold">Settings</h1>
+</div>
+<!-- Desktop Search Bar & Actions -->
+<div class="flex-1 flex items-center justify-between ml-md md:ml-0">
+<div class="hidden md:flex relative w-full max-w-xl mx-lg">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border border-border-subtle rounded-full py-sm pl-xl pr-md text-body-text focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Search settings..." type="text"/>
+</div>
+<div class="flex items-center gap-sm ml-auto">
+<button class="p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors hidden md:block">
+<span class="material-symbols-outlined">apps</span>
+</button>
+<button class="w-8 h-8 rounded-full overflow-hidden border border-border-subtle ml-sm hover:ring-2 ring-primary transition-all">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="A professional headshot of a person looking confident, lit with soft, high-key studio lighting against a clean white background. Modern, minimalist, corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTwa2USosxtV3uhl-I3iQ4dPVHDNk8e2-oVWa8oYb4iYbiFS60gm5aCaNW1QBxVecXKXuTZEqS-trLxWodW_uSoJVM64RdibUbgxG9IjLTRXmvXU7ppCPmQhi4a1Tn7RFBkKZi84W4xVRmdpnSqeXgpRQ82t5m57i2GYJebl3JC1cPUhTLD7rf-LQmlN2b9zr0ON11tak5hCOM6wV16QMs_nSPfiRXgH6fMBuomJRCtHRugehieFa8mw"/>
+</button>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 overflow-y-auto p-gutter md:p-xl lg:p-[48px] flex justify-center">
+<div class="w-full max-w-3xl flex flex-col gap-lg">
+<!-- Page Header -->
+<div class="mb-sm">
+<h2 class="text-page-title font-page-title md:text-[28px] md:leading-[36px] font-semibold text-on-background mb-xs">Login Activity &amp; Security</h2>
+<p class="text-body-text font-body-text text-on-surface-variant">Review your active sessions and manage account security settings.</p>
+</div>
+<!-- Security Health Card -->
+<section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-[0px_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+<div class="p-md border-b border-border-subtle bg-surface-container-low flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">security</span>
+<h3 class="text-email-subject font-email-subject">Security Health</h3>
+</div>
+<div class="p-md md:p-lg flex flex-col gap-lg">
+<!-- 2FA Toggle -->
+<div class="flex items-start justify-between gap-md">
+<div>
+<h4 class="text-body-text-lg font-body-text-lg font-medium mb-xs">Two-Factor Authentication (2FA)</h4>
+<p class="text-body-text font-body-text text-on-surface-variant">Add an extra layer of security to your account by requiring a verification code upon login.</p>
+<div class="mt-sm inline-flex items-center gap-xs px-sm py-[2px] bg-surface-variant text-on-surface-variant rounded-full text-label-secondary font-label-secondary font-medium">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                                    Currently OFF
+                                </div>
+</div>
+<!-- Toggle Switch (Visual Only) -->
+<button class="w-11 h-6 bg-surface-variant rounded-full relative cursor-pointer flex-shrink-0 border border-border-subtle mt-1 transition-colors hover:bg-surface-dim">
+<span class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform"></span>
+</button>
+</div>
+<hr class="border-border-subtle border-t"/>
+<!-- Password Update -->
+<div class="flex items-center justify-between gap-md">
+<div>
+<h4 class="text-body-text-lg font-body-text-lg font-medium mb-xs">Password</h4>
+<p class="text-body-text font-body-text text-on-surface-variant">Last changed 6 months ago</p>
+</div>
+<button class="px-md py-sm bg-surface-container border border-border-subtle text-on-surface rounded font-label-button hover:bg-surface-variant transition-colors">
+                                Update
+                            </button>
+</div>
+<hr class="border-border-subtle border-t"/>
+<!-- Sign Out All Action -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-md bg-error-container/30 p-md rounded-md border border-error-container">
+<div>
+<h4 class="text-body-text-lg font-body-text-lg font-medium text-error mb-xs">Sign out of all other sessions</h4>
+<p class="text-body-text font-body-text text-on-surface-variant">If you notice suspicious activity, sign out immediately from all devices except this one.</p>
+</div>
+<button class="whitespace-nowrap px-md py-sm bg-error text-on-error rounded font-label-button hover:bg-error/90 transition-colors shadow-sm flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+                                Terminate Sessions
+                            </button>
+</div>
+</div>
+</section>
+<!-- Recent Activity Card -->
+<section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-[0px_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+<div class="p-md border-b border-border-subtle bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-secondary">devices</span>
+<h3 class="text-email-subject font-email-subject">Recent Login Activity</h3>
+</div>
+</div>
+<div class="flex flex-col">
+<!-- Current Session -->
+<div class="p-md border-b border-border-subtle flex items-start gap-md hover:bg-surface-bright transition-colors relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 text-on-surface-variant">
+<span class="material-symbols-outlined">laptop_mac</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-sm mb-xs">
+<p class="text-body-text-lg font-body-text-lg font-medium truncate">MacBook Pro 16"</p>
+<span class="inline-flex items-center px-[6px] py-[2px] bg-primary-container text-on-primary-container rounded text-[10px] font-bold uppercase tracking-wider">Current</span>
+</div>
+<div class="text-label-secondary font-label-secondary text-on-surface-variant flex flex-col md:flex-row md:items-center gap-xs md:gap-md">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> New York, USA (192.168.1.1)</span>
+<span class="hidden md:inline text-border-subtle">•</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> Active now</span>
+</div>
+</div>
+</div>
+<!-- Previous Session 1 -->
+<div class="p-md border-b border-border-subtle flex items-start gap-md hover:bg-surface-bright transition-colors">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center shrink-0 text-on-surface-variant">
+<span class="material-symbols-outlined">smartphone</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-body-text-lg font-body-text-lg font-medium mb-xs truncate">iPhone 14 Pro</p>
+<div class="text-label-secondary font-label-secondary text-on-surface-variant flex flex-col md:flex-row md:items-center gap-xs md:gap-md">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> New York, USA (10.0.0.45)</span>
+<span class="hidden md:inline text-border-subtle">•</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> Today, 09:41 AM</span>
+</div>
+</div>
+</div>
+<!-- Previous Session 2 -->
+<div class="p-md flex items-start gap-md hover:bg-surface-bright transition-colors">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center shrink-0 text-on-surface-variant">
+<span class="material-symbols-outlined">desktop_windows</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-body-text-lg font-body-text-lg font-medium mb-xs truncate">Windows Desktop</p>
+<div class="text-label-secondary font-label-secondary text-on-surface-variant flex flex-col md:flex-row md:items-center gap-xs md:gap-md">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Boston, USA (172.16.254.1)</span>
+<span class="hidden md:inline text-border-subtle">•</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> Oct 24, 2023, 02:15 PM</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</body></html>

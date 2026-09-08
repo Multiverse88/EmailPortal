@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Invite Team Member - MailPortal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#ffdad5",
+                        "surface-bright": "#f8f9fa",
+                        "secondary-fixed": "#e4e2de",
+                        "primary": "#680003",
+                        "on-background": "#191c1d",
+                        "on-tertiary-fixed-variant": "#46474a",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-error-container": "#93000a",
+                        "background": "#f8f9fa",
+                        "on-surface": "#191c1d",
+                        "secondary-container": "#e1dfdc",
+                        "legal-red-container": "#FFDAD6",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e7e8e9",
+                        "secondary-fixed-dim": "#c8c6c3",
+                        "inverse-on-surface": "#f0f1f2",
+                        "on-secondary-fixed-variant": "#474744",
+                        "on-secondary": "#ffffff",
+                        "outline": "#8f706c",
+                        "on-tertiary": "#ffffff",
+                        "border-subtle": "#DADCE0",
+                        "secondary": "#5e5e5c",
+                        "surface-cream": "#FDFCFB",
+                        "on-primary-fixed-variant": "#930006",
+                        "primary-fixed-dim": "#ffb4aa",
+                        "tertiary-fixed": "#e3e2e6",
+                        "on-tertiary-fixed": "#1a1b1e",
+                        "surface-container-low": "#f3f4f5",
+                        "on-tertiary-container": "#b5b4b8",
+                        "on-secondary-container": "#636360",
+                        "surface-container": "#edeeef",
+                        "on-surface-variant": "#5b403d",
+                        "outline-variant": "#e3beb9",
+                        "surface-variant": "#e1e3e4",
+                        "surface-dim": "#d9dadb",
+                        "on-secondary-fixed": "#1b1c1a",
+                        "surface-tint": "#b6231c",
+                        "on-primary-fixed": "#410001",
+                        "primary-container": "#930006",
+                        "inverse-surface": "#2e3132",
+                        "tertiary-fixed-dim": "#c7c6ca",
+                        "inverse-primary": "#ffb4aa",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#ff998c",
+                        "on-primary": "#ffffff",
+                        "surface": "#f8f9fa",
+                        "tertiary-container": "#46464a",
+                        "tertiary": "#2f3033",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "sidebar-width": "256px",
+                        "md": "16px",
+                        "base": "8px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "gutter": "16px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "email-subject": ["Inter"],
+                        "body-text": ["Inter"],
+                        "page-title": ["Inter"],
+                        "body-text-lg": ["Inter"],
+                        "label-secondary": ["Inter"],
+                        "label-button": ["Inter"],
+                        "page-title-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "email-subject": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                        "body-text": ["14px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "page-title": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                        "body-text-lg": ["15px", {"lineHeight": "26px", "fontWeight": "400"}],
+                        "label-secondary": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "label-button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "page-title-mobile": ["20px", {"lineHeight": "26px", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen flex flex-col font-body-text overflow-hidden">
+<!-- Top Navigation -->
+<header class="bg-background dark:bg-background text-primary dark:text-primary-fixed flex items-center justify-between px-md py-sm w-full h-16 border-b border-border-subtle z-10 relative">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined cursor-pointer hover:bg-surface-variant/50 transition-colors p-sm rounded-full">menu</span>
+<span class="text-page-title font-page-title text-on-surface dark:text-surface-bright">MailPortal</span>
+</div>
+<div class="flex-1 max-w-2xl px-lg hidden md:block">
+<div class="relative flex items-center bg-surface-container-low rounded-full px-md py-sm border border-border-subtle focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span>
+<input class="bg-transparent border-none outline-none w-full text-body-text text-on-surface placeholder:text-on-surface-variant focus:ring-0 p-0" placeholder="Search" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined cursor-pointer hover:bg-surface-variant/50 transition-colors p-sm rounded-full text-on-surface-variant" data-icon="help">help</span>
+<span class="material-symbols-outlined cursor-pointer hover:bg-surface-variant/50 transition-colors p-sm rounded-full text-on-surface-variant" data-icon="settings">settings</span>
+<span class="material-symbols-outlined cursor-pointer hover:bg-surface-variant/50 transition-colors p-sm rounded-full text-on-surface-variant" data-icon="apps">apps</span>
+<div class="ml-sm cursor-pointer active:opacity-80">
+<img alt="User profile" class="w-8 h-8 rounded-full object-cover border border-border-subtle" data-alt="A small, professional headshot of a corporate user. Bright lighting, neutral background, modern minimal aesthetic with subtle warm tones indicating a high quality profile image." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBD63Sh4BXVoXL9IYn2NtJWL2OfzVYINQRfhi1ylGGn91IOlSysYemaJKE_j7LRkEDKRnMRwGkiSEVGOQj9-ojkhUjoz3czXfeDPLO1I5n6qoZLjhgx6i8oxd98Hv57JqAbxCawWUez7TtEq8mYo5HfTgpCAK1v7U6ljzX8U74QjDrffLo1NnAt2G9dNISSyAXalncmaQLLSHBEIPL4HkBIAC9CK5sz6af6vDUtej1uEXn7p0gGPmZHMQ"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden relative z-0">
+<!-- Side Navigation (Underneath modal) -->
+<nav class="hidden md:flex flex-col gap-xs py-md pr-md w-sidebar_width h-full bg-background dark:bg-background border-r border-border-subtle z-0 opacity-50 pointer-events-none">
+<button class="flex items-center justify-center gap-sm bg-primary-container text-on-primary-container rounded-full py-md mx-md mb-lg shadow-sm hover:shadow-md transition-all">
+<span class="material-symbols-outlined">edit</span>
+<span class="font-label-button text-label-button">Compose</span>
+</button>
+<div class="flex flex-col gap-xs flex-1">
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="inbox">inbox</span>
+<span>Inbox</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="star">star</span>
+<span>Starred</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container rounded-r-full font-bold font-label-button text-label-button transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span>Team Management</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full font-label-button text-label-button transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+<span>Snoozed</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas (Underneath modal) -->
+<main class="flex-1 bg-surface-bright p-lg overflow-y-auto z-0 opacity-50 pointer-events-none">
+<div class="max-w-5xl mx-auto">
+<div class="flex justify-between items-center mb-lg">
+<h1 class="font-page-title text-page-title text-on-surface">Team Management</h1>
+<button class="bg-primary text-on-primary px-lg py-sm rounded-full font-label-button text-label-button shadow-sm">Invite Member</button>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-md">
+<div class="flex flex-col gap-md">
+<div class="flex items-center justify-between p-sm border-b border-border-subtle">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-variant"></div>
+<div>
+<p class="font-email-subject text-email-subject">Sarah Jenkins</p>
+<p class="font-body-text text-body-text text-on-surface-variant">Admin</p>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between p-sm border-b border-border-subtle">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-variant"></div>
+<div>
+<p class="font-email-subject text-email-subject">Marcus Webb</p>
+<p class="font-body-text text-body-text text-on-surface-variant">Editor</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Modal Overlay -->
+<div class="absolute inset-0 z-50 flex items-center justify-center bg-on-surface/40 backdrop-blur-sm p-4">
+<!-- Modal Dialog -->
+<div class="bg-surface-container-lowest w-full max-w-md rounded-[12px] shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-border-subtle flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+<!-- Modal Header -->
+<div class="px-lg py-md border-b border-border-subtle flex justify-between items-center bg-surface-cream">
+<h2 class="font-page-title text-page-title text-on-surface">Invite New Member</h2>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors rounded-full p-xs hover:bg-surface-variant/50 flex items-center justify-center">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Modal Body -->
+<div class="p-lg flex flex-col gap-lg">
+<!-- Email Input -->
+<div class="flex flex-col gap-xs">
+<label class="font-email-subject text-email-subject text-on-surface" for="invite-email">Email Address</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">mail</span>
+<input class="w-full pl-[40px] pr-md py-sm rounded-lg border border-border-subtle bg-surface-bright focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all font-body-text text-body-text placeholder:text-on-surface-variant" id="invite-email" placeholder="colleague@example.com" type="email"/>
+</div>
+</div>
+<!-- Role Dropdown -->
+<div class="flex flex-col gap-xs">
+<label class="font-email-subject text-email-subject text-on-surface" for="invite-role">Role</label>
+<div class="relative">
+<select class="w-full px-md py-sm rounded-lg border border-border-subtle bg-surface-bright focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all font-body-text text-body-text appearance-none cursor-pointer" id="invite-role">
+<option value="viewer">Viewer</option>
+<option value="editor">Editor</option>
+<option value="admin">Admin</option>
+</select>
+<span class="material-symbols-outlined absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+<p class="font-label-secondary text-label-secondary text-on-surface-variant mt-xs">Viewers can only read documents. Editors can modify. Admins have full access.</p>
+</div>
+<!-- Personalized Message Checkbox -->
+<div class="flex items-start gap-sm mt-sm">
+<div class="flex items-center h-5">
+<input class="w-4 h-4 rounded border-border-subtle text-primary focus:ring-primary/20 focus:ring-offset-0 bg-surface-bright cursor-pointer" id="personal-msg" type="checkbox"/>
+</div>
+<div class="flex flex-col">
+<label class="font-body-text text-body-text text-on-surface cursor-pointer select-none" for="personal-msg">Send personalized welcome message</label>
+</div>
+</div>
+<!-- Hidden Textarea for message (shown conditionally via JS in real app) -->
+<div class="hidden flex-col gap-xs mt-xs" id="message-area">
+<textarea class="w-full px-md py-sm rounded-lg border border-border-subtle bg-surface-bright focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all font-body-text text-body-text resize-none" placeholder="Add a personal note..." rows="3"></textarea>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="px-lg py-md border-t border-border-subtle bg-surface-cream flex items-center justify-end gap-md">
+<button class="font-label-button text-label-button text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 px-md py-sm rounded-lg transition-colors cursor-pointer">
+                        Cancel
+                    </button>
+<button class="font-label-button text-label-button bg-primary text-on-primary hover:bg-primary/90 px-xl py-sm rounded-full shadow-sm hover:shadow transition-all cursor-pointer flex items-center gap-sm">
+<span class="material-symbols-outlined text-[18px]">send</span>
+                        Send Invitation
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<script>
+        // Simple interaction for the checkbox to show textarea
+        document.getElementById('personal-msg').addEventListener('change', function(e) {
+            const textArea = document.getElementById('message-area');
+            if(e.target.checked) {
+                textArea.classList.remove('hidden');
+                textArea.classList.add('flex');
+            } else {
+                textArea.classList.add('hidden');
+                textArea.classList.remove('flex');
+            }
+        });
+    </script>
+</body></html>

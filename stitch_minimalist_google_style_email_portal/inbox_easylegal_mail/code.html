@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MailPortal - Inbox</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-primary-container": "#ff998c",
+                "on-secondary-fixed": "#1b1c1a",
+                "tertiary-container": "#46464a",
+                "secondary-fixed": "#e4e2de",
+                "primary-container": "#930006",
+                "error-container": "#ffdad6",
+                "surface-dim": "#d9dadb",
+                "on-error": "#ffffff",
+                "inverse-primary": "#ffb4aa",
+                "on-primary": "#ffffff",
+                "on-primary-fixed": "#410001",
+                "outline-variant": "#e3beb9",
+                "on-tertiary-container": "#b5b4b8",
+                "secondary": "#5e5e5c",
+                "surface-cream": "#FDFCFB",
+                "surface-container-lowest": "#ffffff",
+                "surface-container": "#edeeef",
+                "background": "#f8f9fa",
+                "surface-tint": "#b6231c",
+                "surface-variant": "#e1e3e4",
+                "surface-container-high": "#e7e8e9",
+                "on-tertiary-fixed": "#1a1b1e",
+                "tertiary-fixed-dim": "#c7c6ca",
+                "primary-fixed": "#ffdad5",
+                "outline": "#8f706c",
+                "surface": "#f8f9fa",
+                "primary-fixed-dim": "#ffb4aa",
+                "on-error-container": "#93000a",
+                "tertiary": "#2f3033",
+                "inverse-on-surface": "#f0f1f2",
+                "on-surface": "#191c1d",
+                "on-tertiary-fixed-variant": "#46474a",
+                "surface-bright": "#f8f9fa",
+                "on-secondary-container": "#636360",
+                "on-secondary-fixed-variant": "#474744",
+                "error": "#ba1a1a",
+                "primary": "#680003",
+                "surface-container-highest": "#e1e3e4",
+                "on-background": "#191c1d",
+                "legal-red-container": "#FFDAD6",
+                "secondary-container": "#e1dfdc",
+                "tertiary-fixed": "#e3e2e6",
+                "on-tertiary": "#ffffff",
+                "on-surface-variant": "#5b403d",
+                "surface-container-low": "#f3f4f5",
+                "border-subtle": "#DADCE0",
+                "inverse-surface": "#2e3132",
+                "on-primary-fixed-variant": "#930006",
+                "secondary-fixed-dim": "#c8c6c3",
+                "on-secondary": "#ffffff"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "xl": "32px",
+                "sm": "8px",
+                "md": "16px",
+                "xs": "4px",
+                "sidebar-width": "256px",
+                "base": "8px",
+                "lg": "24px",
+                "gutter": "16px"
+        },
+        "fontFamily": {
+                "email-subject": [
+                        "Inter"
+                ],
+                "label-button": [
+                        "Inter"
+                ],
+                "body-text-lg": [
+                        "Inter"
+                ],
+                "body-text": [
+                        "Inter"
+                ],
+                "page-title-mobile": [
+                        "Inter"
+                ],
+                "page-title": [
+                        "Inter"
+                ],
+                "label-secondary": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "email-subject": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-button": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-text-lg": [
+                        "15px",
+                        {
+                                "lineHeight": "26px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-text": [
+                        "14px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "page-title-mobile": [
+                        "20px",
+                        {
+                                "lineHeight": "26px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "page-title": [
+                        "22px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "label-secondary": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .email-item:hover .email-actions { opacity: 1; }
+        .email-item:hover .email-date { opacity: 0; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20; }
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen flex overflow-hidden antialiased font-body-text">
+<!-- SideNavBar -->
+<nav class="bg-background dark:bg-background docked w-sidebar-width h-screen left-0 border-r border-surface-variant flex flex-col gap-xs py-md pr-md hidden md:flex flex-shrink-0 z-20 shadow-sm relative z-10">
+<div class="px-md mb-md flex items-center gap-sm">
+<img alt="EasyLegal Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9KxeqjnFzDl1A62ClQQLwoQA3oa4vGvbmlAwItI94MZ7mkTdL8DaRz6_gs3aBnfGr-Gdto8dQRdzoDU0N9pEAq-oD3p1tjj5lRT18dkaEBvrRCxDWHZm2GreTEdQq3XlbUnTid8BqyR608OzMI8Wq9kRY-n7HnT2suCr-j5gfkpPnZASPTV038cD48rYUpm-EPUtFBuCeDOPvqrNYc1dWkJRLH95lpAom192w6RdVeWUMu6LOw_HAa056BXBnAH6iMhs"/>
+</div>
+<div class="px-sm mb-lg">
+<button class="bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-full py-md px-lg flex items-center gap-md shadow-sm hover:shadow-md transition-all active:scale-95 text-label-button font-label-button w-auto">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">edit</span>
+                Compose
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto">
+<ul class="flex flex-col">
+<li>
+<a class="bg-secondary-container text-on-secondary-container rounded-r-full font-bold flex items-center gap-md px-md py-sm active:scale-95 transition-transform text-label-button font-label-button" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">inbox</span>
+<span class="flex-1">Inbox</span>
+<span class="bg-primary text-on-primary text-xs rounded-full px-2 py-0.5">3</span>
+</a>
+</li>
+<li>
+<a class="text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full flex items-center gap-md px-md py-sm hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform text-label-button font-label-button" href="#">
+<span class="material-symbols-outlined">star</span>
+                        Starred
+                    </a>
+</li>
+<li>
+<a class="text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full flex items-center gap-md px-md py-sm hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform text-label-button font-label-button" href="#">
+<span class="material-symbols-outlined">schedule</span>
+                        Snoozed
+                    </a>
+</li>
+<li>
+<a class="text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full flex items-center gap-md px-md py-sm hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform text-label-button font-label-button" href="#">
+<span class="material-symbols-outlined">send</span>
+                        Sent
+                    </a>
+</li>
+<li>
+<a class="text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full flex items-center gap-md px-md py-sm hover:bg-surface-variant/50 transition-all duration-200 active:scale-95 transition-transform text-label-button font-label-button" href="#">
+<span class="material-symbols-outlined">draft</span>
+                        Drafts
+                    </a>
+</li>
+</ul>
+<div class="mt-lg pt-sm border-t border-surface-variant px-md">
+<h3 class="text-label-secondary font-label-secondary text-outline uppercase tracking-wider mb-sm pl-sm">Categories</h3>
+<ul class="flex flex-col">
+<li>
+<a class="text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full flex items-center gap-md px-sm py-xs hover:bg-surface-variant/50 transition-all duration-200 text-label-button font-label-button" href="#">
+<span class="material-symbols-outlined text-[18px]">label</span>
+                            Labels
+                        </a>
+</li>
+<li>
+<a class="text-on-surface-variant hover:bg-surface-variant/50 rounded-r-full flex items-center gap-md px-sm py-xs hover:bg-surface-variant/50 transition-all duration-200 text-label-button font-label-button" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+                            Settings
+                        </a>
+</li>
+</ul>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-surface">
+<!-- TopNavBar -->
+<header class="bg-background dark:bg-background docked full-width top-0 flat no shadows flex items-center justify-between px-md py-sm w-full h-16 z-10 border-b border-surface-variant">
+<div class="flex items-center flex-1 max-w-2xl gap-sm">
+<!-- Mobile Menu Button -->
+<button class="md:hidden p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<!-- Search Bar -->
+<div class="relative w-full">
+<div class="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline">search</span>
+</div>
+<input class="block w-full pl-12 pr-4 py-sm bg-surface-variant/50 border-none rounded-full text-body-text font-body-text focus:ring-2 focus:ring-primary focus:bg-surface transition-colors placeholder-outline w-full" placeholder="Search mail" type="text"/>
+<div class="absolute inset-y-0 right-0 pr-2 flex items-center">
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-sm ml-auto">
+<button class="p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors cursor-pointer active:opacity-80 hidden sm:block">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors cursor-pointer active:opacity-80 hidden sm:block">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors cursor-pointer active:opacity-80 hidden sm:block">
+<span class="material-symbols-outlined">apps</span>
+</button>
+<div class="ml-sm">
+<img alt="User profile" class="h-8 w-8 rounded-full object-cover border border-surface-variant cursor-pointer hover:ring-2 hover:ring-primary transition-all" data-alt="A small, circular avatar portrait of a professional individual in a corporate setting. High-key lighting, modern clean aesthetic. Minimalist background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7fGiSxdB99v1uinNUY_DuFpNmv5S4Zb9LBiJ8cw0NImQTzCihNH8T0CHByH18zOYgyxsSlKNfJXDKbQUo8kYULvZibTAahLJe-LrTalqOBwzFItGbzKCoUiU0ZIVAJp2BBhQjKVWyEKs1a3WFWKTpPJ2zwuyKebQ29eU2hhrysnBDSHfZY1B74o73-QP7XD6WwXMLfbog_xaNrOkPxb6t1m-O25XDL3_2_E4bd7rpAq4ZabdDd-M6dg"/>
+</div>
+</div>
+</header>
+<!-- Two-pane layout for Inbox -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Email List Column -->
+<div class="w-full md:w-[360px] lg:w-[420px] flex-shrink-0 border-r border-surface-variant flex flex-col bg-surface z-0 overflow-hidden">
+<!-- List Actions -->
+<div class="px-md py-sm flex items-center justify-between border-b border-surface-variant bg-surface sticky top-0 z-10">
+<div class="flex items-center gap-xs">
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded flex items-center transition-colors">
+<span class="material-symbols-outlined text-[20px]">check_box_outline_blank</span>
+<span class="material-symbols-outlined text-[16px] ml-1">arrow_drop_down</span>
+</button>
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded transition-colors">
+<span class="material-symbols-outlined text-[20px]">refresh</span>
+</button>
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex items-center gap-sm text-label-secondary font-label-secondary text-on-surface-variant">
+<span>1-50 of 1,234</span>
+<div class="flex">
+<button class="p-xs hover:bg-surface-variant/50 rounded transition-colors opacity-50 cursor-not-allowed">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<button class="p-xs hover:bg-surface-variant/50 rounded transition-colors">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- List Content -->
+<div class="flex-1 overflow-y-auto">
+<!-- Unread Item -->
+<div class="email-item flex items-center px-md py-sm border-b border-surface-variant bg-surface-container-low cursor-pointer group relative">
+<div class="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary"></div>
+<div class="flex items-center gap-md w-full">
+<div class="flex items-center gap-sm flex-shrink-0">
+<button class="text-outline hover:text-on-surface transition-colors hidden sm:block">
+<span class="material-symbols-outlined text-[20px]">check_box_outline_blank</span>
+</button>
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">star_border</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-sm">
+                                    A
+                                </div>
+</div>
+<div class="flex-1 min-w-0 pr-2">
+<div class="flex justify-between items-baseline mb-0.5">
+<h4 class="font-email-subject text-email-subject text-on-surface truncate pr-2 font-bold">Acme Corp Design Team</h4>
+<span class="email-date text-label-secondary font-label-secondary text-primary font-bold whitespace-nowrap transition-opacity">10:42 AM</span>
+<!-- Hover Actions -->
+<div class="email-actions absolute right-md top-1/2 -translate-y-1/2 flex items-center gap-xs bg-surface-container-low pl-2 opacity-0 transition-opacity shadow-[-8px_0_8px_-4px_rgba(242,243,253,1)]">
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">archive</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">mark_email_read</span>
+</button>
+</div>
+</div>
+<p class="text-body-text font-body-text text-on-surface font-medium truncate mb-0.5">Q3 Product Roadmap Review</p>
+<p class="text-body-text font-body-text text-on-surface-variant truncate text-sm">Please review the attached presentation before our sync tomorrow at 10 AM. We need to finalize the design system tokens.</p>
+</div>
+</div>
+</div>
+<!-- Selected Item -->
+<div class="email-item flex items-center px-md py-sm border-b border-surface-variant bg-secondary-fixed-dim/20 cursor-pointer group relative">
+<div class="flex items-center gap-md w-full">
+<div class="flex items-center gap-sm flex-shrink-0">
+<button class="text-outline hover:text-on-surface transition-colors hidden sm:block">
+<span class="material-symbols-outlined text-[20px]">check_box_outline_blank</span>
+</button>
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">star_border</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-bold text-sm">
+                                    S
+                                </div>
+</div>
+<div class="flex-1 min-w-0 pr-2">
+<div class="flex justify-between items-baseline mb-0.5">
+<h4 class="font-email-subject text-email-subject text-on-surface truncate pr-2">Sarah Jenkins</h4>
+<span class="email-date text-label-secondary font-label-secondary text-on-surface-variant whitespace-nowrap transition-opacity">Yesterday</span>
+<div class="email-actions absolute right-md top-1/2 -translate-y-1/2 flex items-center gap-xs bg-secondary-fixed-dim/20 pl-2 opacity-0 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">archive</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">mark_email_unread</span>
+</button>
+</div>
+</div>
+<p class="text-body-text font-body-text text-on-surface truncate mb-0.5">Weekly Status Update - Marketing Campaign</p>
+<p class="text-body-text font-body-text text-on-surface-variant truncate text-sm">Here is the summary of our performance metrics for last week. CTR is up by 15% across all major platforms.</p>
+</div>
+</div>
+</div>
+<!-- Read Item -->
+<div class="email-item flex items-center px-md py-sm border-b border-surface-variant hover:bg-surface-variant/20 cursor-pointer group relative transition-colors">
+<div class="flex items-center gap-md w-full">
+<div class="flex items-center gap-sm flex-shrink-0">
+<button class="text-outline hover:text-on-surface transition-colors hidden sm:block">
+<span class="material-symbols-outlined text-[20px]">check_box_outline_blank</span>
+</button>
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1; color: #f59e0b;">star</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-bold text-sm">
+                                    G
+                                </div>
+</div>
+<div class="flex-1 min-w-0 pr-2">
+<div class="flex justify-between items-baseline mb-0.5">
+<h4 class="font-email-subject text-email-subject text-on-surface truncate pr-2">Google Cloud Platform</h4>
+<span class="email-date text-label-secondary font-label-secondary text-on-surface-variant whitespace-nowrap transition-opacity">Mar 12</span>
+<div class="email-actions absolute right-md top-1/2 -translate-y-1/2 flex items-center gap-xs bg-surface pl-2 opacity-0 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">archive</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant/80 rounded-full transition-colors bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-sm mb-0.5">
+<span class="bg-surface-variant text-on-surface-variant text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide">Updates</span>
+<p class="text-body-text font-body-text text-on-surface truncate">Your monthly invoice is available</p>
+</div>
+<p class="text-body-text font-body-text text-on-surface-variant truncate text-sm">Please find attached your invoice for February 2024 billing cycle.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Reading Pane -->
+<div class="hidden lg:flex flex-1 flex-col bg-surface overflow-hidden relative">
+<!-- Reading Pane Header Actions -->
+<div class="px-lg py-sm flex items-center justify-between border-b border-surface-variant bg-surface z-10 sticky top-0">
+<div class="flex items-center gap-xs">
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Archive">
+<span class="material-symbols-outlined">archive</span>
+</button>
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Report spam">
+<span class="material-symbols-outlined">report</span>
+</button>
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Delete">
+<span class="material-symbols-outlined">delete</span>
+</button>
+<div class="w-px h-5 bg-outline-variant mx-1"></div>
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Mark unread">
+<span class="material-symbols-outlined">mark_email_unread</span>
+</button>
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Snooze">
+<span class="material-symbols-outlined">schedule</span>
+</button>
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors" title="Add to tasks">
+<span class="material-symbols-outlined">add_task</span>
+</button>
+</div>
+<div class="flex items-center gap-sm">
+<span class="text-label-secondary font-label-secondary text-on-surface-variant">2 of 1,234</span>
+<div class="flex gap-1">
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Email Content -->
+<div class="flex-1 overflow-y-auto p-xl">
+<div class="max-w-[800px] mx-auto">
+<!-- Subject Line -->
+<div class="flex items-start justify-between mb-lg gap-md">
+<h2 class="text-[24px] leading-8 font-normal text-on-surface flex-1">Weekly Status Update - Marketing Campaign</h2>
+<div class="flex gap-2 flex-shrink-0 mt-1">
+<span class="bg-surface-variant/50 text-on-surface-variant text-label-secondary font-label-secondary px-2 py-1 rounded-md">Inbox</span>
+<span class="bg-primary/10 text-primary text-label-secondary font-label-secondary px-2 py-1 rounded-md">Important</span>
+</div>
+</div>
+<!-- Sender Info -->
+<div class="flex items-center justify-between mb-xl">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-bold text-lg shadow-sm">
+                                    S
+                                </div>
+<div>
+<div class="flex items-baseline gap-2">
+<span class="font-bold text-on-surface text-body-text-lg font-body-text-lg">Sarah Jenkins</span>
+<span class="text-label-secondary font-label-secondary text-on-surface-variant">&lt;s.jenkins@example.com&gt;</span>
+</div>
+<div class="flex items-center gap-1 text-label-secondary font-label-secondary text-on-surface-variant">
+<span>to me</span>
+<span class="material-symbols-outlined text-[16px] cursor-pointer hover:text-on-surface">arrow_drop_down</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-md text-label-secondary font-label-secondary text-on-surface-variant">
+<span>Mar 13, 2024, 2:45 PM (18 hours ago)</span>
+<div class="flex gap-1">
+<button class="p-xs hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[20px]">star_border</span>
+</button>
+<button class="p-xs hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[20px]">reply</span>
+</button>
+<button class="p-xs hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Email Body -->
+<div class="text-body-text font-body-text text-on-surface space-y-md leading-relaxed">
+<p>Hi Team,</p>
+<p>Here is the summary of our performance metrics for last week. I'm pleased to report that our Click-Through Rate (CTR) is up by 15% across all major platforms following the deployment of the new creative assets.</p>
+<div class="bg-surface-container-low p-md rounded-lg border border-surface-variant my-lg">
+<h4 class="font-bold mb-sm text-on-surface">Key Highlights:</h4>
+<ul class="list-disc pl-lg space-y-xs text-on-surface-variant">
+<li>Social media engagement increased by 22%</li>
+<li>Email open rates stabilized at 34%</li>
+<li>Conversion rate on the landing page jumped to 4.2%</li>
+</ul>
+</div>
+<p>Please review the attached detailed report before our sync on Friday. We need to discuss resource allocation for the upcoming Q3 push.</p>
+<p>Best regards,<br/>
+                            Sarah</p>
+</div>
+<!-- Attachments -->
+<div class="mt-xl pt-lg border-t border-surface-variant">
+<h4 class="text-label-secondary font-label-secondary text-on-surface-variant mb-md uppercase tracking-wider">1 Attachment</h4>
+<div class="flex flex-wrap gap-md">
+<div class="flex items-center gap-md p-md border border-surface-variant rounded-lg hover:bg-surface-variant/20 cursor-pointer transition-colors max-w-[240px] group">
+<div class="w-10 h-10 bg-error/10 text-error rounded flex items-center justify-center">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-body-text font-body-text text-on-surface truncate font-medium">Weekly_Metrics_v2.pdf</p>
+<p class="text-label-secondary font-label-secondary text-on-surface-variant">2.4 MB</p>
+</div>
+<div class="opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-outline hover:text-on-surface">download</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Reply Area -->
+<div class="mt-xl pt-lg flex gap-md">
+<button class="bg-surface hover:bg-surface-variant/50 border border-outline px-lg py-sm rounded-full flex items-center gap-sm text-label-button font-label-button text-on-surface transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]">reply</span>
+                                Reply
+                            </button>
+<button class="bg-surface hover:bg-surface-variant/50 border border-outline px-lg py-sm rounded-full flex items-center gap-sm text-label-button font-label-button text-on-surface transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]">forward</span>
+                                Forward
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

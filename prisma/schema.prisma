@@ -1,0 +1,104 @@
+// ponytail: sqlite for dev (no docker/postgres in this env). Swap provider to
+// postgresql + re-add String[]/Json for recipients & audit details when deploying.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id                String    @id @default(uuid())
+  name              String
+  personalEmail     String    @unique
+  mailboxAddress    String    @unique
+  mailboxResourceId String?   @unique
+  passwordEnc       String // AES-256-GCM (needed plaintext for IMAP/SMTP)
+  status            String    @default("active") // active, inactive, deleted
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastLoginAt       DateTime?
+
+  messages  MessageCache[]
+  auditLogs AuditLog[]
+
+  @@index([mailboxAddress])
+  @@index([status])
+}
+
+model AdminUser {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("admin") // admin, superadmin
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  auditLogs AuditLog[]
+
+  @@index([email])
+}
+
+model MessageCache {
+  id         String   @id @default(uuid())
+  mailboxId  String
+  uid        String // IMAP UID
+  folder     String   @default("INBOX")
+  subject    String?
+  sender     String?
+  recipients String   @default("") // comma-separated
+  snippet    String?
+  bodyText   String?
+  bodyHtml   String?
+  isRead     Boolean  @default(false)
+  isStarred  Boolean  @default(false)
+  isDeleted  Boolean  @default(false)
+  receivedAt DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  mailbox     Customer     @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+
+  @@unique([mailboxId, uid])
+  @@index([mailboxId, folder])
+  @@index([mailboxId, receivedAt])
+  @@index([mailboxId, isRead])
+}
+
+model Attachment {
+  id        String @id @default(uuid())
+  messageId String
+  filename  String
+  mimeType  String @default("application/octet-stream")
+  size      Int    @default(0)
+  path      String // relative path under STORAGE_DIR
+
+  message MessageCache @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  action     String
+  targetType String // customer, mailbox, message
+  targetId   String?
+  details    String? // JSON string
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  actor    AdminUser @relation(fields: [actorId], references: [id])
+  customer Customer? @relation(fields: [targetId], references: [id])
+
+  @@index([actorId])
+  @@index([createdAt])
+  @@index([action])
+}

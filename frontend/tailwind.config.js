@@ -1,0 +1,57 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        'primary': '#680003',
+        'primary-container': '#930006',
+        'on-primary': '#ffffff',
+        'on-primary-container': '#ff998c',
+        'inverse-primary': '#ffb4aa',
+        'background': '#f8f9fa',
+        'surface': '#f8f9fa',
+        'surface-cream': '#FDFCFB',
+        'surface-container-lowest': '#ffffff',
+        'surface-container-low': '#f3f4f5',
+        'surface-container': '#edeeef',
+        'surface-container-high': '#e7e8e9',
+        'surface-container-highest': '#e1e3e4',
+        'surface-variant': '#e1e3e4',
+        'on-background': '#191c1d',
+        'on-surface': '#191c1d',
+        'on-surface-variant': '#5b403d',
+        'inverse-surface': '#2e3132',
+        'inverse-on-surface': '#f0f1f2',
+        'outline': '#8f706c',
+        'outline-variant': '#e3beb9',
+        'secondary': '#5e5e5c',
+        'secondary-container': '#e1dfdc',
+        'on-secondary': '#ffffff',
+        'on-secondary-container': '#636360',
+        'tertiary': '#2f3033',
+        'tertiary-container': '#46464a',
+        'on-tertiary': '#ffffff',
+        'on-tertiary-container': '#b5b4b8',
+        'error': '#ba1a1a',
+        'error-container': '#ffdad6',
+        'on-error': '#ffffff',
+        'on-error-container': '#93000a',
+        'border-subtle': '#DADCE0',
+        'legal-red-container': '#FFDAD6',
+      },
+      fontFamily: {
+        'inter': ['Inter', 'sans-serif'],
+      },
+      borderRadius: {
+        'full': '9999px',
+      },
+      spacing: {
+        'sidebar-width': '256px',
+      },
+    },
+  },
+  plugins: [],
+};

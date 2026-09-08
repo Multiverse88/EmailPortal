@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DNS Record Editor - EasyLegal Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#ffdad5",
+                        "surface-bright": "#f8f9fa",
+                        "secondary-fixed": "#e4e2de",
+                        "primary": "#680003",
+                        "on-background": "#191c1d",
+                        "on-tertiary-fixed-variant": "#46474a",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-error-container": "#93000a",
+                        "background": "#f8f9fa",
+                        "on-surface": "#191c1d",
+                        "secondary-container": "#e1dfdc",
+                        "legal-red-container": "#FFDAD6",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e7e8e9",
+                        "secondary-fixed-dim": "#c8c6c3",
+                        "inverse-on-surface": "#f0f1f2",
+                        "on-secondary-fixed-variant": "#474744",
+                        "on-secondary": "#ffffff",
+                        "outline": "#8f706c",
+                        "on-tertiary": "#ffffff",
+                        "border-subtle": "#DADCE0",
+                        "secondary": "#5e5e5c",
+                        "surface-cream": "#FDFCFB",
+                        "on-primary-fixed-variant": "#930006",
+                        "primary-fixed-dim": "#ffb4aa",
+                        "tertiary-fixed": "#e3e2e6",
+                        "on-tertiary-fixed": "#1a1b1e",
+                        "surface-container-low": "#f3f4f5",
+                        "on-tertiary-container": "#b5b4b8",
+                        "on-secondary-container": "#636360",
+                        "surface-container": "#edeeef",
+                        "on-surface-variant": "#5b403d",
+                        "outline-variant": "#e3beb9",
+                        "surface-variant": "#e1e3e4",
+                        "surface-dim": "#d9dadb",
+                        "on-secondary-fixed": "#1b1c1a",
+                        "surface-tint": "#b6231c",
+                        "on-primary-fixed": "#410001",
+                        "primary-container": "#930006",
+                        "inverse-surface": "#2e3132",
+                        "tertiary-fixed-dim": "#c7c6ca",
+                        "inverse-primary": "#ffb4aa",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#ff998c",
+                        "on-primary": "#ffffff",
+                        "surface": "#f8f9fa",
+                        "tertiary-container": "#46464a",
+                        "tertiary": "#2f3033",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "sidebar-width": "256px",
+                        "md": "16px",
+                        "base": "8px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "gutter": "16px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "email-subject": ["Inter"],
+                        "body-text": ["Inter"],
+                        "page-title": ["Inter"],
+                        "body-text-lg": ["Inter"],
+                        "label-secondary": ["Inter"],
+                        "label-button": ["Inter"],
+                        "page-title-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "email-subject": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "body-text": ["14px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "page-title": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "body-text-lg": ["15px", { "lineHeight": "26px", "fontWeight": "400" }],
+                        "label-secondary": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "label-button": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "page-title-mobile": ["20px", { "lineHeight": "26px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-text antialiased min-h-screen flex flex-col md:flex-row">
+<!-- Content Canvas -->
+<main class="flex-1 flex flex-col min-h-screen w-full">
+<!-- Header / Top App Bar -->
+<header class="flex items-center justify-between px-md py-sm w-full h-16 bg-surface-container-lowest border-b border-border-subtle shrink-0">
+<div class="flex items-center gap-md">
+<button class="p-2 hover:bg-surface-variant/50 rounded-full transition-colors flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div>
+<h1 class="font-page-title text-page-title text-on-surface">easylegal.com</h1>
+<div class="flex items-center gap-xs mt-1">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span class="font-label-secondary text-label-secondary text-on-surface-variant">Active</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="bg-primary text-on-primary font-label-button text-label-button px-lg py-sm rounded-full hover:opacity-90 transition-opacity shadow-sm flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Add Record
+                </button>
+</div>
+</header>
+<!-- Main Content Area -->
+<div class="flex-1 overflow-auto p-md md:p-xl">
+<div class="max-w-6xl mx-auto space-y-lg">
+<!-- Information Card -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-lg p-md shadow-sm">
+<div class="flex items-start gap-md">
+<span class="material-symbols-outlined text-primary-container shrink-0 mt-1">info</span>
+<div>
+<h3 class="font-email-subject text-email-subject text-on-surface">DNS Management</h3>
+<p class="font-body-text text-body-text text-on-surface-variant mt-xs">Changes to these records may take up to 48 hours to propagate across the internet, though they usually take effect within a few minutes. Ensure accuracy when modifying MX and TXT records to prevent email delivery issues.</p>
+</div>
+</div>
+</div>
+<!-- DNS Records Table / Grid -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[800px]">
+<thead>
+<tr class="bg-surface border-b border-border-subtle">
+<th class="py-sm px-md font-label-button text-label-button text-on-surface-variant w-1/5">Type</th>
+<th class="py-sm px-md font-label-button text-label-button text-on-surface-variant w-1/4">Host / Name</th>
+<th class="py-sm px-md font-label-button text-label-button text-on-surface-variant w-2/5">Value / Target</th>
+<th class="py-sm px-md font-label-button text-label-button text-on-surface-variant w-32">TTL</th>
+<th class="py-sm px-md font-label-button text-label-button text-on-surface-variant w-16 text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-subtle">
+<!-- Record Row: A -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="p-md">
+<select class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option selected="">A</option>
+<option>CNAME</option>
+<option>MX</option>
+<option>TXT</option>
+</select>
+</td>
+<td class="p-md">
+<input class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="text" value="@"/>
+</td>
+<td class="p-md">
+<input class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="text" value="192.168.1.100"/>
+</td>
+<td class="p-md">
+<select class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>Auto</option>
+<option selected="">3600</option>
+<option>7200</option>
+<option>86400</option>
+</select>
+</td>
+<td class="p-md text-center">
+<button class="text-on-surface-variant hover:text-error transition-colors p-1 rounded hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Record Row: CNAME -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="p-md">
+<select class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>A</option>
+<option selected="">CNAME</option>
+<option>MX</option>
+<option>TXT</option>
+</select>
+</td>
+<td class="p-md">
+<input class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="text" value="www"/>
+</td>
+<td class="p-md">
+<input class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="text" value="easylegal.com"/>
+</td>
+<td class="p-md">
+<select class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>Auto</option>
+<option selected="">3600</option>
+<option>7200</option>
+<option>86400</option>
+</select>
+</td>
+<td class="p-md text-center">
+<button class="text-on-surface-variant hover:text-error transition-colors p-1 rounded hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Record Row: MX -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="p-md">
+<select class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>A</option>
+<option>CNAME</option>
+<option selected="">MX</option>
+<option>TXT</option>
+</select>
+</td>
+<td class="p-md">
+<input class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="text" value="@"/>
+</td>
+<td class="p-md flex gap-xs">
+<input class="w-20 bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Priority" type="number" value="10"/>
+<input class="flex-1 bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="text" value="mail.easylegal.com"/>
+</td>
+<td class="p-md">
+<select class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>Auto</option>
+<option selected="">3600</option>
+<option>7200</option>
+<option>86400</option>
+</select>
+</td>
+<td class="p-md text-center">
+<button class="text-on-surface-variant hover:text-error transition-colors p-1 rounded hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Record Row: TXT -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="p-md">
+<select class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>A</option>
+<option>CNAME</option>
+<option>MX</option>
+<option selected="">TXT</option>
+</select>
+</td>
+<td class="p-md">
+<input class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="text" value="@"/>
+</td>
+<td class="p-md">
+<input class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="text" value="v=spf1 include:_spf.google.com ~all"/>
+</td>
+<td class="p-md">
+<select class="w-full bg-surface-container-lowest border border-border-subtle rounded px-sm py-sm font-body-text text-body-text text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>Auto</option>
+<option selected="">3600</option>
+<option>7200</option>
+<option>86400</option>
+</select>
+</td>
+<td class="p-md text-center">
+<button class="text-on-surface-variant hover:text-error transition-colors p-1 rounded hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="flex justify-end gap-md pt-md border-t border-border-subtle">
+<button class="px-lg py-sm font-label-button text-label-button text-primary bg-surface-cream border border-outline-variant rounded-full hover:bg-secondary-fixed transition-colors">
+                        Discard Changes
+                    </button>
+<button class="px-lg py-sm font-label-button text-label-button text-on-primary bg-primary rounded-full hover:opacity-90 transition-opacity shadow-sm">
+                        Save Changes
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

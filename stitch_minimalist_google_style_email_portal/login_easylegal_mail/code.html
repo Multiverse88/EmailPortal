@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MailPortal - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-primary-container": "#ff998c",
+                "on-secondary-fixed": "#1b1c1a",
+                "tertiary-container": "#46464a",
+                "secondary-fixed": "#e4e2de",
+                "primary-container": "#930006",
+                "error-container": "#ffdad6",
+                "surface-dim": "#d9dadb",
+                "on-error": "#ffffff",
+                "inverse-primary": "#ffb4aa",
+                "on-primary": "#ffffff",
+                "on-primary-fixed": "#410001",
+                "outline-variant": "#e3beb9",
+                "on-tertiary-container": "#b5b4b8",
+                "secondary": "#5e5e5c",
+                "surface-cream": "#FDFCFB",
+                "surface-container-lowest": "#ffffff",
+                "surface-container": "#edeeef",
+                "background": "#f8f9fa",
+                "surface-tint": "#b6231c",
+                "surface-variant": "#e1e3e4",
+                "surface-container-high": "#e7e8e9",
+                "on-tertiary-fixed": "#1a1b1e",
+                "tertiary-fixed-dim": "#c7c6ca",
+                "primary-fixed": "#ffdad5",
+                "outline": "#8f706c",
+                "surface": "#f8f9fa",
+                "primary-fixed-dim": "#ffb4aa",
+                "on-error-container": "#93000a",
+                "tertiary": "#2f3033",
+                "inverse-on-surface": "#f0f1f2",
+                "on-surface": "#191c1d",
+                "on-tertiary-fixed-variant": "#46474a",
+                "surface-bright": "#f8f9fa",
+                "on-secondary-container": "#636360",
+                "on-secondary-fixed-variant": "#474744",
+                "error": "#ba1a1a",
+                "primary": "#680003",
+                "surface-container-highest": "#e1e3e4",
+                "on-background": "#191c1d",
+                "legal-red-container": "#FFDAD6",
+                "secondary-container": "#e1dfdc",
+                "tertiary-fixed": "#e3e2e6",
+                "on-tertiary": "#ffffff",
+                "on-surface-variant": "#5b403d",
+                "surface-container-low": "#f3f4f5",
+                "border-subtle": "#DADCE0",
+                "inverse-surface": "#2e3132",
+                "on-primary-fixed-variant": "#930006",
+                "secondary-fixed-dim": "#c8c6c3",
+                "on-secondary": "#ffffff"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "xl": "32px",
+                "sm": "8px",
+                "md": "16px",
+                "xs": "4px",
+                "sidebar-width": "256px",
+                "base": "8px",
+                "lg": "24px",
+                "gutter": "16px"
+        },
+        "fontFamily": {
+                "email-subject": [
+                        "Inter"
+                ],
+                "label-button": [
+                        "Inter"
+                ],
+                "body-text-lg": [
+                        "Inter"
+                ],
+                "body-text": [
+                        "Inter"
+                ],
+                "page-title-mobile": [
+                        "Inter"
+                ],
+                "page-title": [
+                        "Inter"
+                ],
+                "label-secondary": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "email-subject": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-button": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-text-lg": [
+                        "15px",
+                        {
+                                "lineHeight": "26px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-text": [
+                        "14px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "page-title-mobile": [
+                        "20px",
+                        {
+                                "lineHeight": "26px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "page-title": [
+                        "22px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "label-secondary": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen flex items-center justify-center p-md">
+<div class="w-full max-w-sm bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container-highest p-xl flex flex-col items-center">
+<div class="flex justify-center w-full mb-lg">
+<img alt="EasyLegal Logo" class="h-16 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDogG3mrFFNqzqCweCkmgCzFOMnL3ZMW1zyxhw2ijVklGnCJNuz48RtRcF6Ksb3spwxlMVhgi_ukF7hvdYg5PX8sNIkviSUUiyEVjPqUuxNXqgGm4l_kNPIv-7AfI5Jco_DKqpa0FxTZ3eERe7pu4qDNYAG3xNXabxcihxbWFKw89Rh09T_TwvMgzK3eiNeuN27NKsnUwiqogiU7iG7lv-JKoNsIxrBa6FRkToUgzj0suiWWWtyxP4tLPthi7NeqfGN3E"/>
+</div>
+<form action="#" class="w-full flex flex-col gap-md" method="POST">
+<div class="flex flex-col gap-xs">
+<label class="sr-only font-body-text text-body-text text-on-surface-variant" for="email">Email</label>
+<input class="w-full px-md py-sm bg-surface rounded-lg border border-outline-variant text-on-surface font-body-text text-body-text focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow" id="email" name="email" placeholder="Email address" required="" type="email"/>
+</div>
+<div class="flex flex-col gap-xs mb-sm">
+<label class="sr-only font-body-text text-body-text text-on-surface-variant" for="password">Password</label>
+<input class="w-full px-md py-sm bg-surface rounded-lg border border-outline-variant text-on-surface font-body-text text-body-text focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow" id="password" name="password" placeholder="Password" required="" type="password"/>
+</div>
+<button class="w-full bg-primary text-on-primary font-label-button text-label-button py-sm px-lg rounded-full hover:bg-surface-tint shadow-sm transition-colors duration-200" type="submit">
+                Sign in
+            </button>
+</form>
+</div>
+</body></html>
