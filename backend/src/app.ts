@@ -14,6 +14,7 @@ import securityRoutes from './routes/security';
 import settingsRoutes from './routes/settings';
 import documentsRoutes from './routes/documents';
 import supportRoutes from './routes/support';
+import storageRoutes from './routes/storage';
 
 const app = express();
 export const prisma = new PrismaClient();
@@ -47,6 +48,7 @@ app.use('/api/security', authenticateCustomer, securityRoutes(prisma));
 app.use('/api/settings', authenticateCustomer, settingsRoutes(prisma));
 app.use('/api/documents', authenticateCustomer, documentsRoutes(prisma));
 app.use('/api/support', authenticateCustomer, supportRoutes(prisma));
+app.use('/api/storage', authenticateAdmin, storageRoutes(prisma));
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
