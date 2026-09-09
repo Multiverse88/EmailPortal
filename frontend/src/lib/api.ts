@@ -22,6 +22,7 @@ api.interceptors.request.use((config) => {
     url.includes('/storage') ||
     url.includes('/audit') ||
     url.includes('/auth/register') ||
+    url.includes('/auth/impersonate') ||
     url.includes('/security/admin');
 
   const isCustomerEndpoint =
@@ -67,6 +68,7 @@ api.interceptors.response.use(
         url.includes('/storage') ||
         url.includes('/audit') ||
         url.includes('/auth/register') ||
+        url.includes('/auth/impersonate') ||
         url.includes('/security/admin') ||
         pathname.startsWith('/admin');
 
