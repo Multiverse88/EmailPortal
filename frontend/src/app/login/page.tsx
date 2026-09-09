@@ -318,10 +318,31 @@ export default function LoginPage() {
               >
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-slate-800">Administrator</span>
+                    <span className="text-xs font-semibold text-slate-800">Super Admin</span>
                     <span className="text-xs text-slate-500">admin@clienteasylegal.co.id</span>
                   </div>
-                  <span className="text-[10px] text-slate-400">Kelola 8 mailbox, sandi Admin123!</span>
+                  <span className="text-[10px] text-slate-400">Synology sync, security radar, sandi Admin123!</span>
+                </div>
+                <CheckCircle2 className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
+              </button>
+
+              <button
+                type="button"
+                data-testid="fill-demo-officer"
+                onClick={() => {
+                  setTab('admin');
+                  setEmail('officer@clienteasylegal.co.id');
+                  setPassword('Officer123!');
+                  setError('');
+                }}
+                className="group flex items-center justify-between rounded-xl border border-transparent bg-white p-2.5 text-left transition-colors hover:border-primary/15 hover:bg-primary/[0.035]"
+              >
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-slate-800">Officer (Staf Legal)</span>
+                    <span className="text-xs text-slate-500">officer@clienteasylegal.co.id</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400">Buat mailbox, email staf, sandi Officer123!</span>
                 </div>
                 <CheckCircle2 className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
               </button>

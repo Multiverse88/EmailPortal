@@ -34,6 +34,7 @@ import {
   Send,
   FileText,
   LifeBuoy,
+  Zap,
 } from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
 import { useAdminAuth, useAuthStore } from '@/store/auth';
@@ -160,6 +161,7 @@ function Admin_() {
   const [refreshingRadar, setRefreshingRadar] = useState(false);
   const [terminatingSessionId, setTerminatingSessionId] = useState<string | null>(null);
   const [terminatingAccountId, setTerminatingAccountId] = useState<string | null>(null);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
 
   // Mailboxes data
   const { data, mutate, isLoading } = useSWR<{ data: Mailbox[]; quota: { used: number; limit: number } }>(
@@ -287,6 +289,33 @@ function Admin_() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleImpersonate = async (customerId: string) => {
+    try {
+      setImpersonatingId(customerId);
+      const res = await api.post(`/auth/impersonate/${customerId}`);
+      const { token, user, impersonatedBy } = res.data;
+
+      localStorage.setItem('customer_token', token);
+      localStorage.setItem('customer_user', JSON.stringify(user));
+      if (impersonatedBy) {
+        localStorage.setItem('staff_impersonation', JSON.stringify(impersonatedBy));
+      }
+
+      const bridgeUrl = `/auth/impersonate?token=${encodeURIComponent(token)}&user=${encodeURIComponent(
+        JSON.stringify(user)
+      )}&officer=${encodeURIComponent(JSON.stringify(impersonatedBy))}`;
+
+      window.open(bridgeUrl, '_blank');
+      setToast(`Webmail ${user.email} berhasil dibuka di tab baru`);
+      setTimeout(() => setToast(''), 3500);
+    } catch (err: any) {
+      setToast(errMsg(err, 'Gagal membuka akun customer'));
+      setTimeout(() => setToast(''), 4000);
+    } finally {
+      setImpersonatingId(null);
+    }
   };
 
   const mailboxes = data?.data ?? [];
@@ -703,11 +732,31 @@ function Admin_() {
                               </div>
                             </td>
 
-                            {/* Mailbox address */}
+                            {/* Mailbox address + 1-Click Login Button */}
                             <td className="px-5 py-3.5">
-                              <span className="font-mono text-slate-800 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
-                                {m.mailboxAddress}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-slate-800 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
+                                  {m.mailboxAddress}
+                                </span>
+                                {isActive && (
+                                  <button
+                                    type="button"
+                                    data-testid={`impersonate-${m.id}`}
+                                    title={`Login 1-klik ke mailbox ${m.mailboxAddress}`}
+                                    onClick={() => handleImpersonate(m.id)}
+                                    disabled={impersonatingId === m.id}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shrink-0 shadow-2xs disabled:opacity-50 cursor-pointer"
+                                  >
+                                    {impersonatingId === m.id ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
+                                    )}
+                                    <span>Buka Akun</span>
+                                    <ExternalLink className="w-3 h-3 ml-0.5 opacity-75" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
 
                             {/* Personal email */}
@@ -1298,6 +1347,45 @@ function Admin_() {
                       Kirim surat resmi atau cek korespondensi legal customer di portal email.
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Quick 1-Click Mailbox Access for Officer */}
+              <div className="app-panel p-5">
+                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <span>Akses Cepat 1-Klik Mailbox Klien</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Masuk langsung ke webmail klien untuk pengecekan dokumen dan korespondensi tanpa memasukkan sandi.
+                </p>
+
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {mailboxes.filter(m => m.status === 'active').slice(0, 6).map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:border-primary/40 transition-colors"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <span className="block text-xs font-bold text-slate-800 truncate">{m.name}</span>
+                        <span className="block text-[11px] font-mono text-slate-500 truncate">{m.mailboxAddress}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleImpersonate(m.id)}
+                        disabled={impersonatingId === m.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark transition-colors shrink-0 shadow-xs disabled:opacity-50 cursor-pointer"
+                      >
+                        {impersonatingId === m.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                        )}
+                        <span>Buka Webmail</span>
+                        <ExternalLink className="w-3 h-3 ml-0.5 opacity-75" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
 
