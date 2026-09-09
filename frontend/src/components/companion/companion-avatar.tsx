@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useCompanionStore } from "@/lib/companion/companion-store";
 import { POSE_ASSETS } from "@/lib/companion/types";
 import { use3DTilt } from "./use-3d-tilt";
@@ -8,6 +9,7 @@ import { X, Sparkles } from "lucide-react";
 export function CompanionAvatar() {
   const { isOpen, isMinimized, pose, bubble, toggleChat, setMinimized, hideBubble } =
     useCompanionStore();
+  const [calloutDismissed, setCalloutDismissed] = useState(false);
   const { ref, style, shadowStyle, handlePointerEnter, handlePointerLeave } = use3DTilt({
     maxTilt: 16,
     perspective: 500,
@@ -41,7 +43,7 @@ export function CompanionAvatar() {
   return (
     <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end select-none">
       {/* Spontaneous thought / tip speech bubble */}
-      {bubble && (
+      {bubble ? (
         <div className="relative mb-2 max-w-xs animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="rounded-2xl border border-primary/20 bg-white/95 p-3 text-xs leading-relaxed text-slate-800 shadow-xl backdrop-blur">
             <div className="flex items-start justify-between gap-2 mb-1">
@@ -70,6 +72,49 @@ export function CompanionAvatar() {
           {/* Speech bubble tail pointer */}
           <div className="absolute right-8 -bottom-1.5 size-3 rotate-45 border-b border-r border-primary/20 bg-white" />
         </div>
+      ) : (
+        /* Friendly Invitation Callout Bubble above robot icon */
+        !calloutDismissed && (
+          <div className="relative mb-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div
+              onClick={toggleChat}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleChat();
+                }
+              }}
+              className="group/callout flex items-center gap-2 rounded-2xl border border-primary/25 bg-white/95 px-3.5 py-2 text-xs shadow-xl backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-2xl cursor-pointer"
+            >
+              <span className="relative flex size-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+              </span>
+              <div className="flex items-center gap-1 text-xs">
+                <span className="font-medium text-slate-700">Ada kendala?</span>
+                <span className="font-bold text-primary group-hover/callout:underline underline-offset-2">
+                  Silakan kabari saya!
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCalloutDismissed(true);
+                }}
+                className="ml-1 -mr-1 rounded-full p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                aria-label="Tutup pesan ajakan"
+                title="Tutup pesan"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+            {/* Speech bubble tail pointer */}
+            <div className="absolute right-8 -bottom-1.5 size-3 rotate-45 border-b border-r border-primary/25 bg-white pointer-events-none" />
+          </div>
+        )
       )}
 
       {/* 3D Parallax Floating Avatar */}
@@ -90,10 +135,12 @@ export function CompanionAvatar() {
           />
         </div>
 
-        {/* Hover Hint Badge */}
-        <div className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-900/85 px-2.5 py-0.5 text-[10px] font-semibold text-white opacity-0 shadow-md transition-opacity duration-200 group-hover:opacity-100">
-          Klik untuk ngobrol ✨
-        </div>
+        {/* Hover Hint Badge (only if callout dismissed) */}
+        {calloutDismissed && (
+          <div className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-900/85 px-2.5 py-0.5 text-[10px] font-semibold text-white opacity-0 shadow-md transition-opacity duration-200 group-hover:opacity-100">
+            Klik untuk ngobrol ✨
+          </div>
+        )}
       </div>
     </div>
   );

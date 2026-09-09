@@ -1,5 +1,5 @@
 import api from "../api";
-import { CompanionBackendStatus, CompanionPose, KnowledgeItem } from "./types";
+import { CompanionBackendStatus, CompanionPose, CompanionQuickAction, KnowledgeItem } from "./types";
 import { PORTAL_KNOWLEDGE_BASE } from "./knowledge-base";
 
 export function findMatchingKnowledge(query: string): KnowledgeItem | null {
@@ -89,7 +89,7 @@ export async function queryCompanion(
 ): Promise<{
   text: string;
   pose: CompanionPose;
-  quickActions?: Array<{ label: string; action: string; url?: string }>;
+  quickActions?: CompanionQuickAction[];
   source?: "9router" | "local";
 }> {
   try {

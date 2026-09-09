@@ -10,13 +10,23 @@ export type CompanionPose =
   | "waving"
   | "head";
 
+export interface CompanionQuickAction {
+  label: string;
+  action: string;
+  url?: string;
+  category?: string;
+  subject?: string;
+  message?: string;
+  priority?: "normal" | "urgent";
+}
+
 export interface CompanionMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: number;
   pose?: CompanionPose;
-  quickActions?: Array<{ label: string; action: string; url?: string }>;
+  quickActions?: CompanionQuickAction[];
 }
 
 export interface CompanionBackendStatus {
@@ -34,7 +44,7 @@ export interface KnowledgeItem {
   summary: string;
   content: string;
   pose: CompanionPose;
-  quickActions?: Array<{ label: string; action: string; url?: string }>;
+  quickActions?: CompanionQuickAction[];
 }
 
 export const POSE_ASSETS: Record<CompanionPose, string> = {

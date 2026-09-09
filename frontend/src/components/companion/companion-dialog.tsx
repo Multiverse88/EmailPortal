@@ -93,19 +93,35 @@ export function CompanionDialog({ onOpenSupport }: CompanionDialogProps) {
     }
   };
 
-  const handleAction = (action: string, url?: string) => {
+  const handleAction = (
+    action: string,
+    url?: string,
+    extra?: {
+      category?: string;
+      priority?: "normal" | "urgent";
+      subject?: string;
+      message?: string;
+    }
+  ) => {
     if (action === "open-support-modal") {
+      const category = extra?.category || "Retensi & Masa Aktif Akun";
+      const priority = extra?.priority || "normal";
+      const subject = extra?.subject || "Permohonan Bantuan Layanan EasyLegal";
+      const message =
+        extra?.message ||
+        "Halo Tim Support EasyLegal,\n\nSaya membutuhkan bantuan terkait akun dan layanan portal saya.\n\nTerima kasih.";
+
       if (onOpenSupport) {
         onOpenSupport({
-          category: "Retensi & Masa Aktif Akun",
-          subject: "Permohonan Informasi / Perpanjangan Masa Retensi Akun",
-          message: "Halo Tim Support EasyLegal,\n\nSaya ingin menanyakan perihal masa aktif akun saya serta permohonan perpanjangan retensi dokumen.\n\nTerima kasih.",
-          priority: "normal",
+          category,
+          subject,
+          message,
+          priority,
         });
       } else {
         window.dispatchEvent(
           new CustomEvent("easylegal:open-support", {
-            detail: { category: "Retensi & Masa Aktif Akun", priority: "normal" },
+            detail: { category, subject, message, priority },
           })
         );
       }
@@ -115,6 +131,12 @@ export function CompanionDialog({ onOpenSupport }: CompanionDialogProps) {
       handleSend("Bagaimana cara backup berkas dokumen saya?");
     } else if (action === "ask-support") {
       handleSend("Berapa lama tiket support saya diproses?");
+    } else if (action === "navigate-documents" || url === "/documents") {
+      router.push("/documents");
+    } else if (action === "navigate-settings" || url === "/settings") {
+      router.push("/settings");
+    } else if (action === "navigate-inbox" || url === "/inbox") {
+      router.push("/inbox");
     } else if (url) {
       router.push(url);
     }
@@ -207,7 +229,14 @@ export function CompanionDialog({ onOpenSupport }: CompanionDialogProps) {
                     <button
                       key={i}
                       type="button"
-                      onClick={() => handleAction(action.action, action.url)}
+                      onClick={() =>
+                        handleAction(action.action, action.url, {
+                          category: action.category,
+                          priority: action.priority,
+                          subject: action.subject,
+                          message: action.message,
+                        })
+                      }
                       className="inline-flex items-center gap-1 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary hover:text-white transition active:scale-95"
                     >
                       <Sparkles className="size-3" />
@@ -252,6 +281,34 @@ export function CompanionDialog({ onOpenSupport }: CompanionDialogProps) {
           className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-medium text-slate-600 hover:border-primary hover:text-primary transition"
         >
           📁 Backup Berkas
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSend("Bagaimana jika ukuran lampiran email melebihi 10 MB?")}
+          className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-medium text-slate-600 hover:border-primary hover:text-primary transition"
+        >
+          📎 Lampiran &gt; 10MB
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSend("Mengapa gambar di dalam email saya tidak muncul?")}
+          className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-medium text-slate-600 hover:border-primary hover:text-primary transition"
+        >
+          🖼️ Gambar Terblokir
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSend("Bagaimana cara mengamankan akun dan menghentikan sesi mencurigakan?")}
+          className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-medium text-slate-600 hover:border-primary hover:text-primary transition"
+        >
+          🔒 Sesi &amp; 2FA
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSend("Bagaimana cara memulihkan dokumen yang berumur lebih dari 90 hari?")}
+          className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-medium text-slate-600 hover:border-primary hover:text-primary transition"
+        >
+          💾 Berkas &gt; 90 Hari
         </button>
         <button
           type="button"

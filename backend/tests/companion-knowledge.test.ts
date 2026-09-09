@@ -24,6 +24,34 @@ describe('Backend Companion Knowledge Base', () => {
     expect(match?.pose).toBe('document');
   });
 
+  it('should match attachment limit queries', () => {
+    const match = findMatchingKnowledge('kenapa lampiran file terlalu besar gagal dikirim?');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('email-attachment-limit');
+    expect(match?.content).toContain('10 MB');
+  });
+
+  it('should match blocked email images queries', () => {
+    const match = findMatchingKnowledge('gambar email saya tidak muncul');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('email-images-blocked');
+    expect(match?.content).toContain('Tampilkan Gambar Asli');
+  });
+
+  it('should match 2FA loss queries and direct to urgent support', () => {
+    const match = findMatchingKnowledge('hp saya hilang tidak bisa 2fa');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('2fa-device-lost');
+    expect(match?.quickActions?.[0]?.priority).toBe('urgent');
+  });
+
+  it('should match cold storage restoration queries', () => {
+    const match = findMatchingKnowledge('bagaimana cara pulihkan dokumen lama lebih dari 90 hari di synology?');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('cold-storage-restore');
+    expect(match?.content).toContain('Synology NAS');
+  });
+
   it('should return null for unmatched random query', () => {
     const match = findMatchingKnowledge('siapa presiden pertama indonesia?');
     expect(match).toBeNull();
