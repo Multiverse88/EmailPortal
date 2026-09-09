@@ -155,14 +155,14 @@ export function DocumentPreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 overflow-hidden animate-in fade-in duration-150"
+      className="modal-backdrop overflow-hidden !p-2 sm:!p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[#f8f9fa] w-full max-w-6xl h-[92vh] rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden">
+      <div className="modal-panel flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden bg-background">
         {/* Modal Top Bar */}
-        <header className="h-14 bg-white border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between shrink-0">
+        <header className="workspace-toolbar">
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
@@ -180,7 +180,7 @@ export function DocumentPreviewModal({
           <div className="flex items-center gap-2">
             <button
               onClick={handleShare}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
+              className="app-secondary-button !min-h-9 !px-3 !text-xs"
               title="Salin tautan dokumen"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
@@ -189,7 +189,7 @@ export function DocumentPreviewModal({
 
             <button
               onClick={handleDownload}
-              className="px-4 py-1.5 rounded-full bg-primary hover:bg-primary-container text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
+              className="app-primary-button !min-h-9 !px-3 !text-xs"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Unduh Berkas</span>
@@ -197,7 +197,7 @@ export function DocumentPreviewModal({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors ml-1"
+              className="app-icon-button !size-8"
             >
               <X className="w-4 h-4" />
             </button>

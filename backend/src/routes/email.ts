@@ -6,7 +6,17 @@ import fs from 'node:fs';
 import { sanitizeHtml, toSnippet } from '../lib/sanitize';
 import { decrypt } from '../lib/crypto';
 import { sendMail } from '../lib/mail';
-import { isMailApiConfigured, resolveResourceId, sendViaApi } from '../lib/hostinger';
+import {
+  fetchMessageAttachment,
+  isMailApiConfigured,
+  resolveResourceId,
+  sendViaApi,
+} from '../lib/hostinger';
+import {
+  inferAttachmentMimeType,
+  isInlinePreviewMimeType,
+  previewResponseMimeType,
+} from '../lib/attachments';
 
 export const STORAGE_DIR = path.resolve(process.env.STORAGE_DIR || './storage');
 fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -258,8 +268,34 @@ export default (prisma: PrismaClient) => {
     try {
       const attachment = await prisma.attachment.findFirst({
         where: { id: req.params.id, message: { mailboxId: req.user!.id } },
+        include: {
+          message: {
+            include: { mailbox: true },
+          },
+        },
       });
       if (!attachment) return res.status(404).json({ error: 'Lampiran tidak ditemukan' });
+
+      if (attachment.path.startsWith('api-attach:')) {
+        const remoteId = attachment.path.slice('api-attach:'.length);
+        let resourceId = attachment.message.mailbox.mailboxResourceId ?? undefined;
+        if (!resourceId && isMailApiConfigured()) {
+          resourceId = await resolveResourceId(attachment.message.mailbox.mailboxAddress);
+        }
+        if (!resourceId || !remoteId) {
+          return res.status(404).json({ error: 'File lampiran remote tidak tersedia' });
+        }
+
+        const data = await fetchMessageAttachment(
+          resourceId,
+          attachment.message.folder,
+          Number(attachment.message.uid),
+          remoteId,
+        );
+        res.setHeader('Content-Type', inferAttachmentMimeType(attachment.filename, attachment.mimeType));
+        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(attachment.filename)}`);
+        return res.send(data);
+      }
 
       // path is stored as a basename; re-resolve and confirm it stays in STORAGE_DIR.
       const file = path.resolve(STORAGE_DIR, path.basename(attachment.path));
@@ -270,6 +306,60 @@ export default (prisma: PrismaClient) => {
     } catch (error) {
       console.error('Download error:', error);
       res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Inline attachment preview. Only browser-safe formats are served inline;
+  // active formats such as HTML and SVG intentionally remain download-only.
+  router.get('/attachment/:id/preview', async (req: Request, res: Response) => {
+    try {
+      const attachment = await prisma.attachment.findFirst({
+        where: { id: req.params.id, message: { mailboxId: req.user!.id } },
+        include: {
+          message: {
+            include: { mailbox: true },
+          },
+        },
+      });
+      if (!attachment) return res.status(404).json({ error: 'Lampiran tidak ditemukan' });
+
+      const mimeType = inferAttachmentMimeType(attachment.filename, attachment.mimeType);
+      if (!isInlinePreviewMimeType(mimeType)) {
+        return res.status(415).json({ error: 'Format berkas ini belum mendukung pratinjau langsung' });
+      }
+
+      res.setHeader('Content-Type', previewResponseMimeType(mimeType));
+      res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(attachment.filename)}`);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'private, max-age=300');
+
+      if (attachment.path.startsWith('api-attach:')) {
+        const remoteId = attachment.path.slice('api-attach:'.length);
+        let resourceId = attachment.message.mailbox.mailboxResourceId ?? undefined;
+        if (!resourceId && isMailApiConfigured()) {
+          resourceId = await resolveResourceId(attachment.message.mailbox.mailboxAddress);
+        }
+        if (!resourceId || !remoteId) {
+          return res.status(404).json({ error: 'File lampiran remote tidak tersedia' });
+        }
+
+        const data = await fetchMessageAttachment(
+          resourceId,
+          attachment.message.folder,
+          Number(attachment.message.uid),
+          remoteId,
+        );
+        return res.send(data);
+      }
+
+      const file = path.resolve(STORAGE_DIR, path.basename(attachment.path));
+      if (!file.startsWith(STORAGE_DIR + path.sep) || !fs.existsSync(file)) {
+        return res.status(404).json({ error: 'File tidak ada di storage' });
+      }
+      return res.sendFile(file);
+    } catch (error) {
+      console.error('Preview attachment error:', error);
+      res.status(500).json({ error: 'Gagal memuat pratinjau lampiran' });
     }
   });
 

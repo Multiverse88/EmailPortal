@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Mail, FileText, Ticket, Settings } from 'lucide-react';
+import { Mail, FileText, Ticket, Settings, Grip } from 'lucide-react';
 
 export type AppId = 'mail' | 'documents' | 'support' | 'settings';
 
@@ -27,8 +27,8 @@ const APPS: AppItem[] = [
     subtitle: 'Email & Pesan',
     href: '/inbox',
     icon: Mail,
-    iconBg: 'bg-red-50 border border-red-200/80',
-    iconColor: 'text-[#680003]',
+    iconBg: 'bg-primary/10 border border-primary/15',
+    iconColor: 'text-primary',
   },
   {
     id: 'documents',
@@ -36,8 +36,8 @@ const APPS: AppItem[] = [
     subtitle: 'Berkas & Preview Dokumen',
     href: '/documents',
     icon: FileText,
-    iconBg: 'bg-blue-50 border border-blue-200/80',
-    iconColor: 'text-blue-700',
+    iconBg: 'bg-primary/10 border border-primary/15',
+    iconColor: 'text-primary',
   },
   {
     id: 'support',
@@ -45,8 +45,8 @@ const APPS: AppItem[] = [
     subtitle: 'Tiket Bantuan & FAQ',
     href: '/support',
     icon: Ticket,
-    iconBg: 'bg-emerald-50 border border-emerald-200/80',
-    iconColor: 'text-emerald-700',
+    iconBg: 'bg-primary/10 border border-primary/15',
+    iconColor: 'text-primary',
   },
   {
     id: 'settings',
@@ -54,8 +54,8 @@ const APPS: AppItem[] = [
     subtitle: 'Pengaturan Akun & 2FA',
     href: '/settings',
     icon: Settings,
-    iconBg: 'bg-slate-100 border border-slate-200/80',
-    iconColor: 'text-slate-700',
+    iconBg: 'bg-primary/10 border border-primary/15',
+    iconColor: 'text-primary',
   },
 ];
 
@@ -96,28 +96,14 @@ export function AppLauncher({ currentApp }: AppLauncherProps) {
         aria-label="Aplikasi EasyLegal"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`p-2 rounded-xl transition-colors flex items-center justify-center group ${
+        className={`app-icon-button group ${
           isOpen
             ? 'bg-slate-100 text-[#680003] ring-2 ring-[#680003]/20'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
         title="Aplikasi EasyLegal"
       >
-        <svg
-          className="w-5 h-5 fill-current transition-transform group-hover:scale-105"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle cx="5" cy="5" r="2" />
-          <circle cx="12" cy="5" r="2" />
-          <circle cx="19" cy="5" r="2" />
-          <circle cx="5" cy="12" r="2" />
-          <circle cx="12" cy="12" r="2" />
-          <circle cx="19" cy="12" r="2" />
-          <circle cx="5" cy="19" r="2" />
-          <circle cx="12" cy="19" r="2" />
-          <circle cx="19" cy="19" r="2" />
-        </svg>
+        <Grip className="size-5 transition-transform group-hover:scale-105" />
       </button>
 
       {/* Popover Card */}
@@ -142,7 +128,7 @@ export function AppLauncher({ currentApp }: AppLauncherProps) {
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 px-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-800 tracking-tight">EasyLegal Suite</span>
-              <span className="text-[10px] font-semibold bg-[#680003]/10 text-[#680003] px-1.5 py-0.5 rounded-md">
+              <span className="text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded-md">
                 Hub
               </span>
             </div>
@@ -199,10 +185,9 @@ export function AppLauncher({ currentApp }: AppLauncherProps) {
           </div>
 
           {/* Footer */}
-          <div className="pt-2 mt-2 border-t border-slate-100 px-1 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Portal Klien Terintegrasi</span>
-            <span className="font-mono text-[10px] text-slate-400">v2.0</span>
-          </div>
+          <p className="mt-2 border-t border-slate-100 px-1 pt-2 text-[11px] text-slate-400">
+            Portal klien terintegrasi
+          </p>
         </div>
       </>
       )}

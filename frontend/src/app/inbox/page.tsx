@@ -8,7 +8,11 @@ import { id as localeId } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { ComposeModal, Draft } from '@/components/compose';
-import { AppLauncher } from '@/components/app-launcher';
+import { SuiteHeader } from '@/components/suite-header';
+import {
+  EmailAttachment,
+  EmailAttachmentPreviewModal,
+} from '@/components/email-attachment-preview-modal';
 import {
   Star,
   Mail,
@@ -34,6 +38,7 @@ import {
   HardDrive,
   Loader2,
   Ticket,
+  Eye,
 } from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
 
@@ -50,7 +55,7 @@ interface Message {
   isRead: boolean;
   isStarred: boolean;
   receivedAt: string;
-  attachments?: { id: string; filename: string; size: number }[];
+  attachments?: EmailAttachment[];
 }
 
 const FOLDER_META = [
@@ -108,6 +113,7 @@ function Inbox_() {
   const [sidebar, setSidebar] = useState(false);
   const [toast, setToast] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<EmailAttachment | null>(null);
 
   // Prevent browser default file drop behavior (which attempts navigation to file:///)
   useEffect(() => {
@@ -122,8 +128,7 @@ function Inbox_() {
     };
   }, []);
 
-  const handleDownloadAttachment = async (e: React.MouseEvent, a: { id: string; filename: string }) => {
-    e.preventDefault();
+  const handleDownloadAttachment = async (a: EmailAttachment) => {
     setDownloadingId(a.id);
     try {
       const res = await api.get(`/email/attachment/${a.id}/download`, {
@@ -199,129 +204,63 @@ function Inbox_() {
   const messages = list.data?.data ?? [];
 
   return (
-    <div className="h-screen flex flex-col bg-[#f8f9fa] overflow-hidden">
-      {/* Top Header */}
-      <header className="flex items-center justify-between px-4 sm:px-6 w-full h-16 border-b border-slate-200/90 bg-white z-30 shrink-0 select-none">
-        {/* Left Brand */}
-        <div className="flex items-center gap-3 w-64 shrink-0">
-          <button
-            type="button"
-            aria-label="Menu"
-            data-testid="menu-toggle"
-            className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-            onClick={() => setSidebar((s) => !s)}
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow-sm shadow-primary/20">
-              <Mail className="w-5 h-5 text-white" strokeWidth={2.2} />
-            </div>
-            <div>
-              <span className="text-base font-bold text-slate-900 tracking-tight block leading-tight">
-                MailPortal
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium hidden sm:block">
-                clienteasylegal.co.id
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Center Search Bar */}
-        <form
-          className="flex-1 max-w-xl mx-4 hidden md:flex"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setQuery(search);
-            setOpenUid(null);
-          }}
-        >
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-              <Search className="w-4 h-4" />
-            </div>
-            <input
-              data-testid="search-input"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  setQuery(search);
-                  setOpenUid(null);
-                }
-              }}
-              placeholder="Cari subjek, pengirim, atau isi pesan..."
-              className="block w-full pl-10 pr-9 py-2 rounded-xl bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-transparent focus:border-primary/40 focus:ring-2 focus:ring-primary/10 text-xs sm:text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:outline-none"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch('');
-                  setQuery('');
-                }}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </form>
-
-        {/* Right User Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
+    <div className="app-shell h-[100dvh]">
+      <SuiteHeader
+        currentApp="mail"
+        product="Mail"
+        description="Email kerja dan korespondensi klien"
+        userName={user?.name}
+        userEmail={user?.email}
+        onMenu={() => setSidebar((s) => !s)}
+        onLogout={() => {
+          logout();
+          router.replace('/login');
+        }}
+        actions={
           <button
             data-testid="refresh"
             onClick={refresh}
-            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors hidden sm:flex items-center justify-center"
-            title="Muat Ulang"
+            className="app-icon-button hidden sm:inline-flex"
+            title="Muat ulang"
           >
-            <RefreshCw className={`w-4 h-4 ${list.isValidating ? 'animate-spin text-primary' : ''}`} />
+            <RefreshCw className={`size-4 ${list.isValidating ? 'animate-spin text-primary' : ''}`} />
           </button>
-
-          <button
-            data-testid="nav-settings"
-            onClick={() => router.push('/settings')}
-            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors hidden sm:flex items-center justify-center"
-            title="Pengaturan Akun"
+        }
+        search={
+          <form
+            className="mx-auto max-w-xl"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setQuery(search);
+              setOpenUid(null);
+            }}
           >
-            <Settings className="w-4 h-4" />
-          </button>
-
-          {/* Google-style 9-dots App Launcher */}
-          <AppLauncher currentApp="mail" />
-
-          {/* User Pill */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-200/80">
-            <div className="flex flex-col text-right hidden sm:block">
-              <span className="text-xs font-semibold text-slate-800 leading-tight">
-                {user?.name || 'Customer'}
-              </span>
-              <span className="text-[10px] text-slate-500 truncate max-w-[140px]">
-                {user?.email || ''}
-              </span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <input
+                data-testid="search-input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari email, pengirim, atau isi pesan"
+                className="h-10 w-full rounded-xl border border-transparent bg-[#efedec] pl-10 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 hover:bg-[#e9e6e5] focus:border-primary/25 focus:bg-white focus:ring-4 focus:ring-primary/10"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setQuery('');
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 app-icon-button !size-7"
+                  aria-label="Hapus pencarian"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
             </div>
-
-            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center ring-2 ring-primary/20">
-              {initials(user?.name || user?.email || 'CU')}
-            </div>
-
-            <button
-              data-testid="logout"
-              onClick={() => {
-                logout();
-                router.replace('/login');
-              }}
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-0.5"
-              title="Keluar"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
+          </form>
+        }
+      />
 
       {/* Main Workspace Area */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -330,7 +269,7 @@ function Inbox_() {
           <div
             data-testid="sidebar-backdrop"
             onClick={() => setSidebar(false)}
-            className="md:hidden fixed inset-0 top-16 bg-slate-900/40 backdrop-blur-[1px] z-40 transition-opacity"
+            className="md:hidden fixed inset-0 top-[68px] bg-slate-950/35 backdrop-blur-[1px] z-40 transition-opacity"
           />
         )}
 
@@ -339,7 +278,7 @@ function Inbox_() {
           data-testid="sidebar"
           className={`${
             sidebar ? 'flex' : 'hidden md:flex'
-          } w-64 flex-shrink-0 bg-white md:bg-transparent border-r border-slate-200/90 z-50 md:z-10 flex-col h-full absolute md:relative top-0 shadow-lg md:shadow-none`}
+          } w-64 flex-shrink-0 workspace-sidebar z-50 md:z-10 flex-col h-full absolute md:relative top-0 shadow-lg md:shadow-none`}
         >
           {/* Compose Button */}
           <div className="p-4 pb-3">
@@ -349,7 +288,7 @@ function Inbox_() {
                 setDraft({});
                 setSidebar(false);
               }}
-              className="w-full bg-gradient-to-r from-primary to-primary-container text-white py-2.5 px-4 rounded-2xl flex items-center justify-center gap-2 font-semibold text-xs shadow-md shadow-primary/20 hover:opacity-95 active:scale-[0.98] transition-all"
+              className="app-primary-button w-full !min-h-11"
             >
               <Mail className="w-4 h-4" />
               <span>Tulis Email</span>
@@ -487,7 +426,7 @@ function Inbox_() {
         <div
           className={`${
             openUid ? 'hidden lg:flex' : 'flex'
-          } flex-col w-full md:w-[380px] lg:w-[440px] border-r border-slate-200/90 bg-white overflow-hidden shrink-0`}
+          } m-2 mr-0 flex-col w-full overflow-hidden rounded-2xl border border-border-subtle bg-white shadow-panel md:w-[390px] lg:w-[430px] shrink-0`}
         >
           {/* List Toolbar */}
           <div className="px-4 py-2.5 flex items-center justify-between border-b border-slate-100 bg-white sticky top-0 z-10">
@@ -625,7 +564,7 @@ function Inbox_() {
         {/* Right: Reading Pane */}
         {openUid ? (
           message ? (
-            <article data-testid="message-view" className="flex flex-1 flex-col bg-[#f8f9fa] overflow-hidden">
+            <article data-testid="message-view" className="m-2 flex flex-1 flex-col overflow-hidden rounded-2xl border border-border-subtle bg-white shadow-panel">
               {/* Reading Action Toolbar */}
               <div className="px-5 py-2.5 flex items-center justify-between border-b border-slate-200/90 bg-white z-10 sticky top-0 shrink-0">
                 <div className="flex items-center gap-1.5">
@@ -707,7 +646,7 @@ function Inbox_() {
 
               {/* Message Content Container */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-                <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-8">
+                <div className="mx-auto max-w-3xl rounded-2xl border border-border-subtle bg-white p-6 sm:p-8">
                   {/* Subject Title */}
                   <div className="border-b border-slate-100 pb-5 mb-6">
                     <div className="flex items-center gap-2 mb-2">
@@ -780,38 +719,50 @@ function Inbox_() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {message.attachments.map((a) => (
-                          <a
+                          <div
                             key={a.id}
                             data-testid="attachment"
-                            href={`${api.defaults.baseURL}/email/attachment/${a.id}/download`}
-                            onClick={(e) => handleDownloadAttachment(e, a)}
-                            className="flex items-center justify-between p-3 rounded-xl border border-slate-200/80 hover:border-primary/40 bg-slate-50/60 hover:bg-white transition-all group shadow-xs cursor-pointer"
+                            className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 p-2 shadow-xs transition-colors hover:border-primary/35 hover:bg-white"
                           >
-                            <div className="flex items-center gap-3 min-w-0">
+                            <button
+                              type="button"
+                              data-testid="attachment-preview-trigger"
+                              onClick={() => setPreviewAttachment(a)}
+                              className="group flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-left focus-visible:outline-none"
+                              aria-label={`Preview ${a.filename}`}
+                            >
                               <div className="w-9 h-9 rounded-lg bg-red-50 text-primary border border-red-100 flex items-center justify-center shrink-0">
-                                {downloadingId === a.id ? (
-                                  <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                  <FileText className="w-5 h-5" />
-                                )}
+                                <FileText className="w-5 h-5" />
                               </div>
                               <div className="min-w-0">
                                 <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">
                                   {a.filename}
                                 </p>
-                                <p className="text-[10px] text-slate-400 font-mono">
-                                  {(a.size / 1024).toFixed(1)} KB
-                                </p>
+                                <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-400">
+                                  <span className="font-mono">{(a.size / 1024).toFixed(1)} KB</span>
+                                  <span aria-hidden="true">•</span>
+                                  <span className="flex items-center gap-1 font-semibold text-primary">
+                                    <Eye className="h-3 w-3" /> Preview
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                            <div className="p-1.5 text-slate-400 group-hover:text-primary group-hover:bg-red-50 rounded-lg transition-colors shrink-0">
+                            </button>
+                            <button
+                              type="button"
+                              data-testid="attachment-download"
+                              onClick={() => handleDownloadAttachment(a)}
+                              disabled={downloadingId === a.id}
+                              className="app-icon-button !size-8 shrink-0"
+                              aria-label={`Unduh ${a.filename}`}
+                              title="Unduh berkas"
+                            >
                               {downloadingId === a.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
                                 <Download className="w-4 h-4" />
                               )}
-                            </div>
-                          </a>
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -849,7 +800,7 @@ function Inbox_() {
               </div>
             </article>
           ) : (
-            <div className="flex flex-1 items-center justify-center bg-[#f8f9fa] p-8">
+            <div className="flex flex-1 items-center justify-center bg-background p-8">
               <div className="text-center text-slate-400 text-xs flex items-center gap-2">
                 <RefreshCw className="w-4 h-4 animate-spin text-primary" />
                 <span>Memuat detail pesan...</span>
@@ -857,7 +808,7 @@ function Inbox_() {
             </div>
           )
         ) : (
-          <div className="hidden lg:flex flex-1 items-center justify-center bg-[#f8f9fa] p-8">
+          <div className="m-2 hidden flex-1 items-center justify-center rounded-2xl border border-dashed border-border-subtle bg-white/60 p-8 lg:flex">
             <div className="text-center max-w-sm">
               <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center mx-auto mb-4 text-slate-300">
                 <Mail className="w-8 h-8" />
@@ -881,6 +832,15 @@ function Inbox_() {
             setToast('Email terkirim');
             refresh();
           }}
+        />
+      )}
+
+      {previewAttachment && (
+        <EmailAttachmentPreviewModal
+          attachment={previewAttachment}
+          onClose={() => setPreviewAttachment(null)}
+          onDownload={handleDownloadAttachment}
+          downloading={downloadingId === previewAttachment.id}
         />
       )}
 

@@ -33,7 +33,7 @@ import {
 import api, { errMsg } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
-import { AppLauncher } from '@/components/app-launcher';
+import { SuiteHeader } from '@/components/suite-header';
 
 type SettingsTab = 'general' | 'profile' | 'security' | 'notifications';
 
@@ -73,7 +73,7 @@ export default function SettingsPage() {
 
 function SettingsLoadingFallback() {
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center">
+    <div className="min-h-[100dvh] bg-background flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
         <span className="text-sm font-medium text-slate-500">Memuat Pengaturan...</span>
@@ -348,96 +348,58 @@ function SettingsContent() {
   const displayName = profileData?.name || user?.name || 'Customer';
 
   return (
-    <main className="min-h-screen bg-[#f8f9fa] flex flex-col font-inter antialiased">
-      {/* Top Header Navigation */}
-      <header className="bg-white border-b border-[#DADCE0] h-16 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shrink-0 select-none shadow-xs">
-        <div className="flex items-center gap-3">
+    <main className="app-shell antialiased">
+      <SuiteHeader
+        currentApp="settings"
+        product="Pengaturan Akun & Keamanan"
+        description="Profil, preferensi, dan keamanan akun"
+        userName={displayName}
+        userEmail={displayEmail}
+        onLogout={() => {
+          logout();
+          router.replace('/login');
+        }}
+        actions={
           <button
             data-testid="back-inbox"
             onClick={() => router.push('/inbox')}
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-xs font-semibold"
-            title="Kembali ke Kotak Masuk"
+            className="app-secondary-button hidden !min-h-9 !px-3 !text-xs sm:inline-flex"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Kotak Masuk</span>
+            <ArrowLeft className="size-4" />
+            <span>Mail</span>
           </button>
-
-          <div className="h-4 w-px bg-slate-200 mx-1" />
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold shadow-xs">
-              <Mail className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-bold text-slate-900 tracking-tight">EasyLegal</span>
-                <span className="text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.2 rounded">
-                  Hub
-                </span>
-              </div>
-              <span className="text-[11px] text-slate-500 font-medium block leading-none">
-                Pengaturan Akun &amp; Keamanan
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Trailing Header Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Quick tab switch shortcut */}
-          <button
-            data-testid="nav-settings"
-            onClick={() => switchTab('security')}
-            className={`p-2 rounded-xl text-xs font-semibold hidden sm:flex items-center gap-1.5 transition-colors ${
-              activeTab === 'security'
-                ? 'text-primary bg-primary/10'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-            title="Keamanan Akun"
-          >
-            <Shield className="w-4 h-4" />
-            <span>Keamanan</span>
-          </button>
-
-          {/* Google-style 9-dots App Launcher */}
-          <AppLauncher currentApp="settings" />
-
-          <div className="h-4 w-px bg-slate-200 mx-0.5" />
-
-          {/* Logout Button */}
-          <button
-            data-testid="logout"
-            onClick={() => {
-              logout();
-              router.replace('/login');
-            }}
-            className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors text-xs font-medium flex items-center gap-1.5"
-            title="Keluar"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Keluar</span>
-          </button>
-        </div>
-      </header>
+        }
+      />
 
       {/* Main Container */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <div className="page-canvas flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-6xl space-y-6">
+
+          <div className="pt-1 sm:pt-2">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.035em] text-slate-950">
+              {activeTab === 'security' ? 'Keamanan dan aktivitas login' : 'Pengaturan akun'}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              {activeTab === 'security'
+                ? 'Tinjau sesi aktif dan kelola perlindungan akun Anda.'
+                : 'Kelola profil, preferensi mailbox, dan notifikasi EasyLegal.'}
+            </p>
+          </div>
 
           {/* Account Profile Summary Banner */}
-          <section className="bg-white rounded-2xl border border-[#DADCE0] p-5 sm:p-6 shadow-xs">
+          <section className="app-panel p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#680003] to-[#930006] text-white font-bold text-lg flex items-center justify-center shadow-md shadow-primary/20 shrink-0">
+                <div className="w-14 h-14 rounded-2xl bg-primary text-white font-bold text-lg flex items-center justify-center shadow-sm shrink-0">
                   {initials(displayName)}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                    <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
                       {displayName}
-                    </h1>
+                    </h2>
                     <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full font-medium inline-flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <CheckCircle2 className="size-3.5" />
                       Mailbox Aktif
                     </span>
                   </div>
@@ -466,64 +428,64 @@ function SettingsContent() {
           </section>
 
           {/* Navigation Tabs Bar */}
-          <div className="flex border-b border-[#DADCE0] overflow-x-auto no-scrollbar gap-2 sm:gap-6 bg-white px-4 rounded-xl shadow-xs">
+          <div className="sticky top-0 z-10 flex gap-1 overflow-x-auto rounded-2xl border border-border-subtle bg-[#ebe8e6]/95 p-1.5 shadow-xs backdrop-blur">
             <button
               data-testid="tab-general"
               onClick={() => switchTab('general')}
-              className={`py-3.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 flex items-center gap-2 transition-all ${
+              className={`py-2.5 px-2 text-[11px] sm:text-sm font-semibold whitespace-nowrap rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 transition-all flex-1 ${
                 activeTab === 'general'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  ? 'bg-white text-primary shadow-xs'
+                  : 'text-slate-500 hover:bg-white/60 hover:text-slate-900'
               }`}
             >
               <SlidersHorizontal className="w-4 h-4" />
-              <span>General</span>
+              <span>Umum</span>
             </button>
 
             <button
               data-testid="tab-profile"
               onClick={() => switchTab('profile')}
-              className={`py-3.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 flex items-center gap-2 transition-all ${
+              className={`py-2.5 px-2 text-[11px] sm:text-sm font-semibold whitespace-nowrap rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 transition-all flex-1 ${
                 activeTab === 'profile'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  ? 'bg-white text-primary shadow-xs'
+                  : 'text-slate-500 hover:bg-white/60 hover:text-slate-900'
               }`}
             >
               <UserIcon className="w-4 h-4" />
-              <span>Profile</span>
+              <span>Profil</span>
             </button>
 
             <button
               data-testid="tab-security"
               onClick={() => switchTab('security')}
-              className={`py-3.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 flex items-center gap-2 transition-all ${
+              className={`py-2.5 px-2 text-[11px] sm:text-sm font-semibold whitespace-nowrap rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 transition-all flex-1 ${
                 activeTab === 'security'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  ? 'bg-white text-primary shadow-xs'
+                  : 'text-slate-500 hover:bg-white/60 hover:text-slate-900'
               }`}
             >
               <Shield className="w-4 h-4" />
-              <span>Security &amp; Activity</span>
+              <span>Keamanan</span>
             </button>
 
             <button
               data-testid="tab-notifications"
               onClick={() => switchTab('notifications')}
-              className={`py-3.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 flex items-center gap-2 transition-all ${
+              className={`py-2.5 px-2 text-[11px] sm:text-sm font-semibold whitespace-nowrap rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 transition-all flex-1 ${
                 activeTab === 'notifications'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  ? 'bg-white text-primary shadow-xs'
+                  : 'text-slate-500 hover:bg-white/60 hover:text-slate-900'
               }`}
             >
               <Bell className="w-4 h-4" />
-              <span>Notifications</span>
+              <span>Notifikasi</span>
             </button>
           </div>
 
           {/* TAB 1: GENERAL PREFERENCES */}
           {activeTab === 'general' && (
             <div className="space-y-6">
-              <section className="bg-white rounded-2xl border border-[#DADCE0] p-6 sm:p-7 shadow-xs">
+              <section className="bg-white rounded-2xl border border-border-subtle p-6 sm:p-7 shadow-xs">
                 <div className="mb-6">
                   <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <SlidersHorizontal className="w-4 h-4 text-primary" />
@@ -654,7 +616,7 @@ function SettingsContent() {
                       type="submit"
                       data-testid="save-general-prefs"
                       disabled={generalSaving}
-                      className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:opacity-95 disabled:opacity-60 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+                      className="flex items-center gap-2 bg-primary hover:bg-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold disabled:opacity-60 transition-all shadow-sm active:scale-[0.98]"
                     >
                       {generalSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                       <span>Simpan Preferensi</span>
@@ -668,7 +630,7 @@ function SettingsContent() {
           {/* TAB 2: PROFILE TAB */}
           {activeTab === 'profile' && (
             <div className="space-y-6">
-              <section className="bg-white rounded-2xl border border-[#DADCE0] p-6 sm:p-7 shadow-xs">
+              <section className="bg-white rounded-2xl border border-border-subtle p-6 sm:p-7 shadow-xs">
                 <div className="flex items-center gap-3 pb-6 border-b border-slate-100">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-base">
                     <UserIcon className="w-6 h-6" />
@@ -755,13 +717,13 @@ function SettingsContent() {
             <div className="space-y-6">
               
               {/* Security Health & 2FA Card */}
-              <section className="bg-white rounded-2xl border border-[#DADCE0] overflow-hidden shadow-xs">
-                <div className="p-4 sm:p-5 border-b border-slate-100 bg-[#f8f9fa] flex items-center justify-between">
+              <section className="bg-white rounded-2xl border border-border-subtle overflow-hidden shadow-panel">
+                <div className="p-4 sm:p-5 border-b border-border-subtle bg-[#f2f0ef] flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <Shield className="w-5 h-5 text-primary" />
-                    <h3 className="text-sm font-bold text-slate-900">Security Health</h3>
+                    <h3 className="text-sm font-bold text-slate-900">Perlindungan akun</h3>
                   </div>
-                  <span className="text-[11px] text-slate-500">Kesehatan Keamanan Akun</span>
+                  <span className="text-[11px] text-slate-500">Status dan akses</span>
                 </div>
 
                 <div className="p-6 sm:p-7 space-y-6">
@@ -774,17 +736,17 @@ function SettingsContent() {
                   )}
 
                   {/* 2FA Card */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-slate-900">Two-Factor Authentication (2FA)</h4>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-bold text-slate-900">Autentikasi dua faktor (2FA)</h4>
                         {twoFactorEnabled ? (
                           <span
                             data-testid="badge-2fa-on"
                             className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[11px] font-semibold"
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            Active Protected
+                            Aktif
                           </span>
                         ) : (
                           <span
@@ -792,7 +754,7 @@ function SettingsContent() {
                             className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-full text-[11px] font-medium"
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                            Currently OFF
+                            Nonaktif
                           </span>
                         )}
                       </div>
@@ -807,7 +769,7 @@ function SettingsContent() {
                       data-testid="toggle-2fa"
                       onClick={handleToggle2FA}
                       disabled={toggling2FA}
-                      aria-label="Toggle Two Factor Authentication"
+                      aria-label="Aktifkan autentikasi dua faktor"
                       className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/20 ${
                         twoFactorEnabled ? 'bg-primary' : 'bg-slate-300'
                       }`}
@@ -827,7 +789,7 @@ function SettingsContent() {
                     <div>
                       <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
                         <ShieldAlert className="w-4 h-4 text-red-600 shrink-0" />
-                        <h4>Sign out of all other sessions</h4>
+                        <h4>Keluar dari semua sesi lain</h4>
                       </div>
                       <p className="text-xs text-slate-600 mt-1 max-w-lg leading-relaxed">
                         Jika Anda mendeteksi aktivitas mencurigakan atau meninggalkan akun di perangkat publik, segera putuskan sesi login di seluruh perangkat lain kecuali perangkat ini.
@@ -852,14 +814,14 @@ function SettingsContent() {
                       ) : (
                         <LogOut className="w-4 h-4" />
                       )}
-                      <span>Terminate Sessions</span>
+                      <span>Akhiri sesi lain</span>
                     </button>
                   </div>
                 </div>
               </section>
 
               {/* Change Password Card */}
-              <section className="bg-white rounded-2xl border border-[#DADCE0] p-6 sm:p-7 shadow-xs">
+              <section className="bg-white rounded-2xl border border-border-subtle p-6 sm:p-7 shadow-panel">
                 <div className="flex items-center gap-2.5 mb-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <KeyRound className="w-4 h-4" />
@@ -1016,22 +978,22 @@ function SettingsContent() {
                       type="submit"
                       data-testid="pw-submit"
                       disabled={pwSaving}
-                      className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:opacity-95 disabled:opacity-60 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+                      className="flex items-center gap-2 bg-primary hover:bg-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold disabled:opacity-60 transition-all shadow-sm active:scale-[0.98]"
                     >
                       {pwSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                      <span>Simpan Perubahan Password</span>
+                      <span>Simpan kata sandi</span>
                     </button>
                   </div>
                 </form>
               </section>
 
               {/* Recent Login Activity Card */}
-              <section className="bg-white rounded-2xl border border-[#DADCE0] overflow-hidden shadow-xs">
-                <div className="p-4 sm:p-5 border-b border-slate-100 bg-[#f8f9fa] flex items-center justify-between">
+              <section className="bg-white rounded-2xl border border-border-subtle overflow-hidden shadow-panel">
+                <div className="p-4 sm:p-5 border-b border-border-subtle bg-[#f2f0ef] flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <Monitor className="w-5 h-5 text-slate-700" />
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Recent Login Activity</h3>
+                      <h3 className="text-sm font-bold text-slate-900">Aktivitas login terbaru</h3>
                       <p className="text-[11px] text-slate-500">Daftar sesi dan perangkat yang terhubung ke akun Anda</p>
                     </div>
                   </div>
@@ -1075,7 +1037,7 @@ function SettingsContent() {
                               </span>
                               {session.isCurrent && (
                                 <span className="inline-flex items-center px-2 py-0.5 bg-[#FFDAD6] text-[#680003] border border-[#ffb4aa] rounded text-[10px] font-bold uppercase tracking-wider">
-                                  Current Session
+                                  Sesi ini
                                 </span>
                               )}
                               <span className="text-xs text-slate-400 font-mono">
@@ -1092,7 +1054,7 @@ function SettingsContent() {
                               <span className="flex items-center gap-1">
                                 <Clock className="w-3.5 h-3.5 text-slate-400" />
                                 {session.isCurrent ? (
-                                  <span className="text-emerald-700 font-semibold">Active now</span>
+                                  <span className="text-emerald-700 font-semibold">Aktif sekarang</span>
                                 ) : (
                                   formatSessionTime(session.lastActiveAt)
                                 )}
@@ -1111,7 +1073,7 @@ function SettingsContent() {
           {/* TAB 4: NOTIFICATIONS */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">
-              <section className="bg-white rounded-2xl border border-[#DADCE0] p-6 sm:p-7 shadow-xs">
+              <section className="bg-white rounded-2xl border border-border-subtle p-6 sm:p-7 shadow-xs">
                 <div className="mb-6">
                   <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Bell className="w-4 h-4 text-primary" />
@@ -1200,7 +1162,7 @@ function SettingsContent() {
                       type="submit"
                       data-testid="save-notification-prefs"
                       disabled={notifSaving}
-                      className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:opacity-95 disabled:opacity-60 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+                      className="flex items-center gap-2 bg-primary hover:bg-primary-container text-white px-6 py-2.5 rounded-xl text-xs font-semibold disabled:opacity-60 transition-all shadow-sm active:scale-[0.98]"
                     >
                       {notifSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                       <span>Simpan Preferensi Notifikasi</span>

@@ -140,14 +140,14 @@ export function TicketThreadModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 overflow-hidden animate-in fade-in duration-150"
+      className="modal-backdrop overflow-hidden !p-2 sm:!p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[#fdfcfb] w-full max-w-4xl h-[92vh] rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden">
+      <div className="modal-panel flex h-[92vh] w-full max-w-4xl flex-col overflow-hidden bg-[#fbfaf9]">
         {/* Thread Header */}
-        <header className="bg-white border-b border-slate-200/90 px-4 sm:px-6 py-3 flex items-start justify-between shrink-0">
+        <header className="flex shrink-0 items-start justify-between border-b border-border-subtle bg-white px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-1 min-w-0 pr-3">
             <div className="flex items-center gap-2 flex-wrap">
               <button
@@ -190,7 +190,7 @@ export function TicketThreadModal({
               <button
                 onClick={handleCloseTicket}
                 disabled={closing}
-                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                className="app-secondary-button !min-h-9 !px-3 !text-xs"
               >
                 {closing ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -376,7 +376,7 @@ export function TicketThreadModal({
                 <button
                   type="submit"
                   disabled={sending || !replyText.trim()}
-                  className="px-5 py-2 bg-primary hover:bg-primary-container text-white rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-primary/20 transition-all disabled:opacity-50"
+                  className="px-5 py-2 bg-primary hover:bg-primary-container text-white rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
                 >
                   {sending ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

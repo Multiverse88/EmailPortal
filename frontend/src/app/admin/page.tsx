@@ -28,6 +28,7 @@ import {
 import api, { fetcher, errMsg } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
+import { SuiteHeader } from '@/components/suite-header';
 
 interface Mailbox {
   id: string;
@@ -127,75 +128,43 @@ function Admin_() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex flex-col selection:bg-primary/20 selection:text-primary">
-      {/* Top Header */}
-      <header className="bg-white border-b border-slate-200/90 w-full h-16 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-40 shrink-0 select-none">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow-sm shadow-primary/20">
-            <Mail className="w-5 h-5 text-white" strokeWidth={2.2} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base font-bold text-slate-900 tracking-tight leading-tight">
-                EasyLegal Admin Hub
-              </span>
-              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                Console
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-medium hidden sm:block">
-              Hostinger Mailbox Provisioning • clienteasylegal.co.id
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
+    <div className="app-shell selection:bg-primary/20 selection:text-primary">
+      <SuiteHeader
+        admin
+        product="Admin Console"
+        description="Provisioning dan kontrol akses mailbox"
+        userName={user?.name}
+        userEmail={user?.email}
+        onLogout={() => {
+          logout();
+          router.replace('/login');
+        }}
+        actions={
           <button
             onClick={() => router.push('/inbox')}
-            className="text-xs font-semibold text-slate-600 hover:text-primary hover:bg-slate-100 px-3 py-1.5 rounded-xl transition-colors hidden sm:flex items-center gap-1.5"
+            className="app-secondary-button hidden !min-h-9 !px-3 !text-xs sm:inline-flex"
           >
-            <span>Buka Webmail</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Buka Mail</span>
+            <ExternalLink className="size-3.5" />
           </button>
-
-          <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col text-right hidden md:block">
-              <span className="text-xs font-bold text-slate-800 leading-tight">
-                {user?.name || 'Administrator'}
-              </span>
-              <span data-testid="admin-user" className="text-[10px] text-slate-500 font-mono">
-                {user?.email}
-              </span>
-            </div>
-
-            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center ring-2 ring-primary/20">
-              {initials(user?.name || 'AD')}
-            </div>
-
-            <button
-              data-testid="logout"
-              onClick={() => {
-                logout();
-                router.replace('/login');
-              }}
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-0.5"
-              title="Keluar"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
+        }
+      />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="page-canvas w-full flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-7xl space-y-7 p-4 sm:p-6 lg:p-8">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <h1 className="page-title">Manajemen mailbox</h1>
+              <p className="page-description">Kelola akun customer, kapasitas layanan, dan status akses dalam satu tempat.</p>
+            </div>
+            <span className="text-xs font-medium text-slate-500">Domain: clienteasylegal.co.id</span>
+          </div>
         
         {/* Top Banner & KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Card 1: Quota */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
+          <div className="app-panel flex flex-col justify-between p-5 sm:col-span-2">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-slate-500">Kuota Mailbox Hostinger</span>
               <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -204,7 +173,7 @@ function Admin_() {
             </div>
             <div>
               <div data-testid="quota" className="text-2xl font-bold text-slate-900 tracking-tight">
-                {quota ? `${quota.used} / ${quota.limit}` : '—'}
+                {quota ? `${quota.used} / ${quota.limit}` : '-'}
               </div>
               <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 mb-1.5 overflow-hidden">
                 <div
@@ -219,7 +188,7 @@ function Admin_() {
           </div>
 
           {/* Card 2: Active */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
+          <div className="app-panel flex flex-col justify-between p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-slate-500">Mailbox Aktif</span>
               <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -237,7 +206,7 @@ function Admin_() {
           </div>
 
           {/* Card 3: Inactive */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
+          <div className="app-panel flex flex-col justify-between p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-slate-500">Ditangguhkan / Nonaktif</span>
               <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
@@ -255,10 +224,10 @@ function Admin_() {
           </div>
 
           {/* Card 4: Domain Status */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
+          <div className="app-panel flex flex-col justify-between p-5 sm:col-span-2 lg:col-span-4 lg:flex-row lg:items-center">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-slate-500">Routing Domain</span>
-              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <ShieldCheck className="w-4 h-4" />
               </div>
             </div>
@@ -278,7 +247,7 @@ function Admin_() {
         {created && (
           <div
             data-testid="created-credentials"
-            className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 rounded-2xl p-5 shadow-sm animate-in fade-in"
+            className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-xs animate-in fade-in"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3.5">
@@ -373,7 +342,7 @@ function Admin_() {
                 setShowForm(true);
                 setCreated(null);
               }}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-4 py-2.5 rounded-xl text-xs font-semibold hover:opacity-95 shadow-md shadow-primary/20 active:scale-[0.98] transition-all shrink-0"
+              className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-sm active:scale-[0.98] transition-all shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>Buat Mailbox Baru</span>
@@ -382,7 +351,7 @@ function Admin_() {
         </div>
 
         {/* Mailbox Data Table */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+        <div className="app-panel overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs" data-testid="mailbox-table">
               <thead>
@@ -518,6 +487,7 @@ function Admin_() {
             </table>
           </div>
         </div>
+        </div>
       </main>
 
       {/* New Mailbox Modal */}
@@ -578,9 +548,9 @@ function NewMailboxForm({
       <form
         onSubmit={submit}
         data-testid="mailbox-form"
-        className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden"
+        className="modal-panel max-w-md overflow-hidden"
       >
-        <header className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-primary to-primary-container text-white select-none">
+        <header className="flex items-center justify-between px-5 py-4 bg-primary text-white select-none">
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             <h2 className="font-semibold text-sm">Buat Mailbox Customer Baru</h2>
@@ -672,7 +642,7 @@ function NewMailboxForm({
             type="submit"
             data-testid="form-submit"
             disabled={saving}
-            className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-5 py-2 rounded-xl text-xs font-semibold hover:opacity-95 disabled:opacity-60 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+            className="flex items-center gap-2 bg-primary hover:bg-primary-container text-white px-5 py-2 rounded-xl text-xs font-semibold disabled:opacity-60 transition-all shadow-sm active:scale-[0.98]"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <span>Buat Mailbox</span>

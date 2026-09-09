@@ -33,13 +33,13 @@ import {
 import api, { errMsg } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
-import { AppLauncher } from '@/components/app-launcher';
+import { SuiteHeader } from '@/components/suite-header';
 import { DocumentPreviewModal, LegalDocument } from '@/components/document-preview-modal';
 
 export default function DocumentsPage() {
   return (
     <AuthGuard type="customer">
-      <Suspense fallback={<div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center text-slate-400">Memuat Drive...</div>}>
+      <Suspense fallback={<div className="min-h-[100dvh] bg-background flex items-center justify-center text-slate-400">Memuat Drive...</div>}>
         <DocumentsContent />
       </Suspense>
     </AuthGuard>
@@ -191,77 +191,48 @@ function DocumentsContent() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-[#f8f9fa] overflow-hidden text-slate-900">
-      {/* Global Header */}
-      <header className="h-16 bg-white border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between shrink-0 z-20">
-        <div className="flex items-center gap-3 w-full max-w-xl">
-          <button
-            onClick={() => setMobileSidebar(!mobileSidebar)}
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 md:hidden"
-            aria-label="Toggle navigation menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          <div
-            onClick={() => {
-              setSelectedFolder(null);
-              setActiveTab('my-files');
-            }}
-            className="flex items-center gap-2.5 cursor-pointer shrink-0"
-          >
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
-              <Folder className="w-4 h-4 fill-primary/30" />
+    <div className="app-shell h-[100dvh]">
+      <SuiteHeader
+        currentApp="documents"
+        product="Drive"
+        description="Dokumen, arsip, dan persetujuan hukum"
+        userName={user?.name}
+        userEmail={user?.email}
+        onMenu={() => setMobileSidebar((open) => !open)}
+        onLogout={() => {
+          logout();
+          router.replace('/login');
+        }}
+        search={
+          <form onSubmit={handleSearch} className="mx-auto max-w-xl">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari judul, kategori, atau nama berkas"
+                className="h-10 w-full rounded-xl border border-transparent bg-[#efedec] pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 hover:bg-[#e9e6e5] focus:border-primary/25 focus:bg-white focus:ring-4 focus:ring-primary/10"
+              />
             </div>
-            <div>
-              <span className="text-sm font-bold text-slate-900 tracking-tight">EasyLegal</span>
-              <span className="text-xs font-semibold text-primary ml-1">Drive</span>
-            </div>
-          </div>
-
-          <div className="h-4 w-px bg-slate-200 mx-2 hidden sm:block" />
-
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="relative flex-1 max-w-md hidden sm:block">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari berkas dokumen hukum..."
-              className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-transparent focus:border-primary/40 rounded-full outline-none transition-all"
-            />
           </form>
-        </div>
-
-        {/* Header Actions */}
-        <div className="flex items-center gap-2.5 ml-auto">
-          {/* 9-dots App Launcher */}
-          <AppLauncher currentApp="documents" />
-
-          <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block" />
-
-          {/* User Profile */}
-          <button
-            onClick={() => router.push('/settings')}
-            className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-full hover:bg-slate-100 transition-colors"
-            title="Pengaturan Akun"
-          >
-            <div className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
-              {user?.name?.slice(0, 1) || 'U'}
-            </div>
-            <span className="text-xs font-semibold text-slate-700 hidden lg:inline max-w-[120px] truncate">
-              {user?.name || 'Customer'}
-            </span>
-          </button>
-        </div>
-      </header>
+        }
+      />
 
       {/* Main Layout Area */}
       <div className="flex-1 flex overflow-hidden">
+        {mobileSidebar && (
+          <button
+            type="button"
+            aria-label="Tutup navigasi"
+            onClick={() => setMobileSidebar(false)}
+            className="fixed inset-0 top-[68px] z-20 bg-slate-950/35 md:hidden"
+          />
+        )}
+
         {/* Left Sidebar (256px) */}
         <aside
-          className={`fixed inset-y-0 left-0 z-30 md:static w-64 bg-white border-r border-slate-200/90 flex flex-col transition-transform duration-200 ${
+          className={`fixed bottom-0 left-0 top-[68px] z-30 flex w-64 flex-col workspace-sidebar transition-transform duration-200 md:static ${
             mobileSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
@@ -269,7 +240,7 @@ function DocumentsContent() {
           <div className="p-4">
             <button
               onClick={() => setUploadOpen(true)}
-              className="w-full py-2.5 px-4 bg-primary hover:bg-primary-container text-white rounded-full font-semibold text-xs flex items-center justify-center gap-2 shadow-sm shadow-primary/20 transition-all active:scale-95"
+              className="app-primary-button w-full !min-h-11"
             >
               <Upload className="w-4 h-4" />
               <span>Unggah Dokumen</span>
@@ -430,9 +401,9 @@ function DocumentsContent() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-white">
+        <main className="page-canvas flex flex-1 flex-col overflow-hidden">
           {/* Content Sub-Header & Controls */}
-          <div className="h-14 border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between shrink-0 bg-white">
+          <div className="workspace-toolbar">
             {/* Breadcrumb */}
             <div className="flex items-center gap-1.5 text-xs">
               <button
@@ -497,21 +468,27 @@ function DocumentsContent() {
           </div>
 
           {/* Scrollable Document Content */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          <div className="flex-1 space-y-7 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            {error && (
+              <div role="alert" className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <span>{error}</span>
+                <button type="button" onClick={fetchDocuments} className="font-semibold hover:underline">Coba lagi</button>
+              </div>
+            )}
             {/* Folder Section (if not in single folder mode) */}
             {!selectedFolder && activeTab === 'my-files' && (
               <section className="space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Folder Dokumen
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {folders.map((f) => {
                     const count = documents.filter((d) => d.category === f).length;
                     return (
                       <div
                         key={f}
                         onClick={() => setSelectedFolder(f)}
-                        className="p-3.5 rounded-xl border border-slate-200/90 bg-[#fdfcfb] hover:bg-white hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-3 group"
+                        className="group flex cursor-pointer items-center gap-3 rounded-2xl border border-border-subtle bg-white p-4 shadow-xs transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-panel"
                       >
                         <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                           <Folder className="w-5 h-5 fill-primary/30" />
@@ -553,15 +530,15 @@ function DocumentsContent() {
                 </div>
               ) : viewMode === 'grid' ? (
                 /* Bento Grid Cards */
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                   {documents.map((doc) => (
                     <div
                       key={doc.id}
                       onClick={() => setPreviewDocId(doc.id)}
-                      className="rounded-xl border border-slate-200/90 bg-white hover:border-primary/40 hover:shadow-md transition-all cursor-pointer flex flex-col overflow-hidden group relative"
+                      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border-subtle bg-white shadow-xs transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-panel"
                     >
                       {/* Thumbnail Container */}
-                      <div className="h-32 bg-[#edeeef]/60 border-b border-slate-100 flex items-center justify-center relative overflow-hidden group-hover:bg-slate-100 transition-colors">
+                      <div className="relative flex h-36 items-center justify-center overflow-hidden border-b border-border-subtle bg-[#f2efee] transition-colors group-hover:bg-[#ece8e7]">
                         {getFileIcon(doc.mimeType)}
 
                         {/* Hover Star Button */}
@@ -668,12 +645,12 @@ function DocumentsContent() {
       {/* Upload File Modal */}
       {uploadOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"
+          className="modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget) setUploadOpen(false);
           }}
         >
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
+          <div className="modal-panel max-w-md space-y-4 p-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900">Unggah Dokumen Hukum Baru</h3>
               <button

@@ -53,14 +53,14 @@ export function ComposeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-150">
+    <div className="modal-backdrop !items-end !p-0 sm:!items-center sm:!p-4">
       <form
         onSubmit={send}
         data-testid="compose-modal"
-        className="bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col max-h-[92vh] overflow-hidden"
+        className="modal-panel flex max-h-[92vh] w-full flex-col overflow-hidden !rounded-b-none sm:max-w-2xl sm:!rounded-2xl"
       >
         {/* Header */}
-        <header className="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-primary to-primary-container text-white select-none shrink-0">
+        <header className="flex shrink-0 items-center justify-between border-b border-primary/10 bg-primary px-5 py-4 text-white select-none">
           <div className="flex items-center gap-2">
             <Send className="w-4 h-4 text-white/90" />
             <h2 className="font-semibold text-sm tracking-wide">Pesan Baru</h2>
@@ -182,7 +182,7 @@ export function ComposeModal({
               type="submit"
               data-testid="compose-send"
               disabled={sending}
-              className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-5 py-2.5 rounded-xl text-xs font-semibold hover:opacity-95 disabled:opacity-60 transition-all shadow-md shadow-primary/20 active:scale-95"
+              className="app-primary-button !text-xs"
             >
               {sending ? (
                 <>

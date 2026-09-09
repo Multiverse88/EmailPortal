@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 
 export function AuthGuard({
@@ -23,8 +24,11 @@ export function AuthGuard({
 
   if (!ready || !token || user?.type !== type) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <span className="material-symbols-outlined text-on-surface-variant text-[24px] animate-spin">progress_activity</span>
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-slate-500" role="status" aria-label="Memuat sesi">
+          <Loader2 className="size-5 animate-spin text-primary" />
+          <span className="text-xs font-medium">Memuat sesi...</span>
+        </div>
       </div>
     );
   }

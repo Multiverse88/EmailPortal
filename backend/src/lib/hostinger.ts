@@ -237,6 +237,26 @@ export async function fetchMessageMeta(
 }
 
 /**
+ * Fetch one remote attachment as binary data. The caller is responsible for
+ * checking that the requested message belongs to the authenticated mailbox.
+ */
+export async function fetchMessageAttachment(
+  resourceId: string,
+  folder: string,
+  uid: number,
+  attachmentId: string,
+): Promise<Buffer> {
+  const res = await messagesApi().getMessageAttachment(
+    resourceId,
+    folder,
+    uid,
+    attachmentId,
+    { responseType: 'arraybuffer' },
+  );
+  return Buffer.from(res.data as unknown as ArrayBuffer);
+}
+
+/**
  * Get quota usage for a mailbox.
  */
 export async function getMailboxQuota(resourceId: string): Promise<{

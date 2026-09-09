@@ -36,42 +36,82 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#f8f9fa] relative overflow-hidden px-4 py-8 selection:bg-primary/20 selection:text-primary">
-      {/* Subtle brand ambient glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[320px] bg-gradient-to-b from-primary/10 via-primary-container/5 to-transparent blur-3xl pointer-events-none" />
+    <main className="min-h-[100dvh] bg-background selection:bg-primary/15 selection:text-primary lg:grid lg:grid-cols-[minmax(360px,0.82fr)_minmax(560px,1.18fr)]">
+      <section className="relative hidden overflow-hidden bg-primary px-10 py-12 text-white lg:flex lg:min-h-[100dvh] lg:flex-col lg:justify-between xl:px-16 xl:py-14">
+        <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_20%_10%,rgba(255,255,255,0.32),transparent_28%),linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:auto,56px_56px,56px_56px]" />
 
-      <div className="w-full max-w-[420px] relative z-10">
-        {/* Main Card */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-7 sm:p-8 flex flex-col items-center">
-          
-          {/* Header Brand */}
-          <div className="flex flex-col items-center text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow-md shadow-primary/20 mb-3.5 ring-4 ring-primary/10 transition-transform hover:scale-105">
-              <Mail className="w-7 h-7 text-white" strokeWidth={2.2} />
+        <div className="relative flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+            <Mail className="size-5" strokeWidth={2} />
+          </div>
+          <div>
+            <p className="text-base font-bold tracking-tight">EasyLegal Mail</p>
+            <p className="text-xs text-white/65">clienteasylegal.co.id</p>
+          </div>
+        </div>
+
+        <div className="relative max-w-lg">
+          <p className="mb-5 text-xs font-bold uppercase tracking-[0.16em] text-white/60">
+            Portal komunikasi legal
+          </p>
+          <h2 className="max-w-[12ch] text-4xl font-semibold leading-[1.08] tracking-[-0.035em] xl:text-5xl">
+            Email bisnis yang rapi dan terlindungi.
+          </h2>
+          <p className="mt-5 max-w-[48ch] text-sm leading-6 text-white/68">
+            Kelola korespondensi, dokumen, dan dukungan pelanggan dalam satu ruang kerja EasyLegal.
+          </p>
+
+          <div className="mt-10 grid gap-3 text-sm text-white/82">
+            {[
+              'Domain bisnis terverifikasi',
+              'Dokumen tersimpan dalam satu akun',
+              'Kontrol keamanan dan sesi aktif',
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-3">
+                <CheckCircle2 className="size-4 shrink-0 text-[#ffb4aa]" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative flex items-center gap-2 text-xs text-white/55">
+          <ShieldCheck className="size-4" />
+          <span>Koneksi TLS dan enkripsi AES-256 GCM</span>
+        </div>
+      </section>
+
+      <section className="flex min-h-[100dvh] items-center justify-center px-4 py-8 sm:px-8 lg:px-12">
+        <div className="w-full max-w-[470px]">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-primary text-white shadow-sm">
+              <Mail className="size-5" strokeWidth={2} />
             </div>
-            
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Email Portal
-            </h1>
-            <p className="text-xs text-slate-500 mt-1 font-medium flex items-center gap-1.5 justify-center">
-              <span>EasyLegal Mail</span>
-              <span className="w-1 h-1 rounded-full bg-slate-300" />
-              <span className="text-primary font-semibold">clienteasylegal.co.id</span>
+            <div>
+              <p className="font-bold tracking-tight text-slate-950">EasyLegal Mail</p>
+              <p className="text-xs text-slate-500">clienteasylegal.co.id</p>
+            </div>
+          </div>
+
+          <div className="mb-7">
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950">Email Portal</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Masuk untuk membuka mailbox dan layanan EasyLegal Hub.
             </p>
           </div>
 
           {/* Role Tabs */}
-          <div className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-xl w-full mb-5 border border-slate-200/60">
+          <div className="mb-6 grid w-full grid-cols-2 rounded-xl border border-border-subtle bg-[#ebe8e6] p-1">
             {(['customer', 'admin'] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 data-testid={`tab-${t}`}
                 onClick={() => { setTab(t); setError(''); }}
-                className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-all duration-200 ${
                   tab === t
-                    ? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-primary shadow-xs'
+                    : 'text-slate-600 hover:bg-white/55 hover:text-slate-950'
                 }`}
               >
                 {t === 'customer' ? 'Customer Mail' : 'Administrator'}
@@ -84,21 +124,21 @@ export default function LoginPage() {
             <div
               data-testid="login-error"
               role="alert"
-              className="w-full mb-4 bg-red-50 text-red-700 border border-red-200/80 px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-start gap-2 animate-in fade-in duration-200"
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-red-600 mt-1.5 shrink-0" />
+            className="mb-5 flex w-full items-start gap-2 rounded-xl border border-red-200/80 bg-red-50 px-3.5 py-3 text-xs font-medium text-red-700 animate-in fade-in duration-200"
+          >
+              <ShieldCheck className="mt-0.5 size-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3.5">
+          <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
             <div>
-              <label htmlFor="email" className="block text-xs font-medium text-slate-700 mb-1.5">
+              <label htmlFor="email" className="mb-2 block text-xs font-semibold text-slate-700">
                 Alamat Email
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -109,17 +149,17 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={tab === 'customer' ? 'nama@clienteasylegal.co.id' : 'admin@clienteasylegal.co.id'}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50/60 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className="w-full rounded-xl border border-border-subtle bg-white py-3 pl-10 pr-3.5 text-sm text-slate-950 shadow-xs transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-medium text-slate-700 mb-1.5">
-                Password
+              <label htmlFor="password" className="mb-2 block text-xs font-semibold text-slate-700">
+                Kata sandi
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -130,7 +170,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50/60 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className="w-full rounded-xl border border-border-subtle bg-white py-3 pl-10 pr-3.5 text-sm text-slate-950 shadow-xs transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                 />
               </div>
             </div>
@@ -139,7 +179,7 @@ export default function LoginPage() {
               type="submit"
               data-testid="submit"
               disabled={loading}
-              className="w-full mt-2 bg-gradient-to-r from-primary to-primary-container text-white font-medium text-sm py-2.5 px-4 rounded-xl hover:opacity-95 shadow-md shadow-primary/20 active:scale-[0.99] transition-all disabled:opacity-60 flex items-center justify-center gap-2 group"
+              className="group mt-2 flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-container active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
                 <>
@@ -156,10 +196,10 @@ export default function LoginPage() {
           </form>
 
           {/* Quick Demo Credentials Helper */}
-          <div className="w-full mt-6 pt-5 border-t border-slate-100 flex flex-col gap-2">
+          <div className="mt-7 flex w-full flex-col gap-2 border-t border-border-subtle pt-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Akun Uji Coba Demo</span>
-              <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">1-Klik Isi</span>
+              <span className="text-xs font-semibold text-slate-600">Akun demo</span>
+              <span className="text-[11px] text-slate-400">Isi otomatis</span>
             </div>
             
             <div className="grid grid-cols-1 gap-1.5">
@@ -172,14 +212,14 @@ export default function LoginPage() {
                   setPassword('Customer123!');
                   setError('');
                 }}
-                className="text-left p-2.5 rounded-xl bg-slate-50 hover:bg-red-50/50 hover:border-red-200/60 border border-slate-200/80 transition-all flex items-center justify-between group"
+                className="group flex items-center justify-between rounded-xl border border-transparent bg-white p-2.5 text-left transition-colors hover:border-primary/15 hover:bg-primary/[0.035]"
               >
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-primary">Customer (Budi):</span>
-                    <span className="text-xs text-slate-700">budi@clienteasylegal.co.id</span>
+                    <span className="text-xs font-semibold text-slate-800">Customer Budi</span>
+                    <span className="text-xs text-slate-500">budi@clienteasylegal.co.id</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">PT Maju Bersama • 12 Email • Pass: Customer123!</span>
+                  <span className="text-[10px] text-slate-400">PT Maju Bersama, 12 email, sandi Customer123!</span>
                 </div>
                 <CheckCircle2 className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
               </button>
@@ -193,14 +233,14 @@ export default function LoginPage() {
                   setPassword('Customer123!');
                   setError('');
                 }}
-                className="text-left p-2.5 rounded-xl bg-slate-50 hover:bg-red-50/50 hover:border-red-200/60 border border-slate-200/80 transition-all flex items-center justify-between group"
+                className="group flex items-center justify-between rounded-xl border border-transparent bg-white p-2.5 text-left transition-colors hover:border-primary/15 hover:bg-primary/[0.035]"
               >
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-primary">Akun Trial:</span>
-                    <span className="text-xs text-slate-700">trial@clienteasylegal.co.id</span>
+                    <span className="text-xs font-semibold text-slate-800">Akun trial</span>
+                    <span className="text-xs text-slate-500">trial@clienteasylegal.co.id</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">Masa Percobaan 14 Hari • 5 Email Trial • Pass: Customer123!</span>
+                  <span className="text-[10px] text-slate-400">Percobaan 14 hari, 5 email, sandi Customer123!</span>
                 </div>
                 <CheckCircle2 className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
               </button>
@@ -214,14 +254,14 @@ export default function LoginPage() {
                   setPassword('Admin123!');
                   setError('');
                 }}
-                className="text-left p-2.5 rounded-xl bg-slate-50 hover:bg-red-50/50 hover:border-red-200/60 border border-slate-200/80 transition-all flex items-center justify-between group"
+                className="group flex items-center justify-between rounded-xl border border-transparent bg-white p-2.5 text-left transition-colors hover:border-primary/15 hover:bg-primary/[0.035]"
               >
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-primary">Admin (Utama):</span>
-                    <span className="text-xs text-slate-700">admin@clienteasylegal.co.id</span>
+                    <span className="text-xs font-semibold text-slate-800">Administrator</span>
+                    <span className="text-xs text-slate-500">admin@clienteasylegal.co.id</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">Superadmin • Kelola 8 Mailbox • Pass: Admin123!</span>
+                  <span className="text-[10px] text-slate-400">Kelola 8 mailbox, sandi Admin123!</span>
                 </div>
                 <CheckCircle2 className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
               </button>
@@ -229,13 +269,12 @@ export default function LoginPage() {
           </div>
 
           {/* Security footnote */}
-          <div className="mt-5 pt-3 border-t border-slate-100 w-full flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>Enkripsi TLS & AES-256 GCM • Hostinger Titan Mail</span>
+          <div className="mt-6 flex w-full items-center justify-center gap-1.5 text-[11px] text-slate-500 lg:hidden">
+            <ShieldCheck className="size-3.5 shrink-0 text-primary" />
+            <span>Koneksi terenkripsi untuk setiap sesi</span>
           </div>
-
         </div>
-      </div>
+      </section>
     </main>
   );
 }

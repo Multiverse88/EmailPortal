@@ -23,13 +23,13 @@ import {
 import api, { errMsg } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
-import { AppLauncher } from '@/components/app-launcher';
+import { SuiteHeader } from '@/components/suite-header';
 import { TicketThreadModal, SupportTicket } from '@/components/ticket-thread-modal';
 
 export default function SupportPage() {
   return (
     <AuthGuard type="customer">
-      <Suspense fallback={<div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center text-slate-400">Memuat Pusat Bantuan...</div>}>
+      <Suspense fallback={<div className="min-h-[100dvh] bg-background flex items-center justify-center text-slate-400">Memuat Pusat Bantuan...</div>}>
         <SupportContent />
       </Suspense>
     </AuthGuard>
@@ -37,7 +37,7 @@ export default function SupportPage() {
 }
 
 function SupportContent() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -139,84 +139,39 @@ function SupportContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex flex-col text-slate-900">
-      {/* Global Header */}
-      <header className="h-16 bg-white border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
-        <div className="flex items-center gap-3">
-          <div
-            onClick={() => router.push('/support')}
-            className="flex items-center gap-2.5 cursor-pointer"
-          >
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
-              <Headphones className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-sm font-bold text-slate-900 tracking-tight">EasyLegal</span>
-              <span className="text-xs font-semibold text-primary ml-1">Support</span>
-            </div>
-          </div>
-
-          <div className="h-4 w-px bg-slate-200 mx-2 hidden sm:block" />
-
-          {/* Quick Cross-App Nav Links */}
-          <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <button
-              onClick={() => router.push('/inbox')}
-              className="px-2.5 py-1 rounded-lg hover:bg-slate-100 hover:text-slate-800 transition-colors"
-            >
-              Mailbox
-            </button>
-            <button
-              onClick={() => router.push('/documents')}
-              className="px-2.5 py-1 rounded-lg hover:bg-slate-100 hover:text-slate-800 transition-colors"
-            >
-              Legal Drive
-            </button>
-            <button
-              onClick={() => router.push('/settings')}
-              className="px-2.5 py-1 rounded-lg hover:bg-slate-100 hover:text-slate-800 transition-colors"
-            >
-              Pengaturan
-            </button>
-          </div>
-        </div>
-
-        {/* Trailing Area */}
-        <div className="flex items-center gap-2.5 ml-auto">
-          {/* 9-dots App Launcher */}
-          <AppLauncher currentApp="support" />
-
-          <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block" />
-
-          {/* User Profile */}
-          <button
-            onClick={() => router.push('/settings')}
-            className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-full hover:bg-slate-100 transition-colors"
-            title="Pengaturan Akun"
-          >
-            <div className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
-              {user?.name?.slice(0, 1) || 'U'}
-            </div>
-            <span className="text-xs font-semibold text-slate-700 hidden lg:inline max-w-[120px] truncate">
-              {user?.name || 'Customer'}
-            </span>
-          </button>
-        </div>
-      </header>
+    <div className="app-shell">
+      <SuiteHeader
+        currentApp="support"
+        product="Support"
+        description="Bantuan produk dan konsultasi operasional"
+        userName={user?.name}
+        userEmail={user?.email}
+        onLogout={() => {
+          logout();
+          router.replace('/login');
+        }}
+      />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Banner 24/7 Live Support */}
-        <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+      <main className="page-canvas w-full flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-6xl space-y-7 p-4 sm:p-6 lg:p-8">
+        {error && (
+          <div role="alert" className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <span>{error}</span>
+            <button type="button" onClick={fetchTickets} className="font-semibold hover:underline">Coba lagi</button>
+          </div>
+        )}
+        {/* Support page introduction */}
+        <section className="relative flex flex-col items-start justify-between gap-5 overflow-hidden rounded-2xl border border-primary/15 bg-primary p-6 text-white shadow-panel sm:flex-row sm:items-center sm:p-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
               <Headphones className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">
+              <h2 className="text-xl font-semibold tracking-[-0.025em] text-white sm:text-2xl">
                 Pusat Bantuan & Layanan Pelanggan
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-white/70">
                 Tim hukum dan teknisi kami siap membantu pertanyaan mailbox dan dokumen Anda 24/7.
               </p>
             </div>
@@ -224,7 +179,7 @@ function SupportContent() {
 
           <button
             onClick={() => setNewTicketOpen(true)}
-            className="w-full sm:w-auto px-6 py-2.5 bg-primary hover:bg-primary-container text-white rounded-full text-xs font-semibold flex items-center justify-center gap-2 shadow-sm shadow-primary/20 transition-all shrink-0 active:scale-95"
+            className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white px-5 text-sm font-semibold text-primary transition hover:bg-[#fff5f3] active:scale-[0.98] sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             <span>Buat Tiket Bantuan</span>
@@ -232,12 +187,12 @@ function SupportContent() {
         </section>
 
         {/* 2-Column Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           {/* Main Left: Tickets List (2 Columns) */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                <h3 className="section-title">
                   Tiket Bantuan Anda
                 </h3>
                 <span className="text-xs font-mono bg-slate-200/80 px-2 py-0.5 rounded-full font-semibold text-slate-700">
@@ -281,7 +236,7 @@ function SupportContent() {
             </div>
 
             {/* Ticket Cards List */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden divide-y divide-slate-100">
+            <div className="app-panel overflow-hidden divide-y divide-slate-100">
               {loading ? (
                 <div className="py-16 flex flex-col items-center justify-center text-slate-400">
                   <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
@@ -349,7 +304,7 @@ function SupportContent() {
 
           {/* Right Column: FAQ Accordion Section (1 Column) */}
           <aside className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+            <h3 className="section-title">
               Tanya Jawab (FAQ)
             </h3>
 
@@ -370,7 +325,7 @@ function SupportContent() {
                   <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
                 </summary>
                 <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                  Tiket reguler dijawab dalam waktu <strong>1–24 jam kerja</strong>. Tiket dengan prioritas <strong>Urgent (Mendesak)</strong> akan ditangani tim kami dalam waktu <strong>di bawah 4 jam</strong>.
+                  Tiket reguler dijawab dalam waktu <strong>1-24 jam kerja</strong>. Tiket dengan prioritas <strong>Urgent (Mendesak)</strong> akan ditangani tim kami dalam waktu <strong>di bawah 4 jam</strong>.
                 </p>
               </details>
 
@@ -396,17 +351,18 @@ function SupportContent() {
             </div>
           </aside>
         </div>
+        </div>
       </main>
 
       {/* New Ticket Modal */}
       {newTicketOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"
+          className="modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget) setNewTicketOpen(false);
           }}
         >
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
+          <div className="modal-panel max-w-lg space-y-4 p-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900">Buat Tiket Bantuan Baru</h3>
               <button

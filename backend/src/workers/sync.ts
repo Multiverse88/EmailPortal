@@ -3,6 +3,7 @@ import Imap from 'imap';
 import { simpleParser } from 'mailparser';
 import { decrypt } from '../lib/crypto';
 import { toSnippet } from '../lib/sanitize';
+import { inferAttachmentMimeType } from '../lib/attachments';
 import { isMailApiConfigured, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody } from '../lib/hostinger';
 
 const IMAP_HOST = process.env.HOSTINGER_IMAP_HOST;
@@ -139,7 +140,7 @@ export class SyncWorker {
           attachments: attachmentMeta ? {
             create: JSON.parse(attachmentMeta).map((a: any) => ({
               filename: a.filename,
-              mimeType: '',
+              mimeType: inferAttachmentMimeType(a.filename),
               size: a.size,
               path: `api-attach:${a.id}`,
             })),
