@@ -1,5 +1,4 @@
-import { findMatchingKnowledge, getContextualTip, queryCompanion } from "../ai-engine";
-import { DEFAULT_COMPANION_SETTINGS } from "../types";
+import { findMatchingKnowledge, getContextualTip, queryCompanion, fetchCompanionStatus } from "../ai-engine";
 
 describe("AI Companion Engine & Knowledge Base", () => {
   it("matches 3-month retention queries accurately", () => {
@@ -37,9 +36,18 @@ describe("AI Companion Engine & Knowledge Base", () => {
     expect(documentsTip.text).toContain("dokumen");
   });
 
-  it("falls back gracefully to local knowledge when no 9router API key is configured", async () => {
-    const response = await queryCompanion("halo el, bisa bantu apa?", [], DEFAULT_COMPANION_SETTINGS);
+  it("falls back gracefully to local knowledge when backend is offline or unconfigured", async () => {
+    const response = await queryCompanion("halo el, bisa bantu apa?");
     expect(response.text).toBeDefined();
     expect(response.pose).toBe("greeting");
+    expect(response.source).toBe("local");
+  });
+
+  it("fetches companion status with fallback defaults", async () => {
+    const status = await fetchCompanionStatus();
+    expect(status).toHaveProperty("configured");
+    expect(status).toHaveProperty("model");
+    expect(status).toHaveProperty("status");
+    expect(status).toHaveProperty("active", true);
   });
 });

@@ -10,7 +10,7 @@ import { SupportTicketModal } from "@/components/support-ticket-modal";
 
 export function ElCompanion() {
   const pathname = usePathname();
-  const { setPose, showBubble, settings } = useCompanionStore();
+  const { setPose, showBubble, backendStatus } = useCompanionStore();
 
   const [supportModalOpen, setSupportModalOpen] = useState(false);
   const [supportModalConfig, setSupportModalConfig] = useState<{
@@ -50,7 +50,7 @@ export function ElCompanion() {
     }
   }, [pathname, isExcludedRoute, setPose, showBubble]);
 
-  if (isExcludedRoute || !settings.enabled) {
+  if (isExcludedRoute || (backendStatus && !backendStatus.active)) {
     return null;
   }
 

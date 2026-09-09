@@ -19,11 +19,12 @@ export interface CompanionMessage {
   quickActions?: Array<{ label: string; action: string; url?: string }>;
 }
 
-export interface CompanionSettings {
-  apiKey: string;
-  baseUrl: string;
+export interface CompanionBackendStatus {
+  configured: boolean;
   model: string;
-  enabled: boolean;
+  provider: "9router" | "local";
+  status: "online" | "local";
+  active: boolean;
 }
 
 export interface KnowledgeItem {
@@ -47,11 +48,4 @@ export const POSE_ASSETS: Record<CompanionPose, string> = {
   peeking: "/companion/el/el-muncul-dari-tepi.png",
   waving: "/companion/el/el-hero-melambai.png",
   head: "/companion/el/el-avatar-kepala.png",
-};
-
-export const DEFAULT_COMPANION_SETTINGS: CompanionSettings = {
-  apiKey: "",
-  baseUrl: "https://api.9router.com/v1",
-  model: "gpt-4o-mini",
-  enabled: true,
 };

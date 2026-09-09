@@ -33,6 +33,7 @@ api.interceptors.request.use((config) => {
       url.includes('/search') ||
       url.includes('/security') ||
       url.includes('/settings') ||
+      url.includes('/companion') ||
       url.includes('/auth/change-password') ||
       url.includes('/auth/me')
     );

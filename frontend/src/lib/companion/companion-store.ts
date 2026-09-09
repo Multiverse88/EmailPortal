@@ -1,15 +1,23 @@
 import { create } from "zustand";
 import {
+  CompanionBackendStatus,
   CompanionMessage,
   CompanionPose,
-  CompanionSettings,
-  DEFAULT_COMPANION_SETTINGS,
 } from "./types";
+import { fetchCompanionStatus } from "./ai-engine";
 
 interface CompanionBubble {
   text: string;
   pose: CompanionPose;
 }
+
+const DEFAULT_BACKEND_STATUS: CompanionBackendStatus = {
+  configured: false,
+  model: "gpt-4o-mini",
+  provider: "local",
+  status: "local",
+  active: true,
+};
 
 interface CompanionState {
   isOpen: boolean;
@@ -18,7 +26,7 @@ interface CompanionState {
   bubble: CompanionBubble | null;
   messages: CompanionMessage[];
   isTyping: boolean;
-  settings: CompanionSettings;
+  backendStatus: CompanionBackendStatus;
 
   openChat: () => void;
   closeChat: () => void;
@@ -30,7 +38,8 @@ interface CompanionState {
   hideBubble: () => void;
   addMessage: (message: CompanionMessage) => void;
   setIsTyping: (val: boolean) => void;
-  updateSettings: (patch: Partial<CompanionSettings>) => void;
+  setBackendStatus: (status: CompanionBackendStatus) => void;
+  refreshStatus: () => Promise<void>;
   clearMessages: () => void;
   resetForTesting: () => void;
 }
@@ -49,15 +58,6 @@ const INITIAL_MESSAGE: CompanionMessage = {
   ],
 };
 
-function loadSettingsFromStorage(): CompanionSettings {
-  if (typeof window === "undefined") return DEFAULT_COMPANION_SETTINGS;
-  try {
-    const raw = localStorage.getItem("el_companion_settings");
-    if (raw) return { ...DEFAULT_COMPANION_SETTINGS, ...JSON.parse(raw) };
-  } catch {}
-  return DEFAULT_COMPANION_SETTINGS;
-}
-
 export const useCompanionStore = create<CompanionState>((set, get) => ({
   isOpen: false,
   isMinimized: false,
@@ -65,7 +65,7 @@ export const useCompanionStore = create<CompanionState>((set, get) => ({
   bubble: null,
   messages: [INITIAL_MESSAGE],
   isTyping: false,
-  settings: loadSettingsFromStorage(),
+  backendStatus: DEFAULT_BACKEND_STATUS,
 
   openChat: () => set({ isOpen: true, isMinimized: false }),
   closeChat: () => set({ isOpen: false }),
@@ -95,14 +95,15 @@ export const useCompanionStore = create<CompanionState>((set, get) => ({
 
   setIsTyping: (val: boolean) => set({ isTyping: val }),
 
-  updateSettings: (patch: Partial<CompanionSettings>) => {
-    set((s) => {
-      const next = { ...s.settings, ...patch };
-      if (typeof window !== "undefined") {
-        localStorage.setItem("el_companion_settings", JSON.stringify(next));
-      }
-      return { settings: next };
-    });
+  setBackendStatus: (status: CompanionBackendStatus) => set({ backendStatus: status }),
+
+  refreshStatus: async () => {
+    try {
+      const status = await fetchCompanionStatus();
+      set({ backendStatus: status });
+    } catch {
+      // Keep default
+    }
   },
 
   clearMessages: () => set({ messages: [INITIAL_MESSAGE] }),
@@ -115,6 +116,6 @@ export const useCompanionStore = create<CompanionState>((set, get) => ({
       bubble: null,
       messages: [INITIAL_MESSAGE],
       isTyping: false,
-      settings: DEFAULT_COMPANION_SETTINGS,
+      backendStatus: DEFAULT_BACKEND_STATUS,
     }),
 }));

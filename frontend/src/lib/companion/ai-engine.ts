@@ -1,4 +1,5 @@
-import { CompanionPose, CompanionSettings, KnowledgeItem } from "./types";
+import api from "../api";
+import { CompanionBackendStatus, CompanionPose, KnowledgeItem } from "./types";
 import { PORTAL_KNOWLEDGE_BASE } from "./knowledge-base";
 
 export function findMatchingKnowledge(query: string): KnowledgeItem | null {
@@ -60,84 +61,72 @@ export function getContextualTip(
   };
 }
 
+export async function fetchCompanionStatus(): Promise<CompanionBackendStatus> {
+  try {
+    const res = await api.get("/companion/status");
+    if (res.data) {
+      return res.data;
+    }
+  } catch (err) {
+    if (process.env.NODE_ENV !== "test") {
+      console.warn("Failed to fetch companion status from backend:", err);
+    }
+  }
+
+  return {
+    configured: false,
+    model: "gpt-4o-mini",
+    provider: "local",
+    status: "local",
+    active: true,
+  };
+}
+
 export async function queryCompanion(
   query: string,
-  history: Array<{ role: "user" | "assistant"; content: string }>,
-  settings: CompanionSettings,
+  history: Array<{ role: "user" | "assistant"; content: string }> = [],
   portalContext?: { currentRoute: string; remainingDays?: number }
 ): Promise<{
   text: string;
   pose: CompanionPose;
   quickActions?: Array<{ label: string; action: string; url?: string }>;
+  source?: "9router" | "local";
 }> {
-  const localMatch = findMatchingKnowledge(query);
-
-  // If user has provided a 9router API key, call the OpenAI-compatible completion API
-  if (settings.apiKey && settings.apiKey.trim().length > 0) {
-    try {
-      const endpoint = `${settings.baseUrl.replace(/\/+$/, "")}/chat/completions`;
-      const systemPrompt = `Anda adalah "El", AI Companion ramah dan profesional untuk platform EasyLegal.
-Karakter Anda ramah, solutif, sopan, dan menggunakan bahasa Indonesia yang hangat.
-Konteks portal saat ini:
-- Rute halaman: ${portalContext?.currentRoute || "/inbox"}
-- Kebijakan retensi akun: Akun & file hanya bertahan 3 bulan (90 hari) sejak dibuat.
-- Pengingat 1 bulan terakhir: Diwajibkan backup berkas mandiri sebelum nonaktif.
-- Layanan Tiket Support: SLA tanggapan 1x24 jam kerja.
-${localMatch ? `Informasi relevan dari sistem: ${localMatch.content}` : ""}
-Jawablah dengan ringkas, jelas, dan ramah (maksimal 2-3 paragraf).`;
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.apiKey.trim()}`,
-        },
-        body: JSON.stringify({
-          model: settings.model || "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...history.slice(-6),
-            { role: "user", content: query },
-          ],
-          temperature: 0.7,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const replyText = data.choices?.[0]?.message?.content;
-        if (replyText) {
-          return {
-            text: replyText,
-            pose: localMatch?.pose || "happy",
-            quickActions: localMatch?.quickActions,
-          };
-        }
-      }
-    } catch (err) {
-      console.warn("9router API call failed, falling back to local engine:", err);
+  try {
+    const res = await api.post("/companion/chat", {
+      query,
+      history,
+      currentRoute: portalContext?.currentRoute,
+    });
+    if (res.data?.text) {
+      return res.data;
+    }
+  } catch (err) {
+    if (process.env.NODE_ENV !== "test") {
+      console.warn("Backend /companion/chat failed or offline, falling back to local:", err);
     }
   }
 
   // Fallback to local intelligent knowledge match
+  const localMatch = findMatchingKnowledge(query);
   if (localMatch) {
     return {
       text: localMatch.content,
       pose: localMatch.pose,
       quickActions: localMatch.quickActions,
+      source: "local",
     };
   }
 
-  // Polite general fallback with guidance
+  // Polite general fallback
   return {
-    text: `Halo! Saya El. Saya dapat membantu Anda seputar **kebijakan retensi 3 bulan**, **cara backup dokumen**, **kuota penyimpanan**, atau **tiket support (SLA 1x24 jam)**.
-
-Untuk pertanyaan kompleks lainnya, Anda juga bisa memasukkan API Key 9router Anda melalui ikon gerigi pengaturan di atas jendela ini!`,
+    text: "Halo! Saya El. Saya dapat membantu Anda seputar **kebijakan retensi 3 bulan**, **cara backup berkas**, **kuota penyimpanan**, atau **tiket support (SLA 1x24 jam)**. Ada yang ingin Anda tanyakan?",
     pose: "greeting",
     quickActions: [
       { label: "ℹ️ Kebijakan 3 Bulan", action: "ask-retention" },
       { label: "📁 Cara Backup Berkas", action: "ask-backup" },
       { label: "🎫 Info Tiket Support", action: "ask-support" },
     ],
+    source: "local",
   };
 }
