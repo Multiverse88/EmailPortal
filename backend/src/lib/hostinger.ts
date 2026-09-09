@@ -15,6 +15,10 @@ import {
   SendApi,
   QuotaApi,
 } from 'hostinger-mail-api-sdk';
+import dns from 'node:dns';
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 import axios from 'axios';
 
 // ─── hPanel API (provisioning) ────────────────────────────────────────────
