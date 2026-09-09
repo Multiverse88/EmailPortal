@@ -144,7 +144,7 @@ export function SupportTicketModal({
               </div>
             )}
 
-            {category === 'Masa Aktif & Retensi Akun' ? (
+            {category === 'Masa Aktif & Retensi Akun' || category === 'Retensi & Masa Aktif Akun' ? (
               <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl flex items-start gap-2.5 text-[11px]">
                 <Clock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <div>
@@ -154,13 +154,23 @@ export function SupportTicketModal({
                   </p>
                 </div>
               </div>
-            ) : category === 'Penyimpanan & Kuota' ? (
+            ) : category === 'Penyimpanan & Kuota' || category === 'Storage & Drive' ? (
               <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl flex items-start gap-2.5 text-[11px]">
                 <HardDrive className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold">Batas Kuota Standar 5 GB Tercapai</span>
                   <p className="text-amber-800 mt-0.5">
                     Pengajuan ini akan diteruskan langsung ke Admin Support untuk menambah batas kuota Mailbox Drive Anda.
+                  </p>
+                </div>
+              </div>
+            ) : category === 'Kendala Teknis & Backend' ? (
+              <div className="p-3 bg-rose-50 text-rose-900 border border-rose-200 rounded-xl flex items-start gap-2.5 text-[11px]">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Investigasi Gangguan Teknis &amp; Backend</span>
+                  <p className="text-rose-800 mt-0.5">
+                    Laporan kendala server/backend akan diteruskan langsung ke tim Engineering &amp; Sysadmin kami untuk penanganan cepat (SLA &lt; 4 jam untuk kendala urgent).
                   </p>
                 </div>
               </div>
@@ -176,8 +186,11 @@ export function SupportTicketModal({
                 >
                   <option value="Masa Aktif & Retensi Akun">Masa Aktif &amp; Retensi Akun</option>
                   <option value="Penyimpanan & Kuota">Penyimpanan &amp; Kuota</option>
+                  <option value="Kendala Teknis & Backend">Kendala Teknis &amp; Backend</option>
+                  <option value="Mailbox Technical">Mailbox Technical</option>
+                  <option value="Access & Security">Access &amp; Security</option>
                   <option value="Document Review">Document Review</option>
-                  <option value="Billing">Billing</option>
+                  <option value="Billing">Billing &amp; Tagihan</option>
                   <option value="Umum">Umum</option>
                 </select>
               </div>

@@ -40,6 +40,17 @@ describe("AI Companion Engine & Knowledge Base", () => {
     expect(match?.quickActions?.[0]?.priority).toBe("urgent");
   });
 
+  it("matches complex backend issues and directs to support ticket", () => {
+    const match = findMatchingKnowledge("saya mengalami error 500 dan kendala server backend");
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe("complex-backend-issues");
+    expect(match?.pose).toBe("thinking");
+    expect(match?.content).toContain("tiket bantuan");
+    expect(match?.quickActions?.[0]?.action).toBe("open-support-modal");
+    expect(match?.quickActions?.[0]?.category).toBe("Kendala Teknis & Backend");
+    expect(match?.quickActions?.[0]?.priority).toBe("urgent");
+  });
+
   it("returns proactive contextual tips based on route and remaining days", () => {
     const settingsWarning = getContextualTip("/settings", { remainingDays: 14, isExpiringSoon: true });
     expect(settingsWarning.pose).toBe("tips");

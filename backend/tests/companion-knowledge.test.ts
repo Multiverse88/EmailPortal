@@ -52,6 +52,17 @@ describe('Backend Companion Knowledge Base', () => {
     expect(match?.content).toContain('Synology NAS');
   });
 
+  it('should match complex backend and server error queries and direct to support ticket', () => {
+    const match = findMatchingKnowledge('saya menemukan error 500 dan kendala server backend bermasalah');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('complex-backend-issues');
+    expect(match?.pose).toBe('thinking');
+    expect(match?.content).toContain('tiket bantuan');
+    expect(match?.quickActions?.[0]?.action).toBe('open-support-modal');
+    expect(match?.quickActions?.[0]?.category).toBe('Kendala Teknis & Backend');
+    expect(match?.quickActions?.[0]?.priority).toBe('urgent');
+  });
+
   it('should return null for unmatched random query', () => {
     const match = findMatchingKnowledge('siapa presiden pertama indonesia?');
     expect(match).toBeNull();

@@ -87,11 +87,17 @@ Panduan Penanganan Masalah & Kendala Pengguna:
    - Email bounce / gagal kirim server Titan: Buat tiket kategori "Mailbox Technical" prioritas Urgent (SLA < 4 jam kerja).
    - Legal review / konsultasi kontrak resmi: Jelaskan El tidak memberikan opini hukum mengikat, tawarkan buat tiket kategori "Document Review" ke divisi legal advokat.
 
+5. Masalah Kompleks & Menyangkut Backend / Server:
+   - Jika pengguna melaporkan kendala yang terlalu kompleks, kegagalan sistem internal, eror backend/server (seperti HTTP 500, error database, API crash, kegagalan sinkronisasi internal, bug sistem, atau anomali teknis yang tidak bisa diselesaikan secara mandiri lewat antarmuka):
+   - Jelaskan bahwa kendala tersebut memerlukan investigasi dan perbaikan langsung oleh tim engineer / sysadmin EasyLegal.
+   - Arahkan pengguna secara tegas dan ramah untuk SEGERA membuat tiket support di menu Bantuan (/support) dengan kategori "Kendala Teknis & Backend" (atau melalui tombol aksi tiket).
+   - Anjurkan pengguna menyertakan rincian halaman, kode/pesan eror, kronologi waktu, dan screenshot agar tim teknis dapat memprosesnya dengan cepat (SLA 1x24 jam kerja, atau prioritas Urgent < 4 jam jika menghentikan operasional).
+
 Konteks portal saat ini:
 - Rute halaman pengguna: ${currentRoute || '/inbox'}
 ${customerContext ? `- Data pengguna saat ini: ${customerContext}` : ''}
 ${localMatch ? `Informasi relevan dari sistem: ${localMatch.content}` : ''}
-Jawablah dengan ringkas, jelas, dan ramah (maksimal 2-3 paragraf). Berikan langkah praktis jika ditanya panduan atau tawarkan tiket support bila membutuhkan eskalasi.`;
+Jawablah dengan ringkas, jelas, dan ramah (maksimal 2-3 paragraf). Berikan langkah praktis jika ditanya panduan atau arahkan membuat tiket support bila masalah terlalu kompleks atau menyangkut backend.`;
 
           const messagesPayload = [
             { role: 'system', content: systemPrompt },
@@ -146,10 +152,30 @@ Jawablah dengan ringkas, jelas, dan ramah (maksimal 2-3 paragraf). Berikan langk
             }
 
             if (reply && typeof reply === 'string' && reply.trim()) {
+              const isComplexOrTechnical =
+                /backend|server|error 500|500 error|database|crash|kompleks|bug sistem|anomali/i.test(trimmedQuery) ||
+                /tiket support|buat tiket|tim teknis|tim engineer|sysadmin|investigasi/i.test(reply);
+
+              const resolvedQuickActions =
+                localMatch?.quickActions ||
+                (isComplexOrTechnical
+                  ? [
+                      {
+                        label: '🎫 Buat Tiket Kendala Teknis',
+                        action: 'open-support-modal',
+                        category: 'Kendala Teknis & Backend',
+                        subject: 'Laporan Kendala Teknis / Gangguan Backend Server',
+                        message: 'Halo Tim Support & Engineering EasyLegal,\n\nSaya mengalami kendala teknis / gangguan sistem pada akun saya dengan rincian berikut:\n- Halaman / Fitur: \n- Pesan Eror / Kode Status: \n- Kronologi Singkat: \n\nMohon bantuan investigasi log server dan penanganan teknis. Terima kasih.',
+                        priority: 'urgent' as const,
+                      },
+                      { label: '📋 Riwayat Tiket', action: 'navigate', url: '/support' },
+                    ]
+                  : undefined);
+
               return res.json({
                 text: reply.trim(),
-                pose: localMatch?.pose || 'happy',
-                quickActions: localMatch?.quickActions,
+                pose: localMatch?.pose || (isComplexOrTechnical ? 'thinking' : 'happy'),
+                quickActions: resolvedQuickActions,
                 source: '9router',
               });
             }

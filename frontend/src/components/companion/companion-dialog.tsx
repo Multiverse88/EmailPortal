@@ -317,6 +317,13 @@ export function CompanionDialog({ onOpenSupport }: CompanionDialogProps) {
         >
           🎫 SLA 1x24 Jam
         </button>
+        <button
+          type="button"
+          onClick={() => handleSend("Saya mengalami error sistem dan kendala teknis backend, bagaimana solusinya?")}
+          className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-medium text-slate-600 hover:border-primary hover:text-primary transition"
+        >
+          🛠️ Kendala Teknis / Eror
+        </button>
       </div>
 
       {/* Input Footer */}
