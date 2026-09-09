@@ -87,38 +87,60 @@ flowchart TD
 
 ---
 
-## 3. Diagram Alur Siklus Dokumen (Data Lifecycle)
+## 3. Diagram Alur Siklus Dokumen & Retensi (Data Lifecycle)
 
-Alur berkas dari saat diunggah customer, disimpan di Hot Storage S3 selama 90 hari, hingga diarsipkan ke NAS:
+Alur berkas dari saat diunggah customer, disimpan di Hot Storage S3 selama 90 hari, otomatis dihapus oleh S3 Native Lifecycle, hingga mekanisme pemulihan berkas arsip dari Synology NAS melalui Tiket Bantuan:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Customer / Staf
-    participant VPS as Backend VPS (Dokploy)
-    participant S3 as IDCloudHost S3 (Hot)
-    participant Laptop as Laptop (Admin PC)
-    participant NAS as Synology NAS (Cold)
+    actor User as Customer / Klien
+    participant VPS as Web Portal & API (Dokploy)
+    participant S3 as IDCloudHost S3 (Hot Storage)
+    participant Laptop as Laptop Admin (Synology Client)
+    participant NAS as Synology NAS (Cold Storage)
+    actor Admin as Admin / Staf Legal
 
-    %% Fase Hot Storage
-    Note over User, S3: FASE HOT STORAGE (Bulan 1 - 3 / 90 Hari)
-    User->>VPS: Upload Dokumen / Email Masuk
-    VPS->>S3: PutObject (Simpan PDF / Berkas ke S3)
-    S3-->>VPS: Simpan URL Path / Key
-    VPS-->>User: Berkas Tersedia & Siap Diakses Cepat
-    User->>VPS: Request Preview / Unduh Berkas
-    VPS->>S3: GetObject / Signed URL
-    S3-->>User: Streaming Dokumen
+    %% Fase 1: Hot Storage Aktif (0 - 90 Hari)
+    rect rgb(235, 245, 251)
+        Note over User, S3: FASE 1: HOT STORAGE AKTIF (Hari ke 0 - 90 / 3 Bulan)
+        User->>VPS: Upload Dokumen Legal / Kirim Lampiran Email
+        VPS->>S3: PutObject (Simpan berkas ke Bucket S3)
+        S3-->>VPS: Status OK & Key Tersimpan
+        VPS-->>User: Berkas Siap & Preview Instan (< 1 detik)
+        User->>VPS: Unduh / Pratinjau Berkas Aktif
+        VPS->>S3: GetObject / Pre-Signed URL
+        S3-->>User: Berkas Terunduh Cepat
+    end
 
-    %% Fase Archival / Cold Storage
-    Note over S3, NAS: FASE COLD STORAGE (> 3 Bulan / Pengarsipan)
-    Note over Laptop: Admin menjalankan download arsip berkala (1x sebulan/kuartal)
-    Laptop->>S3: Download berkas usia > 90 hari
-    S3-->>Laptop: File tersimpan di folder Synology Drive lokal
-    Note over Laptop, NAS: Synology Drive Client mendeteksi file baru di folder
-    Laptop->>NAS: Sinkronisasi otomatis via LAN / QuickConnect
-    NAS-->>Laptop: Konfirmasi data tersimpan di Volume Hard Disk NAS
-    Laptop->>S3: DeleteObject (Hapus berkas lama dari S3 untuk hemat biaya)
+    %% Fase 2: Sinkronisasi Cold Storage Berkala
+    rect rgb(244, 236, 247)
+        Note over Laptop, NAS: FASE 2: SINKRONISASI KE COLD STORAGE (< 90 Hari)
+        Laptop->>S3: Backup berkas aktif ke folder staging lokal
+        Laptop->>NAS: Sinkronisasi otomatis via Synology Drive Client (LAN / QuickConnect)
+        NAS-->>Laptop: Salinan permanen tersimpan aman di hard disk NAS kantor
+    end
+
+    %% Fase 3: Auto Expiration S3
+    rect rgb(254, 249, 231)
+        Note over S3: FASE 3: AUTO-EXPIRATION BUCKET (> 90 Hari)
+        S3->>S3: S3 Lifecycle Rule otomatis menghapus objek usia > 90 hari
+        Note over S3, NAS: Berkas fisik kini HANYA tersimpan di Synology NAS
+    end
+
+    %% Fase 4: Permohonan Berkas Arsip via Tiket Bantuan
+    rect rgb(232, 248, 245)
+        Note over User, Admin: FASE 4: PEMULIHAN ARSIP VIA TIKET BANTUAN (> 90 Hari)
+        User->>VPS: Klik Dokumen / Lampiran Lama (> 90 Hari)
+        VPS-->>User: Smart Age Detection: Status "Arsip Cold Storage"
+        User->>VPS: Klik "Buka Tiket Bantuan" (1-Klik Auto Prefill)
+        VPS->>VPS: Buat Tiket Kategori "Permohonan Berkas Arsip"
+        VPS-->>Admin: Notifikasi Tiket Baru Masuk ke Helpdesk
+        Admin->>NAS: Ambil Berkas Asli dari Folder Arsip Synology NAS
+        NAS-->>Admin: Berkas Diambil
+        Admin->>VPS: Balas Tiket & Lampirkan Berkas Restorasi
+        VPS-->>User: Customer Menerima Berkas Arsip (Tiket Resolved)
+    end
 ```
 
 ---
@@ -128,16 +150,16 @@ sequenceDiagram
 ### A. Compute & Platform Layer (IDCloudHost VPS)
 * **Dokploy PaaS**: Berfungsi sebagai orkestrator kontainer (Docker) mandiri di VPS untuk mengelola database, redis, backend, dan frontend secara otomatis.
 * **Traefik Reverse Proxy**: Menangani routing domain (`mail.clienteasylegal.co.id`), rate limiting, dan auto-renewal sertifikat SSL Let's Encrypt.
-* **Backend & Worker**: Menjalankan Node.js untuk menangani REST API, IMAP sync dengan Hostinger, dan adapter S3.
-* **Database (PostgreSQL)**: Menyimpan metadata dokumen (nama file, hash, ukuran, relasi user, timestamp), bukan file fisik biner.
+* **Backend & Worker**: Menjalankan Node.js untuk menangani REST API, IMAP sync dengan Hostinger, adapter S3, dan deteksi usia berkas (Smart Age Detection).
+* **Database (PostgreSQL)**: Menyimpan metadata dokumen (nama file, hash, ukuran, relasi user, timestamp asli), bukan file fisik biner.
 
 ### B. Hot Storage Layer (IDCloudHost Object Storage S3)
 * **Standard**: S3-Compatible API.
-* **Fungsi**: Menyimpan berkas biner aktif (PDF kontrak, scan identitas, lampiran email).
+* **Fungsi**: Menyimpan berkas biner aktif (PDF kontrak, scan identitas, lampiran email) selama **maksimal 90 hari (3 bulan)**.
 * **Keunggulan**:
   * **Zero VPS Disk Bloat**: Hard disk SSD VPS tetap bersih dan tidak akan kehabisan ruang.
   * **Intranet Speed**: Karena VPS dan S3 berada di data center IDCloudHost yang sama, latensi transfer data sangat rendah (< 2 ms).
-  * **High Availability**: Redundansi multi-node IDCloudHost memastikan file tidak hilang jika VPS mengalami restart/maintenance.
+  * **Auto Purge via Lifecycle**: Menggunakan Native S3 Lifecycle Rule untuk otomatis menghapus berkas > 90 hari tanpa membebani resource komputasi VPS.
 
 ### C. Cold Storage Layer (Synology NAS & Drive Client)
 * **Fungsi**: Arsip permanen jangka panjang untuk keperluan audit hukum dan retensi data bertahun-tahun.
@@ -171,7 +193,7 @@ $$\text{Steady-State Storage S3} = 75\text{ GB} \times 3 = \mathbf{225\text{ GB}
 | **Cold Storage (NAS)** | Synology Drive On-Premises | **Rp 0** (Hardware sudah dimiliki) |
 | **Total Estimasi** | Infrastruktur Full Cloud + Hot Storage | **~Rp 264.000 – Rp 314.000 / bulan** |
 
-> **Catatan:** Setelah bulan ke-3, tagihan Object Storage akan terkunci stabil (flat) karena dokumen lama yang berumur > 90 hari dipindahkan ke NAS dan dihapus dari S3.
+> **Catatan:** Setelah bulan ke-3, tagihan Object Storage akan terkunci stabil (flat) karena dokumen lama yang berumur > 90 hari dipindahkan ke NAS dan dihapus dari S3 oleh aturan lifecycle otomatis.
 
 ---
 
@@ -185,3 +207,104 @@ $$\text{Steady-State Storage S3} = 75\text{ GB} \times 3 = \mathbf{225\text{ GB}
    * Komunikasi Web ke VPS: HTTPS (TLS 1.3).
    * Komunikasi VPS ke S3: S3 HTTPS API dengan Signature V4.
    * Komunikasi Laptop ke NAS: Enkripsi SSL bawaan Synology Drive Client.
+
+---
+
+## 7. Kebijakan Retensi 3 Bulan & Integrasi Tiket Bantuan (Cold Storage Restore)
+
+### 7.1 Kebijakan S3 Native Lifecycle Rule (90 Hari)
+Bucket S3 IDCloudHost (`emailportal`) dikonfigurasi dengan aturan siklus hidup (lifecycle policy) resmi Ceph S3:
+* **Target Bucket**: `emailportal`
+* **Filter Prefix**: `attachments/` dan `documents/` (atau seluruh objek dalam bucket)
+* **Status**: `Enabled`
+* **Action**: `Expiration -> Days: 90`
+
+#### Konfigurasi XML S3 Lifecycle:
+```xml
+<LifecycleConfiguration>
+    <Rule>
+        <ID>AutoExpireColdStorageAfter90Days</ID>
+        <Filter>
+            <Prefix></Prefix>
+        </Filter>
+        <Status>Enabled</Status>
+        <Expiration>
+            <Days>90</Days>
+        </Expiration>
+    </Rule>
+</LifecycleConfiguration>
+```
+*Aturan ini dapat diaplikasikan melalui AWS CLI (`aws s3api put-bucket-lifecycle-configuration --endpoint-url https://is3.cloudhost.id`) atau menu S3 Management di Dokploy / Web Console IDCloudHost.*
+
+---
+
+### 7.2 Backend Smart Age Detection (Deteksi Usia Cerdas)
+Untuk mencegah error `404 Not Found` saat customer mencoba mengunduh file yang sudah dibersihkan oleh S3 setelah 90 hari:
+
+1. **Kalkulasi Usia Berkas**:
+   ```typescript
+   const RETENTION_DAYS = 90;
+   const fileAgeInDays = Math.floor((Date.now() - new Date(fileRecord.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+   const isArchived = fileAgeInDays > RETENTION_DAYS;
+   ```
+2. **Respon Metadata Berkas**:
+   Ketika API merespons daftar dokumen (`/api/documents`) atau detail lampiran email:
+   ```json
+   {
+     "id": "doc_12345",
+     "fileName": "Akta_Pendirian_PT.pdf",
+     "fileSize": "2.4 MB",
+     "createdAt": "2026-05-10T08:00:00.000Z",
+     "fileAgeDays": 122,
+     "isArchived": true,
+     "storageTier": "COLD_STORAGE",
+     "archiveLocation": "Synology NAS Kantor",
+     "restoreAction": {
+       "type": "OPEN_SUPPORT_TICKET",
+       "targetUrl": "/support?action=restore_archive&documentId=doc_12345"
+     }
+   }
+   ```
+3. **Pencegahan Akses Langsung**:
+   Jika endpoint `/api/documents/:id/download` dipanggil untuk file berusia > 90 hari, backend tidak akan memanggil S3 `GetObject`, melainkan mengembalikan response HTTP `410 Gone` atau `200 OK` dengan status terarah:
+   `"Berkas telah dialihkan ke cold storage kantor. Silakan ajukan permohonan pemulihan melalui tiket bantuan."`
+
+---
+
+### 7.3 Pengalaman Pengguna (UI/UX) & 1-Klik Buka Tiket
+Di portal frontend (`/documents` dan `/inbox`):
+
+1. **Indikator Status (Badge)**:
+   * Berkas < 90 hari: Badge hijau `"Tersedia di Cloud"` dengan tombol **Unduh** & **Pratinjau**.
+   * Berkas > 90 hari: Badge amber/kuning `"Arsip Cold Storage (> 3 Bulan)"`.
+2. **Tombol Tindakan 1-Klik**:
+   * Tombol biasa otomatis berganti menjadi **"Minta Berkas (Tiket Bantuan)"**.
+3. **Formulir Tiket Terisi Otomatis (*Pre-filled Ticket Form*)**:
+   Saat tombol diklik, portal langsung membuka halaman Tiket Bantuan (`/support`) dengan field yang sudah otomatis terisi:
+   * **Kategori**: `Permohonan File Arsip (Cold Storage)`
+   * **Subjek**: `[Permohonan Berkas Arsip] Akta_Pendirian_PT.pdf`
+   * **Prioritas**: `Sedang`
+   * **Deskripsi Tiket**:
+     ```text
+     Halo Tim Support EasyLegal,
+
+     Saya memerlukan salinan berkas yang telah melewati masa retensi 3 bulan berikut:
+     - Nama Berkas: Akta_Pendirian_PT.pdf
+     - ID Dokumen: doc_12345
+     - Tanggal Unggah: 10 Mei 2026 (Usia: 122 hari)
+     - Ukuran: 2.4 MB
+
+     Mohon dibantu restorasi dari arsip Synology NAS kantor. Terima kasih.
+     ```
+
+---
+
+### 7.4 Standard Operating Procedure (SOP) Admin: Pemulihan dari Synology NAS
+1. **Penerimaan Tiket**: Staf Admin/Legal menerima notifikasi tiket baru di modul Helpdesk (`/support`).
+2. **Pencarian Berkas di NAS**:
+   * Admin membuka folder sinkronisasi Synology Drive di laptop/PC kantor:
+     `D:\SynologyDrive\EasyLegal_ColdStorage\2026\05\doc_12345_Akta_Pendirian_PT.pdf`
+3. **Pengiriman ke Customer**:
+   * Admin mengunggah kembali file tersebut langsung ke kolom balasan tiket bantuan sebagai lampiran pemulihan resmi.
+   * Admin mengirim pesan konfirmasi: *"Berkas Anda telah berhasil dipulihkan dari arsip Synology NAS kantor kami."*
+4. **Penyelesaian Tiket**: Admin mengubah status tiket menjadi **Resolved**.

@@ -73,6 +73,15 @@ Saat ini akses email tim/customer bergantung pada webmail bawaan Hostinger (Tita
 
 - FR-18: Saat mailbox dibuat, sistem mengirim informasi ke email pribadi customer (bukan email baru) berisi alamat email baru dan cara login/set password pertama.
 
+### 5.5 Retensi Berkas 3 Bulan & Pemulihan Arsip via Support Ticket (Cold Storage)
+
+- FR-19: Sistem mendeteksi usia lampiran email dan dokumen legal secara cerdas (*Smart Age Detection*). Berkas berusia > 90 hari (3 bulan) dialihkan ke status arsip (*Cold Storage*).
+- FR-20: Berkas biner di Object Storage S3 IDCloudHost otomatis dihapus setelah 90 hari menggunakan *S3 Native Lifecycle Rule* untuk mengunci kapasitas dan menjaga biaya cloud tetap flat/stabil.
+- FR-21: Salinan permanen berkas disimpan di Synology NAS kantor melalui sinkronisasi berkala *Synology Drive Client* di PC/laptop administrator.
+- FR-22: Sistem memblokir unduhan langsung file berusia > 90 hari untuk mencegah error `404 Not Found`, serta menampilkan badge status *"Arsip Cold Storage (> 3 Bulan)"*.
+- FR-23: Sistem menyediakan tombol 1-klik *"Minta Berkas (Tiket Bantuan)"* yang mengarahkan customer ke formulir tiket `/support` dengan field terisi otomatis (*pre-filled* nama file, ID dokumen, tanggal unggah, ukuran).
+- FR-24: Staf admin/legal dapat merespons tiket dengan melampirkan berkas hasil pemulihan dari Synology NAS kantor dan menandai tiket selesai (*Resolved*).
+
 ## 6. Non-functional requirements
 
 |Kategori|Requirement|
