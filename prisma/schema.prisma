@@ -24,6 +24,7 @@ model Customer {
   lastLoginAt       DateTime?
 
   twoFactorEnabled  Boolean         @default(false)
+  twoFactorSecret   String?         // Encrypted TOTP secret (AES-256-GCM)
   preferences       String?         // JSON: { language: "id", timezone: "Asia/Jakarta", signature: "...", notifyEmail: true, notifySound: true }
 
   messages  MessageCache[]

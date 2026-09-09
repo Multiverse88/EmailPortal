@@ -1,6 +1,8 @@
 import { Request, Response, Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateCustomer, authenticateSuperAdmin } from '../middleware/auth';
+import { encrypt, decrypt, verifyPassword } from '../lib/crypto';
+import { generateTotpSecret, generateTotpUri, verifyTotp } from '../lib/totp';
 
 export default (prisma: PrismaClient) => {
   const router = Router();
@@ -20,13 +22,136 @@ export default (prisma: PrismaClient) => {
     }
   });
 
-  // POST /api/security/2fa/toggle - toggle or explicitly set 2FA status
+  // POST /api/security/2fa/setup - generate new TOTP secret & QR code uri for configuration
+  router.post('/2fa/setup', authenticateCustomer, async (req: Request, res: Response) => {
+    try {
+      const customerId = req.user!.id;
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        select: { id: true, mailboxAddress: true },
+      });
+
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+
+      const secret = generateTotpSecret();
+      const encryptedSecret = encrypt(secret);
+
+      await prisma.customer.update({
+        where: { id: customerId },
+        data: { twoFactorSecret: encryptedSecret },
+      });
+
+      const otpauthUri = generateTotpUri(customer.mailboxAddress, secret, 'EasyLegal');
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUri)}`;
+
+      res.json({
+        secret,
+        otpauthUri,
+        qrCodeUrl,
+      });
+    } catch (error) {
+      console.error('2FA setup error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/security/2fa/verify-setup - verify user has correctly entered TOTP code before activating
+  router.post('/2fa/verify-setup', authenticateCustomer, async (req: Request, res: Response) => {
+    try {
+      const customerId = req.user!.id;
+      const { code } = req.body;
+
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ error: 'Kode verifikasi 6 digit diperlukan' });
+      }
+
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        select: { id: true, twoFactorSecret: true },
+      });
+
+      if (!customer || !customer.twoFactorSecret) {
+        return res.status(400).json({ error: 'Konfigurasi 2FA belum dimulai. Silakan buat kode QR terlebih dahulu.' });
+      }
+
+      let secret: string;
+      try {
+        secret = decrypt(customer.twoFactorSecret);
+      } catch (err) {
+        return res.status(500).json({ error: 'Gagal mendekripsi kunci rahasia 2FA' });
+      }
+
+      const isValid = verifyTotp(code, secret);
+      if (!isValid) {
+        return res.status(400).json({ error: 'Kode verifikasi 2FA tidak valid atau telah kedaluwarsa' });
+      }
+
+      const updated = await prisma.customer.update({
+        where: { id: customerId },
+        data: { twoFactorEnabled: true },
+        select: { twoFactorEnabled: true },
+      });
+
+      res.json({
+        success: true,
+        twoFactorEnabled: updated.twoFactorEnabled,
+        message: 'Autentikasi 2 faktor berhasil diaktifkan',
+      });
+    } catch (error) {
+      console.error('2FA verify setup error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/security/2fa/disable - safely disable 2FA with current password confirmation
+  router.post('/2fa/disable', authenticateCustomer, async (req: Request, res: Response) => {
+    try {
+      const customerId = req.user!.id;
+      const { currentPassword } = req.body;
+
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Kata sandi saat ini diperlukan untuk menonaktifkan 2FA' });
+      }
+
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        select: { id: true, passwordEnc: true },
+      });
+
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+
+      if (!verifyPassword(currentPassword, customer.passwordEnc)) {
+        return res.status(400).json({ error: 'Kata sandi salah' });
+      }
+
+      const updated = await prisma.customer.update({
+        where: { id: customerId },
+        data: { twoFactorEnabled: false },
+        select: { twoFactorEnabled: true },
+      });
+
+      res.json({
+        success: true,
+        twoFactorEnabled: updated.twoFactorEnabled,
+        message: 'Autentikasi 2 faktor dinonaktifkan',
+      });
+    } catch (error) {
+      console.error('2FA disable error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/security/2fa/toggle - toggle or explicitly set 2FA status (backward compatible)
   router.post('/2fa/toggle', authenticateCustomer, async (req: Request, res: Response) => {
     try {
       const customerId = req.user!.id;
       const customer = await prisma.customer.findUnique({
         where: { id: customerId },
-        select: { id: true, twoFactorEnabled: true },
+        select: { id: true, twoFactorEnabled: true, twoFactorSecret: true },
       });
 
       if (!customer) {
@@ -38,9 +163,18 @@ export default (prisma: PrismaClient) => {
           ? req.body.enabled
           : !customer.twoFactorEnabled;
 
+      const updateData: { twoFactorEnabled: boolean; twoFactorSecret?: string } = {
+        twoFactorEnabled: nextStatus,
+      };
+
+      if (nextStatus && !customer.twoFactorSecret) {
+        const generatedSecret = generateTotpSecret();
+        updateData.twoFactorSecret = encrypt(generatedSecret);
+      }
+
       const updated = await prisma.customer.update({
         where: { id: customerId },
-        data: { twoFactorEnabled: nextStatus },
+        data: updateData,
         select: { twoFactorEnabled: true },
       });
 
