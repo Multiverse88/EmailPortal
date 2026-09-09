@@ -455,6 +455,7 @@ export const CUSTOMERS_DATA = [
     localPart: 'budi',
     status: 'active',
     lastLoginMinutesAgo: 15,
+    createdDaysAgo: 15, // 15 days ago -> 75 days remaining (normal active)
   },
   {
     name: 'Pengguna Trial EasyLegal',
@@ -462,6 +463,7 @@ export const CUSTOMERS_DATA = [
     localPart: 'trial',
     status: 'active',
     lastLoginMinutesAgo: 5,
+    createdDaysAgo: 65, // 65 days ago -> 25 days remaining (warning <= 30 days)
   },
   {
     name: 'Siti Rahayu',
@@ -469,6 +471,7 @@ export const CUSTOMERS_DATA = [
     localPart: 'siti',
     status: 'inactive',
     lastLoginMinutesAgo: 60 * 24 * 5,
+    createdDaysAgo: 95, // 95 days ago -> expired
   },
   {
     name: 'Hendra Wijaya',
@@ -476,6 +479,7 @@ export const CUSTOMERS_DATA = [
     localPart: 'hendra',
     status: 'active',
     lastLoginMinutesAgo: 120,
+    createdDaysAgo: 20,
   },
   {
     name: 'Dewi Lestari',
@@ -483,6 +487,7 @@ export const CUSTOMERS_DATA = [
     localPart: 'dewi',
     status: 'active',
     lastLoginMinutesAgo: 60 * 24 * 1,
+    createdDaysAgo: 30,
   },
   {
     name: 'Ahmad Fauzi, S.H.',
@@ -490,6 +495,7 @@ export const CUSTOMERS_DATA = [
     localPart: 'ahmad',
     status: 'active',
     lastLoginMinutesAgo: 60 * 24 * 3,
+    createdDaysAgo: 40,
   },
   {
     name: 'Rudi Hartono',
@@ -497,6 +503,7 @@ export const CUSTOMERS_DATA = [
     localPart: 'rudi',
     status: 'active',
     lastLoginMinutesAgo: null,
+    createdDaysAgo: 5,
   },
   {
     name: 'Maya Safitri',
@@ -504,6 +511,7 @@ export const CUSTOMERS_DATA = [
     localPart: 'maya',
     status: 'inactive',
     lastLoginMinutesAgo: null,
+    createdDaysAgo: 92,
   },
   {
     name: 'Eka Pratama',
@@ -511,6 +519,7 @@ export const CUSTOMERS_DATA = [
     localPart: 'eka',
     status: 'active',
     lastLoginMinutesAgo: 60 * 24 * 4,
+    createdDaysAgo: 10,
   },
 ];
 
@@ -893,6 +902,10 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
         ? '--\nPengguna Trial EasyLegal\nPT Solusi Digital Nusantara\nEmail: trial@clienteasylegal.co.id'
         : `--\n${c.name}\nEmail: ${c.localPart}@${domain}`;
 
+    const createdDate = c.createdDaysAgo
+      ? new Date(Date.now() - c.createdDaysAgo * 24 * 60 * 60 * 1000)
+      : new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+
     const cust = await prisma.customer.create({
       data: {
         name: c.name,
@@ -901,6 +914,7 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
         passwordEnc: encrypt('Customer123!'),
         status: c.status,
         twoFactorEnabled: false,
+        createdAt: createdDate,
         preferences: JSON.stringify({
           language: 'id',
           timezone: 'Asia/Jakarta',

@@ -251,6 +251,13 @@ describe('Security and Settings API Routes (TDD)', () => {
       expect(res.body.preferences).toHaveProperty('language', 'id');
       expect(res.body.preferences).toHaveProperty('timezone', 'Asia/Jakarta');
       expect(res.body.preferences).toHaveProperty('signature', 'Salam hangat, Test Customer');
+
+      // Retention metadata check
+      expect(res.body).toHaveProperty('retention');
+      expect(res.body.retention).toHaveProperty('retentionDays', 90);
+      expect(res.body.retention).toHaveProperty('remainingDays');
+      expect(res.body.retention).toHaveProperty('policyNotice');
+      expect(res.body.retention.policyNotice).toContain('3 bulan');
     });
   });
 
