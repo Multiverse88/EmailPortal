@@ -1,53 +1,157 @@
-# Dependencies
+# ==========================================
+# Dependencies & Package Managers
+# ==========================================
 node_modules/
 .pnp
 .pnp.js
+.npm/
+.yarn/
+.yarn-cache/
+.pnpm-store/
 
-# Build outputs
+# ==========================================
+# Build Outputs & Bundles
+# ==========================================
 .next/
 dist/
 build/
 out/
+.turbo/
+.vercel/
 *.tsbuildinfo
 
-# Environment variables & secrets
+# ==========================================
+# Environment Variables, Credentials & Secrets
+# ==========================================
 .env
 .env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+*.env
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+credentials.json
+service-account*.json
+client_secret*.json
+
+# Whitelist env templates and examples
 !.env.example
 !**/.env.example
 !**/.env.*.example
+!.env.template
+!**/.env.template
 
-# Logs
+# ==========================================
+# Database & Local Persistence
+# ==========================================
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.dump
+*.sql.gz
+*.sql.bak
+backups/*.sql
+
+# Keep Prisma migrations tracked
+!prisma/migrations/**/*.sql
+
+# ==========================================
+# Local Storage, Uploads & Archival
+# ==========================================
+backend/storage/*
+!backend/storage/.gitkeep
+storage/*
+!storage/.gitkeep
+uploads/*
+!uploads/.gitkeep
+archive/
+archives/
+cold-storage/
+backups/
+temp/
+tmp/
+*.tmp
+*.bak
+
+# ==========================================
+# Synology NAS & Drive Client Metadata
+# ==========================================
+@eaDir/
+@eaDir
+@syno/
+#recycle/
+#snapshot/
+.SynologyWorkingDirectory/
+.SynologyRestore/
+
+# ==========================================
+# Logs & Diagnostic Files
+# ==========================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Database & local storage
-prisma/*.db
-prisma/*.db-journal
-backend/storage/*
-!backend/storage/.gitkeep
-storage/
-
-# Testing & Reports
+# ==========================================
+# Testing, Coverage & Reports
+# ==========================================
 coverage/
 test-results/
 playwright-report/
+blob-report/
+playwright/.cache/
 ui-review/
+.nyc_output/
 
-# IDE, OS, & AI editor metadata
+# ==========================================
+# IDE, OS, AI Assistants & Workspace Cache
+# ==========================================
+# OS Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-.vscode/
+
+# Editors & IDEs
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 .idea/
-.obsidian/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
+
+# AI Assistant & Knowledge Tools
 .claude/
 .claudian/
 .grimoire/
-
+.obsidian/
+.superpowers/
+.gemini/
+.cursor/
+.aider*
+.continue/
