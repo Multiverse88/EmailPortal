@@ -14,8 +14,17 @@ const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS || '30000'); // N
 export class SyncWorker {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
+  private failedAuthMailboxes = new Map<string, number>();
 
   constructor(private prisma: PrismaClient) {}
+
+  resetFailedAuth(mailboxAddress?: string) {
+    if (mailboxAddress) {
+      this.failedAuthMailboxes.delete(mailboxAddress);
+    } else {
+      this.failedAuthMailboxes.clear();
+    }
+  }
 
   async start() {
     if (!IMAP_HOST && !isMailApiConfigured()) {
@@ -42,15 +51,27 @@ export class SyncWorker {
     try {
       const customers = await this.prisma.customer.findMany({ where: { status: 'active' } });
       for (const customer of customers) {
+        const lastFailed = this.failedAuthMailboxes.get(customer.mailboxAddress);
+        if (lastFailed && Date.now() - lastFailed < 15 * 60 * 1000) {
+          continue;
+        }
+
         try {
           if (isMailApiConfigured()) {
             await this.syncCustomerViaApi(customer);
           } else {
             await this.syncCustomer(customer);
           }
+          this.failedAuthMailboxes.delete(customer.mailboxAddress);
         } catch (error: any) {
-          if (error?.textCode === 'AUTHENTICATIONFAILED') {
-            console.warn(`[IMAP Sync] Akun demo / belum ada di server Hostinger (${customer.mailboxAddress}): autentikasi dilewati.`);
+          const isAuthFailure =
+            error?.textCode === 'AUTHENTICATIONFAILED' ||
+            error?.source === 'timeout-auth' ||
+            (typeof error?.message === 'string' && /authenticat/i.test(error.message));
+
+          if (isAuthFailure) {
+            this.failedAuthMailboxes.set(customer.mailboxAddress, Date.now());
+            console.warn(`[IMAP Sync] Akun demo / belum ada di server Hostinger (${customer.mailboxAddress}): autentikasi dilewati (backoff 15m).`);
           } else {
             console.error(`sync failed for ${customer.mailboxAddress}:`, error);
           }
@@ -172,7 +193,7 @@ export class SyncWorker {
         host: IMAP_HOST!,
         port: parseInt(process.env.HOSTINGER_IMAP_PORT || '993'),
         tls: true,
-        authTimeout: 10000,
+        authTimeout: 5000,
       });
       imap.once('ready', () => resolve(imap));
       imap.once('error', reject);

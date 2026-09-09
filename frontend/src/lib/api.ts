@@ -21,17 +21,20 @@ api.interceptors.request.use((config) => {
     url.includes('/mailboxes') ||
     url.includes('/storage') ||
     url.includes('/audit') ||
-    url.includes('/auth/register');
+    url.includes('/auth/register') ||
+    url.includes('/security/admin');
 
   const isCustomerEndpoint =
-    url.includes('/email') ||
-    url.includes('/documents') ||
-    url.includes('/support') ||
-    url.includes('/search') ||
-    url.includes('/security') ||
-    url.includes('/settings') ||
-    url.includes('/auth/change-password') ||
-    url.includes('/auth/me');
+    !url.includes('/security/admin') && (
+      url.includes('/email') ||
+      url.includes('/documents') ||
+      url.includes('/support') ||
+      url.includes('/search') ||
+      url.includes('/security') ||
+      url.includes('/settings') ||
+      url.includes('/auth/change-password') ||
+      url.includes('/auth/me')
+    );
 
   let chosenToken: string | null = null;
 
@@ -64,6 +67,7 @@ api.interceptors.response.use(
         url.includes('/storage') ||
         url.includes('/audit') ||
         url.includes('/auth/register') ||
+        url.includes('/security/admin') ||
         pathname.startsWith('/admin');
 
       if (isAdminReq) {
