@@ -18,6 +18,7 @@ import {
   resolveResourceId,
   resolveOrderResourceId,
   createMailboxOnHostinger,
+  changeMailboxPasswordOnHostinger,
 } from '../lib/hostinger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
@@ -201,6 +202,18 @@ export default (prisma: PrismaClient) => {
 
       const weak = validatePasswordStrength(newPassword);
       if (weak) return res.status(400).json({ error: weak });
+
+      if (customer.mailboxResourceId && isProvisioningConfigured()) {
+        try {
+          await changeMailboxPasswordOnHostinger(customer.mailboxResourceId, newPassword);
+        } catch (hErr: any) {
+          const hMsg = hErr?.response?.data?.message || (hErr as Error).message;
+          console.error('change-password Hostinger update failed:', hMsg);
+          return res.status(502).json({
+            error: `Gagal memperbarui password di Hostinger: ${hMsg}`,
+          });
+        }
+      }
 
       await prisma.customer.update({
         where: { id: customer.id },

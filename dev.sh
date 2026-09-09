@@ -22,17 +22,24 @@ echo -e "\033[1;36m-----------------------------------------------------\033[0m"
 # Bersihkan port jika masih ada proses lama yang tersisa
 cleanup_port() {
   local PORT=$1
+  if command -v fuser >/dev/null 2>&1; then
+    fuser -k -9 "${PORT}/tcp" >/dev/null 2>&1 || true
+  fi
   if command -v lsof >/dev/null 2>&1; then
-    local PIDS=$(lsof -ti :$PORT 2>/dev/null || true)
+    local PIDS=$(lsof -ti ":$PORT" 2>/dev/null || true)
     if [ -n "$PIDS" ]; then
-      echo -e "\033[1;33m⚠️  Membersihkan proses lama di port $PORT (PID: $PIDS)...\033[0m"
+      echo -e "\033[1;33m⚠️  Membersihkan proses lama di port $PORT...\033[0m"
       kill -9 $PIDS 2>/dev/null || true
     fi
   fi
 }
 
+# Pastikan port bersih sebelum mulai
 cleanup_port 3000
 cleanup_port 4000
 
-# Jalankan backend dan frontend menggunakan npm run dev
+# Pastikan proses dihentikan bersih saat script dimatikan (Ctrl+C)
+trap 'echo -e "\n\033[1;33m🛑 Menghentikan server...\033[0m"; cleanup_port 3000; cleanup_port 4000; exit 0' INT TERM EXIT
+
+# Jalankan backend dan frontend secara bersamaan dari root
 npm run dev

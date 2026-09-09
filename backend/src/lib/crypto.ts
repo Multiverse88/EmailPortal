@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes, createHash, timingSafeEqual } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes, createHash, timingSafeEqual, randomInt } from 'node:crypto';
 
 // PRD requires reversible storage: IMAP/SMTP need the plaintext mailbox password.
 const key = () =>
@@ -30,15 +30,41 @@ export function verifyPassword(input: string, stored: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-// FR-10: Hostinger complexity rules.
+// FR-10: Hostinger complexity rules (min 8 chars, uppercase, lowercase, numbers, symbols).
 export function validatePasswordStrength(pw: string): string | null {
   if (pw.length < 8) return 'Password minimal 8 karakter';
   if (!/[A-Z]/.test(pw)) return 'Password harus memuat huruf kapital';
   if (!/[a-z]/.test(pw)) return 'Password harus memuat huruf kecil';
   if (!/[0-9]/.test(pw)) return 'Password harus memuat angka';
+  if (!/[!@#$%^&*()_+~=\-[\]{}|;:,.<>?]/.test(pw)) return 'Password harus memuat simbol (@$!%*#?& dll)';
   return null;
 }
 
 export function generatePassword(): string {
-  return 'Aa1' + randomBytes(9).toString('base64url');
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const numbers = '23456789';
+  const symbols = '!@#$%^&*()_+~=';
+  const all = upper + lower + numbers + symbols;
+
+  const pwd = [
+    upper[randomInt(upper.length)],
+    lower[randomInt(lower.length)],
+    numbers[randomInt(numbers.length)],
+    symbols[randomInt(symbols.length)],
+  ];
+
+  for (let i = 4; i < 16; i++) {
+    pwd.push(all[randomInt(all.length)]);
+  }
+
+  for (let i = pwd.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    const tmp = pwd[i];
+    pwd[i] = pwd[j];
+    pwd[j] = tmp;
+  }
+
+  return pwd.join('');
 }
+
