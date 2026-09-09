@@ -31,6 +31,7 @@ import {
   RefreshCw,
   Upload,
   Trash2,
+  Headphones,
 } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
 import { useCustomerAuth } from '@/store/auth';
@@ -64,6 +65,20 @@ interface UserProfile {
   storageQuota?: number;
   createdAt?: string;
   lastLoginAt?: string;
+}
+
+interface AccountRetentionInfo {
+  createdAt: string;
+  expiresAt: string;
+  retentionDays: number;
+  remainingDays: number;
+  elapsedDays: number;
+  percentUsed: number;
+  isExpiringSoon: boolean;
+  isExpired: boolean;
+  warningThresholdDays: number;
+  policyNotice: string;
+  warningNotice?: string;
 }
 
 export default function SettingsPage() {
@@ -161,6 +176,18 @@ function SettingsContent() {
   const [avatarErr, setAvatarErr] = useState('');
   const [avatarOk, setAvatarOk] = useState('');
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [retention, setRetention] = useState<AccountRetentionInfo | null>(null);
+  const [ticketConfig, setTicketConfig] = useState<{
+    category?: string;
+    subject?: string;
+    message?: string;
+    priority?: 'normal' | 'urgent';
+  }>({
+    category: 'Penyimpanan & Kuota',
+    subject: 'Permohonan Penambahan Kapasitas Penyimpanan (5 GB Penuh)',
+    message: 'Halo Tim Support EasyLegal,\n\nKapasitas penyimpanan Mailbox Drive kami saat ini telah mencapai batas maksimal 5 GB. Kami memohon penambahan kuota penyimpanan agar aktivitas penerimaan berkas legal dan pengiriman email dapat terus berjalan lancar.\n\nTerima kasih.',
+    priority: 'urgent',
+  });
   const [storageStats, setStorageStats] = useState<{
     storageUsed: number;
     storageLimit: number;
@@ -172,6 +199,40 @@ function SettingsContent() {
     isFull: false,
     usagePercent: 0,
   });
+
+  const openRetentionTicketModal = () => {
+    setTicketConfig({
+      category: 'Masa Aktif & Retensi Akun',
+      subject: 'Permohonan Perpanjangan / Kendala Masa Aktif Akun Non-Aktif',
+      message: `Halo Tim Support EasyLegal,\n\nAkun saya (${profileData?.mailboxAddress || user?.email || '-'}) akan/telah memasuki masa non-aktif setelah 3 bulan. Saya memohon bantuan perpanjangan waktu atau pemulihan akses data saya.\n\nTerima kasih.`,
+      priority: 'urgent',
+    });
+    setTicketModalOpen(true);
+  };
+
+  const openQuotaTicketModal = () => {
+    setTicketConfig({
+      category: 'Penyimpanan & Kuota',
+      subject: 'Permohonan Penambahan Kapasitas Penyimpanan (5 GB Penuh)',
+      message: 'Halo Tim Support EasyLegal,\n\nKapasitas penyimpanan Mailbox Drive kami saat ini telah mencapai batas maksimal 5 GB. Kami memohon penambahan kuota penyimpanan agar aktivitas penerimaan berkas legal dan pengiriman email dapat terus berjalan lancar.\n\nTerima kasih.',
+      priority: 'urgent',
+    });
+    setTicketModalOpen(true);
+  };
+
+  const formatSimpleDate = (isoStr?: string) => {
+    if (!isoStr) return '-';
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return isoStr;
+    }
+  };
 
   // Fetch settings & sessions
   const fetchSettings = async () => {
@@ -187,6 +248,9 @@ function SettingsContent() {
         }
         if (res.data.storageStats) {
           setStorageStats(res.data.storageStats);
+        }
+        if (res.data.retention) {
+          setRetention(res.data.retention);
         }
         if (res.data.preferences) {
           const p = res.data.preferences;
@@ -463,9 +527,62 @@ function SettingsContent() {
             </p>
           </div>
 
+          {/* Reminder / Warning: 1 Bulan Terakhir & Masa Aktif 3 Bulan */}
+          {retention && (retention.isExpiringSoon || retention.isExpired) && (
+            <div
+              data-testid="retention-warning-alert"
+              className="rounded-2xl border border-amber-300 bg-amber-50/90 p-5 shadow-xs text-slate-800 animate-in fade-in duration-200"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                    <Clock className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-bold text-amber-950">
+                        {retention.isExpired
+                          ? 'Masa Aktif Akun & Penyimpanan Telah Berakhir'
+                          : `Perhatian: Masa Aktif Akun & Penyimpanan Tersisa ${retention.remainingDays} Hari (Kurang dari 1 Bulan)`}
+                      </h3>
+                      <span className="text-[11px] font-semibold bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-md">
+                        {retention.isExpired ? 'Status: Non-Aktif' : 'Peringatan 1 Bulan Terakhir'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-900/90 leading-relaxed max-w-3xl">
+                      Akun dan seluruh file penyimpanan ini hanya bertahan selama <strong>3 bulan</strong> semenjak akun ini dibuat. {retention.isExpired ? 'Akun dan penyimpanan kini berstatus non-aktif.' : `Dalam kurun waktu 1 bulan ke depan (tersisa ${retention.remainingDays} hari), akun ini akan bersifat non-aktif beserta seluruh file penyimpanannya.`}
+                    </p>
+                    <p className="text-xs text-amber-900/90 leading-relaxed max-w-3xl font-medium">
+                      ⚠️ Harap segera backup berkas penting ke dalam penyimpanan Anda sendiri. Jika terjadi kendala setelah akun non-aktif, silakan membuka tiket support yang akan diproses 1x24 jam.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0">
+                  <button
+                    type="button"
+                    onClick={openRetentionTicketModal}
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
+                  >
+                    <Headphones className="w-4 h-4" />
+                    <span>Buka Tiket Support (1x24 Jam)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/documents')}
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-white hover:bg-amber-100/60 text-amber-900 border border-amber-300 text-xs font-semibold rounded-xl transition-colors"
+                  >
+                    <HardDrive className="w-4 h-4 text-amber-700" />
+                    <span>Ke Berkas Dokumen (Backup)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Account Profile Summary Banner */}
           <section className="app-panel p-5 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="size-14 rounded-2xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shadow-xs shrink-0">
                   {user?.avatarUrl || profileData?.avatarUrl ? (
@@ -500,25 +617,63 @@ function SettingsContent() {
                 </div>
               </div>
 
-              {/* Quick Storage Indicator */}
-              <div className="sm:text-right bg-slate-50 border border-slate-100 p-3 rounded-xl min-w-[220px]">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-slate-500 font-medium">Kapasitas Cloud</span>
-                  <span className="font-semibold text-slate-700">
-                    {(storageStats.storageUsed / (1024 * 1024 * 1024)).toFixed(2)} GB / {(storageStats.storageLimit / (1024 * 1024 * 1024)).toFixed(1)} GB
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className={`h-1.5 rounded-full transition-all ${
-                      storageStats.isFull ? 'bg-red-600' : storageStats.usagePercent > 80 ? 'bg-amber-500' : 'bg-primary'
-                    }`}
-                    style={{ width: `${Math.min(100, Math.max(2, storageStats.usagePercent))}%` }}
-                  />
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                  <span>{storageStats.usagePercent}% digunakan</span>
-                  <span className="text-primary font-medium">Maks 5 GB</span>
+              {/* Status Indicators (Masa Aktif & Storage) */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Masa Aktif Akun Widget */}
+                {retention && (
+                  <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl min-w-[210px]">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                        <Clock className="size-3.5 text-primary" />
+                        Masa Aktif (3 Bulan)
+                      </span>
+                      <span className={`font-semibold text-xs ${
+                        retention.isExpired ? 'text-red-600' : retention.isExpiringSoon ? 'text-amber-700 font-bold' : 'text-slate-700'
+                      }`}>
+                        {retention.isExpired ? 'Non-Aktif' : `Sisa ${retention.remainingDays} Hari`}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${
+                          retention.isExpired
+                            ? 'bg-red-600'
+                            : retention.isExpiringSoon
+                              ? 'bg-amber-500'
+                              : 'bg-primary'
+                        }`}
+                        style={{ width: `${Math.min(100, Math.max(2, retention.percentUsed))}%` }}
+                      />
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                      <span>{retention.percentUsed}% berjalan</span>
+                      <span className={retention.isExpiringSoon ? 'text-amber-700 font-medium' : 'text-slate-500'}>
+                        Hingga {formatSimpleDate(retention.expiresAt)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Quick Storage Indicator */}
+                <div className="sm:text-right bg-slate-50 border border-slate-100 p-3 rounded-xl min-w-[210px]">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-slate-500 font-medium">Kapasitas Cloud</span>
+                    <span className="font-semibold text-slate-700">
+                      {(storageStats.storageUsed / (1024 * 1024 * 1024)).toFixed(2)} GB / {(storageStats.storageLimit / (1024 * 1024 * 1024)).toFixed(1)} GB
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-1.5 rounded-full transition-all ${
+                        storageStats.isFull ? 'bg-red-600' : storageStats.usagePercent > 80 ? 'bg-amber-500' : 'bg-primary'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(2, storageStats.usagePercent))}%` }}
+                    />
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                    <span>{storageStats.usagePercent}% digunakan</span>
+                    <span className="text-primary font-medium">Maks 5 GB</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -592,6 +747,26 @@ function SettingsContent() {
                     Atur konfigurasi bahasa, zona waktu lokal, dan tanda tangan resmi pada email keluar.
                   </p>
                 </div>
+
+                {/* 3-Month Retention Information Callout */}
+                {retention && (
+                  <div className="mb-6 p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-3 text-xs">
+                    <Clock className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-semibold text-slate-800">
+                          Informasi Masa Aktif Akun (3 Bulan)
+                        </span>
+                        <span className={`text-[11px] font-medium ${retention.isExpiringSoon ? 'text-amber-700 font-semibold' : 'text-slate-500'}`}>
+                          {retention.isExpired ? 'Berstatus Non-Aktif' : `Tersisa ${retention.remainingDays} Hari`}
+                        </span>
+                      </div>
+                      <p className="text-slate-500 mt-1 leading-relaxed text-[11px]">
+                        Akun dan file penyimpanan bertahan selama 3 bulan sejak pendaftaran ({formatSimpleDate(retention.createdAt)} s/d {formatSimpleDate(retention.expiresAt)}). Harap lakukan backup berkas ke penyimpanan mandiri sebelum masa aktif berakhir. Bantuan tiket support diproses 1x24 jam.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {generalOk && (
                   <div
@@ -891,7 +1066,7 @@ function SettingsContent() {
                       </p>
                       <button
                         type="button"
-                        onClick={() => setTicketModalOpen(true)}
+                        onClick={openQuotaTicketModal}
                         className="self-start sm:self-auto font-semibold text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs"
                       >
                         <span>Minta Tambah Kuota via Tiket Support &rarr;</span>
@@ -900,6 +1075,103 @@ function SettingsContent() {
                   </div>
                 </div>
               </section>
+
+              {/* Masa Aktif Akun & Kebijakan Retensi 3 Bulan Card */}
+              {retention && (
+                <section className="bg-white rounded-2xl border border-border-subtle p-6 sm:p-7 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-bold text-slate-900">
+                          Masa Aktif Akun &amp; Retensi Penyimpanan (3 Bulan)
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Ketentuan masa berlaku akun email portal dan berkas penyimpanan cloud Anda.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {retention.isExpired ? (
+                        <span className="text-xs font-semibold bg-red-50 text-red-700 border border-red-200 px-3 py-1 rounded-full">
+                          Akun Non-Aktif
+                        </span>
+                      ) : retention.isExpiringSoon ? (
+                        <span className="text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 px-3 py-1 rounded-full flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                          Tersisa {retention.remainingDays} Hari (1 Bulan Terakhir)
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          Aktif (Tersisa {retention.remainingDays} Hari)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-5 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <dt className="text-slate-400 font-medium mb-1">Tanggal Pendaftaran Akun</dt>
+                        <dd className="text-slate-800 font-semibold text-sm">
+                          {formatSimpleDate(retention.createdAt)}
+                        </dd>
+                        <span className="text-[10px] text-slate-400">Awal masa aktif</span>
+                      </div>
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <dt className="text-slate-400 font-medium mb-1">Batas Akhir Masa Aktif (3 Bulan)</dt>
+                        <dd className={`font-semibold text-sm ${retention.isExpiringSoon ? 'text-amber-700 font-bold' : 'text-slate-800'}`}>
+                          {formatSimpleDate(retention.expiresAt)}
+                        </dd>
+                        <span className="text-[10px] text-slate-400">Total retensi 90 hari</span>
+                      </div>
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <dt className="text-slate-400 font-medium mb-1">Sisa Waktu Aktif</dt>
+                        <dd className={`text-sm font-bold ${retention.isExpired ? 'text-red-600' : retention.isExpiringSoon ? 'text-amber-600' : 'text-primary'}`}>
+                          {retention.isExpired ? '0 Hari (Non-Aktif)' : `${retention.remainingDays} Hari Lagi`}
+                        </dd>
+                        <span className="text-[10px] text-slate-400">{retention.elapsedDays} hari telah berjalan ({retention.percentUsed}%)</span>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-900 space-y-2">
+                      <div className="flex items-center gap-2 font-bold text-blue-950">
+                        <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>Informasi &amp; Kebijakan Retensi Penyimpanan</span>
+                      </div>
+                      <p className="leading-relaxed">
+                        Akun ini beserta seluruh data file penyimpanan hanya bertahan selama <strong>3 bulan (90 hari)</strong> sejak akun dibuat. Ketika memasuki 1 bulan terakhir, sistem akan memberikan pengingat agar Anda segera mengunduh dan mem-backup berkas penting ke penyimpanan Anda sendiri.
+                      </p>
+                      <p className="leading-relaxed">
+                        Setelah masa aktif 3 bulan berakhir, akun dan penyimpanan akan bersifat non-aktif. Jika terjadi kendala setelah akun dinonaktifkan atau Anda membutuhkan perpanjangan, silakan membuka <strong>tiket support</strong> dan tim bantuan kami akan memprosesnya dalam <strong>1x24 jam kerja</strong>.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => router.push('/documents')}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
+                      >
+                        <HardDrive className="w-4 h-4" />
+                        <span>Buka Menu Dokumen untuk Backup Data</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={openRetentionTicketModal}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-xs"
+                      >
+                        <Headphones className="w-4 h-4" />
+                        <span>Buka Tiket Support Perpanjangan (1x24 Jam)</span>
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
             </div>
           )}
 
@@ -1371,6 +1643,10 @@ function SettingsContent() {
       <SupportTicketModal
         isOpen={ticketModalOpen}
         onClose={() => setTicketModalOpen(false)}
+        initialCategory={ticketConfig.category}
+        initialSubject={ticketConfig.subject}
+        initialMessage={ticketConfig.message}
+        initialPriority={ticketConfig.priority}
       />
     </main>
   );
