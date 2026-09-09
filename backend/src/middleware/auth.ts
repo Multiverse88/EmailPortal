@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
+export type UserRole = 'superadmin' | 'officer' | 'admin' | 'customer';
+
 declare global {
   namespace Express {
     interface Request {
@@ -10,6 +12,7 @@ declare global {
         id: string;
         type: 'customer' | 'admin';
         email: string;
+        role?: UserRole;
       };
     }
   }
@@ -18,7 +21,12 @@ declare global {
 export type AuthRequest = Request;
 
 export const verifyToken = (token: string) => {
-  return jwt.verify(token, JWT_SECRET) as { id: string; email: string; type: 'customer' | 'admin' };
+  return jwt.verify(token, JWT_SECRET) as {
+    id: string;
+    email: string;
+    type: 'customer' | 'admin';
+    role?: UserRole;
+  };
 };
 
 export const authenticateCustomer = async (
@@ -68,6 +76,68 @@ export const authenticateAdmin = async (
 
     if (payload.type !== 'admin') {
       return res.status(403).json({ error: 'Forbidden: not an admin' });
+    }
+
+    req.user = payload;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+};
+
+export const authenticateSuperAdmin = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const payload = verifyToken(token);
+
+    if (payload.type !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden: not an admin' });
+    }
+
+    const role = payload.role || 'admin';
+    if (role !== 'superadmin' && role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden: Super Admin access required' });
+    }
+
+    req.user = payload;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+};
+
+export const authenticateOfficerOrAdmin = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const payload = verifyToken(token);
+
+    if (payload.type !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden: not an admin' });
+    }
+
+    const role = payload.role || 'admin';
+    if (role !== 'officer' && role !== 'superadmin' && role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden: Officer or Admin access required' });
     }
 
     req.user = payload;

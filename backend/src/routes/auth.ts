@@ -11,7 +11,7 @@ import {
 } from '../lib/crypto';
 import { sendOnboardingNotice } from '../lib/mail';
 import { audit } from '../lib/audit';
-import { authenticateAdmin, authenticateCustomer } from '../middleware/auth';
+import { authenticateAdmin, authenticateCustomer, authenticateOfficerOrAdmin, UserRole } from '../middleware/auth';
 import {
   isMailApiConfigured,
   isProvisioningConfigured,
@@ -24,8 +24,29 @@ import {
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-const sign = (id: string, email: string, type: 'customer' | 'admin') =>
-  jwt.sign({ id, email, type }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
+const sign = (id: string, email: string, type: 'customer' | 'admin', role?: UserRole) =>
+  jwt.sign({ id, email, type, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
+
+function parseClientInfo(req: Request) {
+  const forwarded = req.headers['x-forwarded-for'];
+  const ipAddress = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress) || '127.0.0.1';
+  const ua = req.headers['user-agent'] || 'Unknown Device';
+  
+  let deviceType = 'desktop';
+  if (/mobile|android|iphone|ipad/i.test(ua)) {
+    deviceType = 'mobile';
+  } else if (/macintosh|windows|linux/i.test(ua)) {
+    deviceType = 'laptop';
+  }
+
+  let browser = 'Browser Web';
+  if (/chrome/i.test(ua) && !/edg/i.test(ua)) browser = 'Chrome';
+  else if (/firefox/i.test(ua)) browser = 'Firefox';
+  else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browser = 'Safari';
+  else if (/edg/i.test(ua)) browser = 'Edge';
+
+  return { ipAddress, deviceName: `${browser} on ${deviceType}`, deviceType, browser, location: 'Indonesia' };
+}
 
 // FR-8: brute-force guard on the login endpoints only.
 const loginLimiter = rateLimit({
@@ -50,13 +71,33 @@ export default (prisma: PrismaClient) => {
       }
 
       await prisma.customer.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } });
+
+      const clientInfo = parseClientInfo(req);
+      await prisma.loginSession.updateMany({
+        where: { customerId: customer.id },
+        data: { isCurrent: false },
+      });
+      await prisma.loginSession.create({
+        data: {
+          customerId: customer.id,
+          deviceName: clientInfo.deviceName,
+          deviceType: clientInfo.deviceType,
+          browser: clientInfo.browser,
+          ipAddress: clientInfo.ipAddress,
+          location: clientInfo.location,
+          isCurrent: true,
+          lastActiveAt: new Date(),
+        },
+      });
+
       res.json({
-        token: sign(customer.id, customer.mailboxAddress, 'customer'),
+        token: sign(customer.id, customer.mailboxAddress, 'customer', 'customer'),
         user: {
           id: customer.id,
           name: customer.name,
           email: customer.mailboxAddress,
           type: 'customer',
+          role: 'customer',
           avatarUrl: customer.avatarUrl,
           storageQuota: customer.storageQuota,
         },
@@ -79,8 +120,8 @@ export default (prisma: PrismaClient) => {
 
       await prisma.adminUser.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
       res.json({
-        token: sign(admin.id, admin.email, 'admin'),
-        user: { id: admin.id, name: admin.name, email: admin.email, type: 'admin' },
+        token: sign(admin.id, admin.email, 'admin', admin.role as UserRole),
+        user: { id: admin.id, name: admin.name, email: admin.email, type: 'admin', role: admin.role },
       });
     } catch (error) {
       console.error('Admin login error:', error);
@@ -88,8 +129,8 @@ export default (prisma: PrismaClient) => {
     }
   });
 
-  // FR-1..FR-3, FR-6: admin-only mailbox provisioning.
-  router.post('/register', authenticateAdmin, async (req: Request, res: Response) => {
+  // FR-1..FR-3, FR-6: admin-only mailbox provisioning (Officer or Admin).
+  router.post('/register', authenticateOfficerOrAdmin, async (req: Request, res: Response) => {
     try {
       const { name, personalEmail, localPart } = req.body ?? {};
       if (!name || !personalEmail || !localPart) {

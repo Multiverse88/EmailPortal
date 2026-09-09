@@ -862,7 +862,7 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
   await prisma.customer.deleteMany();
   await prisma.adminUser.deleteMany();
 
-  // 2. Buat Admin Utama
+  // 2. Buat Admin Utama & Officer Staf Legal
   const admin = await prisma.adminUser.create({
     data: {
       name: 'Admin Utama EasyLegal',
@@ -870,6 +870,16 @@ export async function seedDemoData(prismaClient?: PrismaClient, storageDir?: str
       passwordHash: await bcrypt.hash('Admin123!', 10),
       role: 'superadmin',
       lastLoginAt: new Date(Date.now() - 10 * 60 * 1000),
+    },
+  });
+
+  const officer = await prisma.adminUser.create({
+    data: {
+      name: 'Officer Staf Legal',
+      email: `officer@${domain}`,
+      passwordHash: await bcrypt.hash('Officer123!', 10),
+      role: 'officer',
+      lastLoginAt: new Date(Date.now() - 30 * 60 * 1000),
     },
   });
 
