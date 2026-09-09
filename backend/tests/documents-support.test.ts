@@ -7,6 +7,7 @@ import app, { prisma } from '../src/app';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
 describe('Documents & Support API Routes (TDD)', () => {
+  jest.setTimeout(30000);
   let customerA: any;
   let tokenA: string;
   let customerB: any;

@@ -115,6 +115,9 @@ class S3StorageDriver implements StorageAdapter {
         ContentType: mimeType,
       })
       .promise();
+
+    // Auto-mirror to Synology Drive Client folder if configured
+    await this.mirrorToSynology(key, buffer);
     return key;
   }
 

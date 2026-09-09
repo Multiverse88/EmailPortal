@@ -28,7 +28,7 @@ export function getApiToken(): string | undefined {
 }
 
 export function getBaseUrl(): string {
-  return process.env.HOSTINGER_API_BASE_URL || 'https://api.hostinger.com';
+  return process.env.HOSTINGER_API_BASE_URL || 'https://developers.hostinger.com';
 }
 
 /**
