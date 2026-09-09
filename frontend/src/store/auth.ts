@@ -6,6 +6,7 @@ export interface User {
   name: string;
   email: string;
   type: 'customer' | 'admin';
+  role?: 'superadmin' | 'officer' | 'admin' | 'customer';
   avatarUrl?: string | null;
   storageQuota?: number;
 }
