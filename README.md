@@ -35,15 +35,34 @@ Platform terintegrasi layanan korporat dan custom email client bergaya Google Mi
 - **E2E & Integration:** Playwright (50 test case otomatis, desktop & mobile)
 - **Backend Tests:** Jest (41 unit & integration test case)
 
-## Struktur Project
+## Struktur Project & Dokumentasi
 
 ```
 email-portal/
+├── docs/             # Dokumentasi sistem terstruktur per modul
+│   ├── deployment/   # Panduan deployment (Dokploy, VPS, Docker, Nginx, SSL)
+│   ├── infrastructure/# Arsitektur Hybrid Storage (S3 + Synology NAS) & retensi
+│   ├── planning/     # Spesifikasi kebutuhan sistem & roadmap fitur
+│   ├── smtp/         # Panduan setup SMTP & IMAP Hostinger Titan Mail
+│   └── superpowers/  # Spesifikasi arsitektur modul & rencana pengembangan
 ├── backend/          # Express API server & routes (auth, email, documents, support, security, settings)
 ├── frontend/         # Next.js 14 web app & components (AppLauncher, DocumentPreview, TicketThread)
 ├── shared/           # Shared types & utils
 └── prisma/           # Database schema (Customer, MessageCache, LegalDocument, SupportTicket, LoginSession)
 ```
+
+### 📚 Indeks Dokumentasi
+
+Setiap panduan dan spesifikasi telah dikelompokkan ke dalam folder masing-masing di bawah direktori `docs/`:
+
+| Modul / Topik | Lokasi Folder & File | Ringkasan Konten |
+|---|---|---|
+| **Infrastruktur & Storage** | [`docs/infrastructure/`](docs/infrastructure/INFRASTRUCTURE.md) | Arsitektur Hybrid Storage (Hot S3 IDCloudHost + Cold Synology NAS), Lifecycle Rule 90 hari, dan integrasi tiket bantuan. |
+| **Deployment & Server** | [`docs/deployment/`](docs/deployment/DEPLOYMENT.md) | Panduan instalasi dan deployment via Dokploy VPS, Docker Compose, manual installation, dan environment variables. |
+| **Perencanaan & Requirement** | [`docs/planning/`](docs/planning/Planning-Development.md) | Analisis kebutuhan sistem, batasan fungsional (FR-01 s.d. FR-24), arsitektur modul, dan implementasi bertahap. |
+| **Integrasi Mail (SMTP/IMAP)** | [`docs/smtp/`](docs/smtp/SMTP_SETUP_GUIDE.md) | Panduan langkah demi langkah konfigurasi mail server Hostinger Titan Mail untuk pengiriman dan penerimaan email. |
+| **Spesifikasi Modul Hub** | [`docs/superpowers/`](docs/superpowers/specs/2026-09-08-easylegal-hub-modules-design.md) | Desain modul EasyLegal Mail, Legal Drive, Helpdesk Ticket, Security & Settings. |
+
 
 ## Setup (Development)
 
