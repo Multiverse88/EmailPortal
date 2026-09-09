@@ -5,7 +5,7 @@ import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import { format, isToday, isYesterday } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { useAuthStore } from '@/store/auth';
+import { useCustomerAuth } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { ComposeModal, Draft } from '@/components/compose';
 import { SuiteHeader } from '@/components/suite-header';
@@ -103,7 +103,7 @@ export default function InboxPage() {
 }
 
 function Inbox_() {
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useCustomerAuth();
   const router = useRouter();
   const [folder, setFolder] = useState('INBOX');
   const [search, setSearch] = useState('');

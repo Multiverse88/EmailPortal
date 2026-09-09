@@ -13,12 +13,11 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { setAuth, hydrate, token, user, ready } = useAuthStore();
+  const { adminToken, adminUser, customerToken, customerUser, setAuth, hydrate } = useAuthStore();
 
-  useEffect(() => hydrate(), [hydrate]);
   useEffect(() => {
-    if (ready && token && user) router.replace(user.type === 'admin' ? '/admin' : '/inbox');
-  }, [ready, token, user, router]);
+    hydrate();
+  }, [hydrate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +25,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await api.post(`/auth/login/${tab}`, { email, password });
-      setAuth(res.data.token, res.data.user);
+      setAuth(res.data.token, res.data.user, tab);
       router.push(tab === 'admin' ? '/admin' : '/inbox');
     } catch (err) {
       setError(errMsg(err, 'Login gagal'));
@@ -128,6 +127,67 @@ export default function LoginPage() {
           >
               <ShieldCheck className="mt-0.5 size-4 shrink-0" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {/* Active Session Indicator */}
+          {tab === 'customer' && customerToken && customerUser && (
+            <div
+              data-testid="active-customer-session"
+              className="mb-5 flex flex-col gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/80 p-3.5 text-xs text-emerald-900 animate-in fade-in duration-200"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-emerald-950 truncate">Sesi Customer Aktif</p>
+                    <p className="text-[11px] text-emerald-700 truncate">
+                      {customerUser.name} &bull; {customerUser.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  data-testid="goto-customer-dashboard"
+                  onClick={() => router.push('/inbox')}
+                  className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-700 active:scale-[0.98]"
+                >
+                  Buka Mail &rarr;
+                </button>
+              </div>
+              <p className="border-t border-emerald-200/70 pt-2 text-[11px] text-emerald-800/80">
+                Atau masuk dengan akun customer lain:
+              </p>
+            </div>
+          )}
+
+          {tab === 'admin' && adminToken && adminUser && (
+            <div
+              data-testid="active-admin-session"
+              className="mb-5 flex flex-col gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/80 p-3.5 text-xs text-emerald-900 animate-in fade-in duration-200"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-emerald-950 truncate">Sesi Administrator Aktif</p>
+                    <p className="text-[11px] text-emerald-700 truncate">
+                      {adminUser.name} &bull; {adminUser.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  data-testid="goto-admin-dashboard"
+                  onClick={() => router.push('/admin')}
+                  className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-700 active:scale-[0.98]"
+                >
+                  Buka Admin &rarr;
+                </button>
+              </div>
+              <p className="border-t border-emerald-200/70 pt-2 text-[11px] text-emerald-800/80">
+                Atau masuk dengan akun administrator lain:
+              </p>
             </div>
           )}
 

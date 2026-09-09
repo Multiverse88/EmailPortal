@@ -92,7 +92,7 @@ export function DocumentPreviewModal({
 
   const handleDownload = () => {
     if (!doc) return;
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('customer_token') || localStorage.getItem('token') || '') : '';
     const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/documents/${doc.id}/download?token=${encodeURIComponent(token || '')}`;
     window.open(downloadUrl, '_blank');
   };
@@ -148,7 +148,7 @@ export function DocumentPreviewModal({
     return <File className="w-5 h-5 text-slate-500" />;
   };
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('customer_token') || localStorage.getItem('token') || '') : '';
   const downloadUrl = doc
     ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/documents/${doc.id}/download?token=${encodeURIComponent(token || '')}`
     : '';

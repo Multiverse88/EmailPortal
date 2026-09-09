@@ -26,7 +26,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
-import { useAuthStore } from '@/store/auth';
+import { useAdminAuth, useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { SuiteHeader } from '@/components/suite-header';
 
@@ -57,7 +57,8 @@ export default function AdminPage() {
 }
 
 function Admin_() {
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useAdminAuth();
+  const { customerToken } = useAuthStore();
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [created, setCreated] = useState<{ mailboxAddress: string; temporaryPassword: string } | null>(null);
@@ -141,7 +142,7 @@ function Admin_() {
         }}
         actions={
           <button
-            onClick={() => router.push('/inbox')}
+            onClick={() => router.push(customerToken ? '/inbox' : '/login')}
             className="app-secondary-button hidden !min-h-9 !px-3 !text-xs sm:inline-flex"
           >
             <span>Buka Mail</span>

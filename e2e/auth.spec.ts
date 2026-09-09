@@ -50,4 +50,37 @@ test.describe('Autentikasi', () => {
     await page.goto('/inbox');
     await expect(page).toHaveURL(/\/login/);
   });
+
+  test('admin dan customer bisa login bersamaan tanpa saling menimpa', async ({ page, context }) => {
+    // 1. Login sebagai Admin
+    await login(page, ADMIN, 'admin');
+    await expect(page).toHaveURL(/\/admin/);
+    await expect(page.getByTestId('mailbox-table')).toBeVisible();
+
+    // 2. Buka tab baru di browser yang sama dan login sebagai Customer
+    const customerPage = await context.newPage();
+    await login(customerPage, CUSTOMER, 'customer');
+    await expect(customerPage).toHaveURL(/\/inbox/);
+    await expect(customerPage.getByTestId('message-list')).toBeVisible();
+
+    // 3. Tab Admin tetap aktif dan valid (tidak ter-logout)
+    await page.reload();
+    await expect(page).toHaveURL(/\/admin/);
+    await expect(page.getByTestId('mailbox-table')).toBeVisible();
+
+    // 4. Tab Customer tetap aktif dan valid
+    await customerPage.reload();
+    await expect(customerPage).toHaveURL(/\/inbox/);
+    await expect(customerPage.getByTestId('message-list')).toBeVisible();
+
+    // 5. Logout customer tidak mempengaruhi sesi admin
+    await customerPage.getByTestId('logout').click();
+    await expect(customerPage).toHaveURL(/\/login/);
+
+    await page.reload();
+    await expect(page).toHaveURL(/\/admin/);
+    await expect(page.getByTestId('mailbox-table')).toBeVisible();
+
+    await customerPage.close();
+  });
 });

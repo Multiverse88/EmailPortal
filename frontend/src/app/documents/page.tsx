@@ -31,7 +31,7 @@ import {
   Menu,
 } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
-import { useAuthStore } from '@/store/auth';
+import { useCustomerAuth } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { SuiteHeader } from '@/components/suite-header';
 import { DocumentPreviewModal, LegalDocument } from '@/components/document-preview-modal';
@@ -47,7 +47,7 @@ export default function DocumentsPage() {
 }
 
 function DocumentsContent() {
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useCustomerAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
