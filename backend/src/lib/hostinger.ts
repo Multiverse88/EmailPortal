@@ -107,19 +107,19 @@ let _quotaApi: QuotaApi | null = null;
 
 function config(): Configuration {
   if (!_config) {
-    const token = getApiToken();
-    if (!token) throw new Error('HOSTINGER_API_TOKEN or HOSTINGER_MAIL_API_KEY not set');
+    const token = process.env.HOSTINGER_MAIL_API_KEY;
+    if (!token) throw new Error('HOSTINGER_MAIL_API_KEY not set');
     _config = new Configuration({ accessToken: token });
   }
   return _config;
 }
 
 export function isMailApiConfigured(): boolean {
-  return !!getApiToken();
+  return !!process.env.HOSTINGER_MAIL_API_KEY;
 }
 
 export function isProvisioningConfigured(): boolean {
-  return !!getApiToken();
+  return !!(process.env.HOSTINGER_API_TOKEN || process.env.HOSTINGER_MAIL_API_KEY);
 }
 
 export function accountApi(): AccountApi {
