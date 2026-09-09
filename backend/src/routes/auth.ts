@@ -282,6 +282,69 @@ export default (prisma: PrismaClient) => {
     }
   });
 
+  // 1-Click login / impersonation for officers and superadmins
+  router.post('/impersonate/:customerId', authenticateOfficerOrAdmin, async (req: Request, res: Response) => {
+    try {
+      const { customerId } = req.params;
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+      });
+
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer tidak ditemukan' });
+      }
+
+      if (customer.status !== 'active') {
+        return res.status(403).json({ error: 'Akun customer ini sedang dinonaktifkan atau ditangguhkan' });
+      }
+
+      const officerEmail = req.user?.email || 'admin@clienteasylegal.co.id';
+      const officerRole = (req.user as any)?.role || 'officer';
+
+      const token = sign(customer.id, customer.mailboxAddress, 'customer', 'customer');
+      const clientInfo = parseClientInfo(req);
+
+      await prisma.loginSession.create({
+        data: {
+          customerId: customer.id,
+          deviceName: `${clientInfo.deviceName} (${officerRole}: ${officerEmail})`,
+          deviceType: clientInfo.deviceType,
+          browser: clientInfo.browser,
+          ipAddress: clientInfo.ipAddress,
+          location: clientInfo.location,
+          isCurrent: true,
+          lastActiveAt: new Date(),
+        },
+      });
+
+      await audit(prisma, req, 'customer.impersonate', 'customer', customer.id, {
+        officerEmail,
+        officerRole,
+        targetEmail: customer.mailboxAddress,
+      });
+
+      res.json({
+        token,
+        user: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.mailboxAddress,
+          type: 'customer',
+          role: 'customer',
+          avatarUrl: customer.avatarUrl,
+          storageQuota: customer.storageQuota,
+        },
+        impersonatedBy: {
+          email: officerEmail,
+          role: officerRole,
+        },
+      });
+    } catch (error) {
+      console.error('Impersonation error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   router.get('/me', authenticateCustomer, async (req: Request, res: Response) => {
     const customer = await prisma.customer.findUnique({
       where: { id: req.user!.id },
