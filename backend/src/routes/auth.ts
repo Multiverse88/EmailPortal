@@ -52,7 +52,14 @@ export default (prisma: PrismaClient) => {
       await prisma.customer.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } });
       res.json({
         token: sign(customer.id, customer.mailboxAddress, 'customer'),
-        user: { id: customer.id, name: customer.name, email: customer.mailboxAddress, type: 'customer' },
+        user: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.mailboxAddress,
+          type: 'customer',
+          avatarUrl: customer.avatarUrl,
+          storageQuota: customer.storageQuota,
+        },
       });
     } catch (error) {
       console.error('Login error:', error);

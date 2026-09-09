@@ -146,6 +146,7 @@ function SupportContent() {
         description="Bantuan produk dan konsultasi operasional"
         userName={user?.name}
         userEmail={user?.email}
+        avatarUrl={user?.avatarUrl}
         onLogout={() => {
           logout();
           router.replace('/login');

@@ -253,7 +253,7 @@ describe('Documents & Support API Routes (TDD)', () => {
       expect(res.body).toHaveProperty('storageUsed');
       expect(res.body.storageUsed).toBe(5000 + 15000);
       expect(res.body).toHaveProperty('storageLimit');
-      expect(res.body.storageLimit).toBe(15 * 1024 * 1024 * 1024);
+      expect(res.body.storageLimit).toBe(5 * 1024 * 1024 * 1024);
     });
 
     it('filters documents by category/folder', async () => {

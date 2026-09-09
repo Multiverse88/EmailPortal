@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Paperclip, X, Send, FileText, CheckCircle2 } from 'lucide-react';
+import { Loader2, Paperclip, X, Send, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
+import { SupportTicketModal } from '@/components/support-ticket-modal';
 
 export interface Draft {
   to?: string;
@@ -26,11 +27,14 @@ export function ComposeModal({
   const [body, setBody] = useState(draft.body ?? '');
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
+  const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsQuotaExceeded(false);
     setSending(true);
     try {
       const form = new FormData();
@@ -41,7 +45,14 @@ export function ComposeModal({
       files.forEach((f) => form.append('attachments', f));
       await api.post('/email/send', form);
       onSent();
-    } catch (err) {
+    } catch (err: any) {
+      const isExceeded =
+        err?.response?.data?.code === 'STORAGE_QUOTA_EXCEEDED' ||
+        err?.response?.status === 403 ||
+        err?.response?.data?.error?.includes('5 GB');
+      if (isExceeded) {
+        setIsQuotaExceeded(true);
+      }
       setError(errMsg(err, 'Gagal mengirim email'));
     } finally {
       setSending(false);
@@ -79,8 +90,21 @@ export function ComposeModal({
         {/* Form Body */}
         <div className="p-4 sm:p-5 flex flex-col gap-2.5 overflow-y-auto flex-1">
           {error && (
-            <div data-testid="compose-error" role="alert" className="bg-red-50 text-red-700 border border-red-200/80 px-3.5 py-2.5 rounded-xl text-xs font-medium">
-              {error}
+            <div
+              data-testid="compose-error"
+              role="alert"
+              className="bg-red-50 text-red-700 border border-red-200/80 px-3.5 py-2.5 rounded-xl text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+            >
+              <span>{error}</span>
+              {(isQuotaExceeded || error.toLowerCase().includes('kuota') || error.includes('5 GB')) && (
+                <button
+                  type="button"
+                  onClick={() => setTicketModalOpen(true)}
+                  className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-[11px] self-start sm:self-auto shrink-0 transition-colors inline-flex items-center gap-1"
+                >
+                  <span>Ajukan Tiket Support &rarr;</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -225,6 +249,14 @@ export function ComposeModal({
           </button>
         </footer>
       </form>
+
+      {/* Support Ticket Modal for Quota Upgrade */}
+      <SupportTicketModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        initialCategory="Penyimpanan & Kuota"
+        initialSubject="Permohonan Penambahan Kuota Mailbox (Kirim Email Terhalang)"
+      />
     </div>
   );
 }

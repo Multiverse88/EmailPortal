@@ -211,6 +211,7 @@ function Inbox_() {
         description="Email kerja dan korespondensi klien"
         userName={user?.name}
         userEmail={user?.email}
+        avatarUrl={user?.avatarUrl}
         onMenu={() => setSidebar((s) => !s)}
         onLogout={() => {
           logout();

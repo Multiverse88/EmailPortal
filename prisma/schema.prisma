@@ -17,6 +17,8 @@ model Customer {
   mailboxResourceId String?   @unique
   passwordEnc       String // AES-256-GCM (needed plaintext for IMAP/SMTP)
   status            String    @default("active") // active, inactive, deleted
+  storageQuota      Float     @default(5368709120) // 5 GB in bytes
+  avatarUrl         String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   lastLoginAt       DateTime?

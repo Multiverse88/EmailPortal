@@ -426,12 +426,50 @@ Di portal frontend (`/documents` dan `/inbox`):
 
 ---
 
-### 8.4 Standard Operating Procedure (SOP) Admin: Pemulihan dari Synology NAS
+### 8.4 Struktur Folder Synology NAS Berbasis Akun (Per-Account Isolation)
+
+Untuk memastikan berkas klien **mudah dicari saat dibutuhkan**, seluruh berkas yang disinkronkan ke Synology NAS otomatis tersimpan dalam folder khusus untuk masing-masing akun customer:
+
+```text
+EmailPortal_ColdStorage/
+└── accounts/
+    ├── PT SINAR JAYA (ptsinarjaya@clienteasylegal.co.id)/
+    │   ├── account-info.json            <-- Profil akun, status, dan kuota 5 GB
+    │   ├── avatar/                      <-- Foto profil / Logo perusahaan
+    │   │   └── logo.png
+    │   ├── documents/                   <-- Dokumen legal (nama asli berkas)
+    │   │   ├── akta-pendirian-pt.pdf
+    │   │   └── sk-kemenkumham-2026.pdf
+    │   └── attachments/                 <-- Lampiran email masuk & keluar
+    │       └── invoice-pembayaran.pdf
+    ├── Budi Setiawan (budi@clienteasylegal.co.id)/
+    │   ├── account-info.json
+    │   ├── documents/
+    │   └── attachments/
+    └── .sync-manifest.json              <-- Riwayat & checksum sinkronisasi
+```
+
+#### Keunggulan Arsitektur Folder per Akun di Synology:
+1. **Pencarian Cepat & Intuitif**:
+   Staf legal atau admin cukup mengetikkan **Nama Perusahaan** (misal *"Sinar Jaya"*) atau **Alamat Email** (misal *"ptsinarjaya@clienteasylegal.co.id"*) pada kotak pencarian Synology Drive / File Station, dan folder akun langsung ditemukan seketika.
+2. **Nama Berkas Asli & Bersih**:
+   Dokumen dan lampiran tidak lagi disimpan dengan UUID acak, melainkan menggunakan nama berkas asli yang diunggah pengguna (misal: `akta-pendirian-pt.pdf`), sehingga staf kantor dapat langsung membaca dan membuka dokumen tanpa perlu mengonversi kode ID.
+3. **Pemisahan Antar-Akun Mutlak (Zero-Cross Leakage)**:
+   Setiap akun memiliki direktori mandiri. Berkas dari akun A tidak akan pernah tercampur dengan berkas dari akun B di dalam NAS kantor.
+4. **Metadata Profil Otomatis (`account-info.json`)**:
+   Setiap folder akun dilengkapi catatan JSON berisi informasi resmi pelanggan: nama akun, email terdaftar, kuota penyimpanan (5 GB), dan timestamp sinkronisasi terakhir.
+
+---
+
+### 8.5 Standard Operating Procedure (SOP) Admin: Pemulihan dari Synology NAS
 1. **Penerimaan Tiket**: Staf Admin/Legal menerima notifikasi tiket baru di modul Helpdesk (`/support`).
 2. **Pencarian Berkas di NAS**:
-   * Admin membuka folder sinkronisasi Synology Drive di laptop/PC kantor:
-     `D:\SynologyDrive\EasyLegal_ColdStorage\2026\05\doc_12345_Akta_Pendirian_PT.pdf`
+   * Admin membuka folder Synology Drive di laptop/PC kantor:
+     `SynologyDrive/EmailPortal_ColdStorage/accounts/[Nama Perusahaan] ([Email])/documents/[Nama Dokumen]`
+     Contoh:
+     `SynologyDrive/EmailPortal_ColdStorage/accounts/PT SINAR JAYA (ptsinarjaya@clienteasylegal.co.id)/documents/akta-pendirian-pt.pdf`
 3. **Pengiriman ke Customer**:
    * Admin mengunggah kembali file tersebut langsung ke kolom balasan tiket bantuan sebagai lampiran pemulihan resmi.
    * Admin mengirim pesan konfirmasi: *"Berkas Anda telah berhasil dipulihkan dari arsip Synology NAS kantor kami."*
 4. **Penyelesaian Tiket**: Admin mengubah status tiket menjadi **Resolved**.
+

@@ -29,12 +29,14 @@ import {
   ChevronRight,
   Shield,
   Menu,
+  Headphones,
 } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
 import { useCustomerAuth } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { SuiteHeader } from '@/components/suite-header';
 import { DocumentPreviewModal, LegalDocument } from '@/components/document-preview-modal';
+import { SupportTicketModal } from '@/components/support-ticket-modal';
 
 export default function DocumentsPage() {
   return (
@@ -57,8 +59,9 @@ function DocumentsContent() {
     'Tax Filings',
     'NDA Templates',
   ]);
-  const [storageUsed, setStorageUsed] = useState<number>(4500000000);
-  const [storageLimit, setStorageLimit] = useState<number>(15000000000);
+  const [storageUsed, setStorageUsed] = useState<number>(0);
+  const [storageLimit, setStorageLimit] = useState<number>(5368709120); // 5 GB
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'my-files' | 'recent' | 'starred' | 'shared' | 'trash'>('my-files');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -185,9 +188,10 @@ function DocumentsContent() {
     return <File className="w-8 h-8 text-slate-500" />;
   };
 
+  const isFull = storageUsed >= storageLimit;
   const storagePercent = Math.min(
     100,
-    Math.round((storageUsed / (storageLimit || 15000000000)) * 100)
+    Math.round((storageUsed / (storageLimit || 5368709120)) * 100)
   );
 
   return (
@@ -198,6 +202,7 @@ function DocumentsContent() {
         description="Dokumen, arsip, dan persetujuan hukum"
         userName={user?.name}
         userEmail={user?.email}
+        avatarUrl={user?.avatarUrl}
         onMenu={() => setMobileSidebar((open) => !open)}
         onLogout={() => {
           logout();
@@ -239,11 +244,19 @@ function DocumentsContent() {
           {/* CTA Upload Button */}
           <div className="p-4">
             <button
-              onClick={() => setUploadOpen(true)}
-              className="app-primary-button w-full !min-h-11"
+              onClick={() => {
+                if (isFull) {
+                  setTicketModalOpen(true);
+                } else {
+                  setUploadOpen(true);
+                }
+              }}
+              className={`app-primary-button w-full !min-h-11 ${
+                isFull ? '!bg-red-600 hover:!bg-red-700' : ''
+              }`}
             >
               <Upload className="w-4 h-4" />
-              <span>Unggah Dokumen</span>
+              <span>{isFull ? 'Kuota Penuh (Ajukan Tiket)' : 'Unggah Dokumen'}</span>
             </button>
           </div>
 
@@ -382,21 +395,32 @@ function DocumentsContent() {
             <div className="flex items-center justify-between text-xs text-slate-600 mb-1.5">
               <span className="font-semibold flex items-center gap-1.5">
                 <HardDrive className="w-3.5 h-3.5 text-slate-400" />
-                <span>Penyimpanan</span>
+                <span>Mailbox Drive (5 GB)</span>
               </span>
-              <span className="font-mono text-[11px]">
+              <span className="font-mono text-[11px] font-bold">
                 {formatSize(storageUsed)} / {formatSize(storageLimit)}
               </span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-primary h-full rounded-full transition-all duration-500"
-                style={{ width: `${storagePercent}%` }}
+                className={`h-full rounded-full transition-all duration-500 ${
+                  isFull ? 'bg-red-600' : storagePercent > 80 ? 'bg-amber-500' : 'bg-primary'
+                }`}
+                style={{ width: `${Math.min(100, Math.max(2, storagePercent))}%` }}
               />
             </div>
-            <span className="text-[10px] text-slate-400 mt-1 block">
-              {storagePercent}% kapasitas cloud terpakai
-            </span>
+            <div className="flex items-center justify-between mt-1.5 text-[10px]">
+              <span className="text-slate-400">
+                {storagePercent}% terpakai
+              </span>
+              <button
+                type="button"
+                onClick={() => setTicketModalOpen(true)}
+                className="font-semibold text-primary hover:underline"
+              >
+                + Tambah Kuota
+              </button>
+            </div>
           </div>
         </aside>
 
@@ -469,6 +493,29 @@ function DocumentsContent() {
 
           {/* Scrollable Document Content */}
           <div className="flex-1 space-y-7 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            {/* Storage Limit Warning Banner */}
+            {isFull && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-red-900 shadow-2xs">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="size-5 text-red-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-red-950">Kapasitas Mailbox Drive 5 GB Penuh</h4>
+                    <p className="text-red-700 mt-0.5">
+                      Anda telah mencapai batas kuota penyimpanan 5 GB. Unggah berkas baru dinonaktifkan sementara sampai kuota ditingkatkan.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTicketModalOpen(true)}
+                  className="self-start sm:self-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold shadow-xs transition-colors shrink-0 flex items-center gap-1.5"
+                >
+                  <Headphones className="size-3.5" />
+                  <span>Ajukan Tiket Tambah Kuota</span>
+                </button>
+              </div>
+            )}
+
             {error && (
               <div role="alert" className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                 <span>{error}</span>
@@ -761,6 +808,14 @@ function DocumentsContent() {
           }}
         />
       )}
+
+      {/* Quick Support Ticket Modal */}
+      <SupportTicketModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        initialCategory="Penyimpanan & Kuota"
+        initialSubject="Permohonan Penambahan Kuota Mailbox Drive (5 GB Penuh)"
+      />
     </div>
   );
 }

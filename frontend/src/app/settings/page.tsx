@@ -29,11 +29,14 @@ import {
   FileSignature,
   Globe,
   RefreshCw,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
 import { useCustomerAuth } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { SuiteHeader } from '@/components/suite-header';
+import { SupportTicketModal } from '@/components/support-ticket-modal';
 
 type SettingsTab = 'general' | 'profile' | 'security' | 'notifications';
 
@@ -57,6 +60,8 @@ interface UserProfile {
   personalEmail?: string;
   status?: string;
   twoFactorEnabled?: boolean;
+  avatarUrl?: string | null;
+  storageQuota?: number;
   createdAt?: string;
   lastLoginAt?: string;
 }
@@ -83,7 +88,7 @@ function SettingsLoadingFallback() {
 }
 
 function SettingsContent() {
-  const { user, logout } = useCustomerAuth();
+  const { user, updateUser, logout } = useCustomerAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -150,8 +155,23 @@ function SettingsContent() {
   const [terminatingOthers, setTerminatingOthers] = useState(false);
   const [terminateMsg, setTerminateMsg] = useState('');
 
-  // Profile data from backend
+  // Profile data & Logo state
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarErr, setAvatarErr] = useState('');
+  const [avatarOk, setAvatarOk] = useState('');
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [storageStats, setStorageStats] = useState<{
+    storageUsed: number;
+    storageLimit: number;
+    isFull: boolean;
+    usagePercent: number;
+  }>({
+    storageUsed: 0,
+    storageLimit: 5368709120, // 5 GB
+    isFull: false,
+    usagePercent: 0,
+  });
 
   // Fetch settings & sessions
   const fetchSettings = async () => {
@@ -161,6 +181,12 @@ function SettingsContent() {
         if (res.data.user) {
           setProfileData(res.data.user);
           setTwoFactorEnabled(!!res.data.user.twoFactorEnabled);
+          if (res.data.user.avatarUrl) {
+            updateUser({ avatarUrl: res.data.user.avatarUrl });
+          }
+        }
+        if (res.data.storageStats) {
+          setStorageStats(res.data.storageStats);
         }
         if (res.data.preferences) {
           const p = res.data.preferences;
@@ -173,6 +199,56 @@ function SettingsContent() {
       }
     } catch (err) {
       console.error('Failed to load settings:', err);
+    }
+  };
+
+  // Upload Logo Perusahaan to IDCloudHost S3
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setAvatarErr('File harus berupa gambar (PNG, JPG, WebP, SVG)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarErr('Ukuran file logo maksimal 5 MB');
+      return;
+    }
+    setAvatarUploading(true);
+    setAvatarErr('');
+    setAvatarOk('');
+    try {
+      const fd = new FormData();
+      fd.append('avatar', file);
+      const res = await api.post('/settings/avatar', fd);
+      setAvatarOk('Logo perusahaan berhasil diperbarui dan tersimpan di IDCloudHost S3');
+      updateUser({ avatarUrl: res.data.avatarUrl });
+      await fetchSettings();
+      setTimeout(() => setAvatarOk(''), 4000);
+    } catch (err) {
+      setAvatarErr(errMsg(err, 'Gagal mengunggah logo perusahaan'));
+    } finally {
+      setAvatarUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Delete Logo Perusahaan from IDCloudHost S3
+  const handleAvatarDelete = async () => {
+    if (!window.confirm('Hapus logo perusahaan dan kembali menggunakan inisial bawaan?')) return;
+    setAvatarUploading(true);
+    setAvatarErr('');
+    setAvatarOk('');
+    try {
+      await api.delete('/settings/avatar');
+      setAvatarOk('Logo perusahaan berhasil dihapus');
+      updateUser({ avatarUrl: null });
+      await fetchSettings();
+      setTimeout(() => setAvatarOk(''), 4000);
+    } catch (err) {
+      setAvatarErr(errMsg(err, 'Gagal menghapus logo'));
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -355,6 +431,7 @@ function SettingsContent() {
         description="Profil, preferensi, dan keamanan akun"
         userName={displayName}
         userEmail={displayEmail}
+        avatarUrl={user?.avatarUrl || profileData?.avatarUrl}
         onLogout={() => {
           logout();
           router.replace('/login');
@@ -390,8 +467,18 @@ function SettingsContent() {
           <section className="app-panel p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-primary text-white font-bold text-lg flex items-center justify-center shadow-sm shrink-0">
-                  {initials(displayName)}
+                <div className="size-14 rounded-2xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shadow-xs shrink-0">
+                  {user?.avatarUrl || profileData?.avatarUrl ? (
+                    <img
+                      src={user?.avatarUrl || profileData?.avatarUrl || ''}
+                      alt="Logo Perusahaan"
+                      className="size-full object-contain p-1"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-primary text-white font-bold text-lg flex items-center justify-center">
+                      {initials(displayName)}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -408,21 +495,31 @@ function SettingsContent() {
                       {displayEmail}
                     </span>
                     <span className="text-slate-300">•</span>
-                    <span className="font-mono text-slate-500">Hostinger Titan Mail Enterprise</span>
+                    <span className="font-mono text-slate-500">Hostinger Mailbox</span>
                   </div>
                 </div>
               </div>
 
               {/* Quick Storage Indicator */}
-              <div className="sm:text-right bg-slate-50 border border-slate-100 p-3 rounded-xl min-w-[200px]">
+              <div className="sm:text-right bg-slate-50 border border-slate-100 p-3 rounded-xl min-w-[220px]">
                 <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-slate-500 font-medium">Kapasitas Mailbox</span>
-                  <span className="font-semibold text-slate-700">4.2 GB / 15 GB</span>
+                  <span className="text-slate-500 font-medium">Kapasitas Cloud</span>
+                  <span className="font-semibold text-slate-700">
+                    {(storageStats.storageUsed / (1024 * 1024 * 1024)).toFixed(2)} GB / {(storageStats.storageLimit / (1024 * 1024 * 1024)).toFixed(1)} GB
+                  </span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-primary h-1.5 rounded-full w-[28%]" />
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${
+                      storageStats.isFull ? 'bg-red-600' : storageStats.usagePercent > 80 ? 'bg-amber-500' : 'bg-primary'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(2, storageStats.usagePercent))}%` }}
+                  />
                 </div>
-                <div className="text-[10px] text-slate-400 mt-1">28% digunakan</div>
+                <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                  <span>{storageStats.usagePercent}% digunakan</span>
+                  <span className="text-primary font-medium">Maks 5 GB</span>
+                </div>
               </div>
             </div>
           </section>
@@ -630,83 +727,177 @@ function SettingsContent() {
           {/* TAB 2: PROFILE TAB */}
           {activeTab === 'profile' && (
             <div className="space-y-6">
+              {/* Feedback Banners for Avatar */}
+              {avatarOk && (
+                <div className="p-4 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-2xs">
+                  <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                  <span>{avatarOk}</span>
+                </div>
+              )}
+              {avatarErr && (
+                <div className="p-4 bg-red-50 text-red-700 border border-red-200 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-2xs">
+                  <AlertCircle className="size-4 text-red-600 shrink-0" />
+                  <span>{avatarErr}</span>
+                </div>
+              )}
+
+              {/* Company Logo / Avatar Card */}
               <section className="bg-white rounded-2xl border border-border-subtle p-6 sm:p-7 shadow-xs">
-                <div className="flex items-center gap-3 pb-6 border-b border-slate-100">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-base">
-                    <UserIcon className="w-6 h-6" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <div className="relative group size-20 rounded-2xl border-2 border-dashed border-slate-300 hover:border-primary overflow-hidden flex items-center justify-center bg-slate-50 transition-colors shrink-0">
+                      {user?.avatarUrl || profileData?.avatarUrl ? (
+                        <img
+                          src={user?.avatarUrl || profileData?.avatarUrl || ''}
+                          alt="Logo Perusahaan"
+                          className="size-full object-contain p-1.5"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold text-primary">
+                          {initials(displayName)}
+                        </span>
+                      )}
+                      {avatarUploading && (
+                        <div className="absolute inset-0 bg-white/80 backdrop-blur-2xs flex items-center justify-center">
+                          <Loader2 className="size-6 text-primary animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">Logo Perusahaan / Avatar</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Tampil di header utama dan identitas perusahaan Anda.
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          <CheckCircle2 className="size-3 text-emerald-600" /> IDCloudHost S3 (Terisolasi per Akun)
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">Rincian Identitas Mailbox</h2>
-                    <p className="text-xs text-slate-500">
-                      Informasi pelanggan dan langganan akun yang terdaftar pada sistem EasyLegal.
-                    </p>
+
+                  <div className="flex items-center gap-2.5 self-stretch sm:self-auto">
+                    <label className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-primary/90 transition-colors cursor-pointer shadow-xs active:scale-98">
+                      <Upload className="size-4" />
+                      <span>{user?.avatarUrl || profileData?.avatarUrl ? 'Ganti Logo' : 'Unggah Logo Perusahaan'}</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                        disabled={avatarUploading}
+                      />
+                    </label>
+
+                    {(user?.avatarUrl || profileData?.avatarUrl) && (
+                      <button
+                        type="button"
+                        onClick={handleAvatarDelete}
+                        disabled={avatarUploading}
+                        className="px-3.5 py-2.5 text-red-600 hover:bg-red-50 border border-red-200 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
+                        title="Hapus Logo Perusahaan"
+                      >
+                        <Trash2 className="size-4" />
+                        <span>Hapus</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5 text-xs">
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <dt className="text-slate-400 font-medium mb-1">Nama Lengkap Pemilik</dt>
-                    <dd className="text-slate-900 font-semibold text-sm">{displayName}</dd>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <dt className="text-slate-400 font-medium mb-1">Alamat Email Mailbox Aktif</dt>
-                    <dd className="text-primary font-semibold text-sm font-mono truncate">
-                      {displayEmail}
-                    </dd>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <dt className="text-slate-400 font-medium mb-1">Email Pemulihan / Pribadi</dt>
-                    <dd className="text-slate-700 font-medium text-sm font-mono">
-                      {profileData?.personalEmail || '-'}
-                    </dd>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <dt className="text-slate-400 font-medium mb-1">Organisasi / Perusahaan</dt>
-                    <dd className="text-slate-900 font-semibold text-sm flex items-center gap-1.5">
-                      <Building className="w-3.5 h-3.5 text-slate-400" />
-                      PT Solusi Hukum Indonesia
-                    </dd>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <dt className="text-slate-400 font-medium mb-1">Paket Layanan Mailbox</dt>
-                    <dd className="text-slate-800 font-semibold text-sm">
-                      EasyLegal Enterprise Suite (15 GB)
-                    </dd>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <dt className="text-slate-400 font-medium mb-1">Status Keamanan 2FA</dt>
-                    <dd className="text-sm">
-                      {twoFactorEnabled ? (
-                        <span className="text-emerald-700 font-semibold inline-flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Aktif Terlindungi
-                        </span>
-                      ) : (
-                        <span className="text-slate-500 font-medium">Non-aktif</span>
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-
-                {/* Storage usage breakdown */}
-                <div className="mt-6 p-4 rounded-xl bg-slate-50/70 border border-slate-200">
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <div className="flex items-center gap-2">
-                      <HardDrive className="w-4 h-4 text-primary" />
-                      <span className="font-semibold text-slate-800">Penyimpanan Cloud Dokumen &amp; Pesan</span>
+                <div className="pt-5">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
+                    Rincian Identitas Pelanggan
+                  </h3>
+                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <dt className="text-slate-400 font-medium mb-1">Nama Lengkap Pemilik</dt>
+                      <dd className="text-slate-900 font-semibold text-sm">{displayName}</dd>
                     </div>
-                    <span className="text-xs font-mono font-bold text-slate-700">4.2 GB / 15.0 GB</span>
+
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <dt className="text-slate-400 font-medium mb-1">Alamat Email Mailbox Aktif</dt>
+                      <dd className="text-primary font-semibold text-sm font-mono truncate">
+                        {displayEmail}
+                      </dd>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <dt className="text-slate-400 font-medium mb-1">Email Pemulihan / Pribadi</dt>
+                      <dd className="text-slate-700 font-medium text-sm font-mono">
+                        {profileData?.personalEmail || '-'}
+                      </dd>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <dt className="text-slate-400 font-medium mb-1">Organisasi / Perusahaan</dt>
+                      <dd className="text-slate-900 font-semibold text-sm flex items-center gap-1.5">
+                        <Building className="w-3.5 h-3.5 text-slate-400" />
+                        PT Solusi Hukum Indonesia
+                      </dd>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <dt className="text-slate-400 font-medium mb-1">Paket Layanan Mailbox</dt>
+                      <dd className="text-slate-800 font-semibold text-sm">
+                        EasyLegal Standard Suite (5 GB Maksimal)
+                      </dd>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <dt className="text-slate-400 font-medium mb-1">Status Keamanan 2FA</dt>
+                      <dd className="text-sm">
+                        {twoFactorEnabled ? (
+                          <span className="text-emerald-700 font-semibold inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Aktif Terlindungi
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 font-medium">Non-aktif</span>
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  {/* IDCloudHost S3 Storage usage breakdown */}
+                  <div className="mt-6 p-5 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="flex items-center justify-between text-xs mb-2.5">
+                      <div className="flex items-center gap-2">
+                        <HardDrive className="w-4 h-4 text-primary" />
+                        <span className="font-semibold text-slate-800">
+                          Penyimpanan IDCloudHost S3 Mailbox Drive
+                        </span>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-slate-700">
+                        {(storageStats.storageUsed / (1024 * 1024 * 1024)).toFixed(2)} GB / {(storageStats.storageLimit / (1024 * 1024 * 1024)).toFixed(1)} GB
+                        {' '}({storageStats.usagePercent}%)
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden mb-2.5">
+                      <div
+                        className={`h-2.5 rounded-full transition-all duration-300 ${
+                          storageStats.isFull
+                            ? 'bg-red-600'
+                            : storageStats.usagePercent > 80
+                              ? 'bg-amber-500'
+                              : 'bg-primary'
+                        }`}
+                        style={{ width: `${Math.min(100, Math.max(2, storageStats.usagePercent))}%` }}
+                      />
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 text-[11px] text-slate-500">
+                      <p>
+                        Batas kuota standar: <strong>5 GB per akun</strong>. Seluruh berkas tersimpan di ruang folder terisolasi.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setTicketModalOpen(true)}
+                        className="self-start sm:self-auto font-semibold text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs"
+                      >
+                        <span>Minta Tambah Kuota via Tiket Support &rarr;</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-2">
-                    <div className="bg-primary h-2 rounded-full w-[28%]" />
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Kapasitas mencakup seluruh pesan inbox, folder berkas legal, serta lampiran terenkripsi.
-                  </p>
                 </div>
               </section>
             </div>
@@ -1175,6 +1366,12 @@ function SettingsContent() {
 
         </div>
       </div>
+
+      {/* Quick Support Ticket Modal */}
+      <SupportTicketModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+      />
     </main>
   );
 }

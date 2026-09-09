@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { sanitizeHtml, toSnippet } from '../lib/sanitize';
 import { decrypt } from '../lib/crypto';
 import { sendMail } from '../lib/mail';
+import { checkStorageQuota } from '../lib/quota';
 import {
   fetchMessageAttachment,
   isMailApiConfigured,
@@ -113,6 +114,25 @@ export default (prisma: PrismaClient) => {
 
       const files = (req.files as Express.Multer.File[]) ?? [];
       const text = body ?? '';
+      const attachmentBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
+
+      // Enforce 5 GB storage limit: block sending if storage is full or if attachments exceed quota
+      const quotaCheck = await checkStorageQuota(prisma, mailboxId, attachmentBytes);
+      if (!quotaCheck.allowed) {
+        for (const f of files) {
+          if (fs.existsSync(f.path)) {
+            try {
+              fs.unlinkSync(f.path);
+            } catch {}
+          }
+        }
+        return res.status(403).json({
+          error: 'Kapasitas penyimpanan 5 GB telah penuh. Anda tidak dapat mengirim email baru. Silakan hubungi tim support untuk penambahan kuota.',
+          code: 'STORAGE_QUOTA_EXCEEDED',
+          storageUsed: quotaCheck.stats.storageUsed,
+          storageLimit: quotaCheck.stats.storageLimit,
+        });
+      }
 
       // Prefer Hostinger Mail API send when configured; SMTP is the fallback.
       let result: { delivered: boolean };

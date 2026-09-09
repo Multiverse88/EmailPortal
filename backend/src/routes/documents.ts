@@ -4,6 +4,8 @@ import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
 import { storage } from '../lib/storage';
+import { getCustomerStorageStats, checkStorageQuota, DEFAULT_STORAGE_QUOTA } from '../lib/quota';
+import { getAccountFolderName, sanitizeFileName } from '../lib/synology-sync';
 
 const storageBase = process.env.STORAGE_DIR || './storage';
 export const STORAGE_DIR = path.isAbsolute(storageBase)
@@ -22,7 +24,7 @@ const upload = multer({
 });
 
 const DEFAULT_FOLDERS = ['Client Agreements', 'Tax Filings', 'NDA Templates'];
-const STORAGE_LIMIT = 15 * 1024 * 1024 * 1024; // 15 GB in bytes
+const STORAGE_LIMIT = DEFAULT_STORAGE_QUOTA; // 5 GB in bytes
 
 const COLD_STORAGE_THRESHOLD_MS = 90 * 24 * 60 * 60 * 1000;
 export const isDocumentColdStorage = (createdAt: Date | string) => {
@@ -69,7 +71,7 @@ export default (prisma: PrismaClient) => {
         ];
       }
 
-      const [documents, distinctCategories, storageAggregate] = await Promise.all([
+      const [documents, distinctCategories, storageStats] = await Promise.all([
         prisma.legalDocument.findMany({
           where,
           include: {
@@ -84,10 +86,7 @@ export default (prisma: PrismaClient) => {
           select: { category: true },
           distinct: ['category'],
         }),
-        prisma.legalDocument.aggregate({
-          where: { customerId },
-          _sum: { size: true },
-        }),
+        getCustomerStorageStats(prisma, customerId),
       ]);
 
       const folders = Array.from(
@@ -97,8 +96,6 @@ export default (prisma: PrismaClient) => {
         ])
       );
 
-      const storageUsed = storageAggregate._sum.size || 0;
-
       const mappedDocuments = documents.map((doc) => ({
         ...doc,
         isColdStorage: isDocumentColdStorage(doc.createdAt),
@@ -107,8 +104,9 @@ export default (prisma: PrismaClient) => {
       res.json({
         documents: mappedDocuments,
         folders,
-        storageUsed,
-        storageLimit: STORAGE_LIMIT,
+        storageUsed: storageStats.storageUsed,
+        storageLimit: storageStats.storageLimit,
+        isStorageFull: storageStats.isFull,
       });
     } catch (error) {
       console.error('List documents error:', error);
@@ -127,18 +125,38 @@ export default (prisma: PrismaClient) => {
       const customerId = req.user!.id;
       const customer = await prisma.customer.findUnique({ where: { id: customerId } });
 
+      // Check storage quota (5 GB max)
+      const quotaCheck = await checkStorageQuota(prisma, customerId, file.size);
+      if (!quotaCheck.allowed) {
+        if (fs.existsSync(file.path)) {
+          try {
+            fs.unlinkSync(file.path);
+          } catch {}
+        }
+        return res.status(403).json({
+          error: quotaCheck.reason,
+          code: 'STORAGE_QUOTA_EXCEEDED',
+          storageUsed: quotaCheck.stats.storageUsed,
+          storageLimit: quotaCheck.stats.storageLimit,
+        });
+      }
+
       const title = req.body.title?.trim() || file.originalname;
       const category = req.body.category?.trim() || 'Client Agreements';
       const status = req.body.status?.trim() || 'Reviewed';
       const ownerName = req.body.ownerName?.trim() || customer?.name || 'Legal Team';
 
-      // Persist to storage adapter & mirror to Synology
+      // Persist to storage adapter with isolated account namespace & mirror to Synology
       if (fs.existsSync(file.path)) {
         try {
           const fileBuffer = await fs.promises.readFile(file.path);
-          const storageKey = `documents/${customerId}/${path.basename(file.path)}`;
+          const storageKey = `accounts/${customerId}/documents/${path.basename(file.path)}`;
           await storage.putObject(storageKey, fileBuffer, file.mimetype || 'application/pdf');
-          await storage.mirrorToSynology(storageKey, fileBuffer);
+
+          // Mirror to Synology with human-readable account folder & filename
+          const accountFolder = getAccountFolderName(customer || { mailboxAddress: req.user!.email });
+          const synologyKey = `accounts/${accountFolder}/documents/${sanitizeFileName(file.originalname)}`;
+          await storage.mirrorToSynology(synologyKey, fileBuffer);
         } catch (storageErr) {
           console.warn('Warning: could not mirror to storage adapter:', storageErr);
         }
@@ -230,7 +248,8 @@ export default (prisma: PrismaClient) => {
 
       const isColdStorage = isDocumentColdStorage(document.createdAt);
       const filePath = path.resolve(STORAGE_DIR, path.basename(document.path));
-      const bucketKey = `documents/${customerId}/${path.basename(document.path)}`;
+      const accountBucketKey = `accounts/${customerId}/documents/${path.basename(document.path)}`;
+      const legacyBucketKey = `documents/${customerId}/${path.basename(document.path)}`;
 
       // 1. Check legacy storage path on disk
       if (fs.existsSync(filePath)) {
@@ -243,12 +262,19 @@ export default (prisma: PrismaClient) => {
         }
       }
 
-      // 2. Check storage adapter (e.g. bucket or s3)
-      if (await storage.objectExists(bucketKey)) {
+      // 2. Check storage adapter (isolated account path first, then legacy fallback)
+      let streamKey: string | null = null;
+      if (await storage.objectExists(accountBucketKey)) {
+        streamKey = accountBucketKey;
+      } else if (await storage.objectExists(legacyBucketKey)) {
+        streamKey = legacyBucketKey;
+      }
+
+      if (streamKey) {
         res.setHeader('Content-Type', document.mimeType || 'application/pdf');
         const dispositionType = req.query.inline === 'true' ? 'inline' : 'attachment';
         res.setHeader('Content-Disposition', `${dispositionType}; filename="${encodeURIComponent(document.filename)}"`);
-        const stream = await storage.getObjectStream(bucketKey);
+        const stream = await storage.getObjectStream(streamKey);
         return stream.pipe(res);
       }
 
@@ -316,9 +342,13 @@ export default (prisma: PrismaClient) => {
         where: { id: document.id },
       });
 
-      const bucketKey = `documents/${customerId}/${path.basename(document.path)}`;
+      const accountBucketKey = `accounts/${customerId}/documents/${path.basename(document.path)}`;
+      const legacyBucketKey = `documents/${customerId}/${path.basename(document.path)}`;
       try {
-        await storage.deleteObject(bucketKey);
+        await storage.deleteObject(accountBucketKey);
+      } catch {}
+      try {
+        await storage.deleteObject(legacyBucketKey);
       } catch (adapterErr) {
         console.warn('Could not remove file from storage adapter:', adapterErr);
       }

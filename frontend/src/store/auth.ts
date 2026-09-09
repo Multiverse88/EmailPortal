@@ -6,6 +6,8 @@ export interface User {
   name: string;
   email: string;
   type: 'customer' | 'admin';
+  avatarUrl?: string | null;
+  storageQuota?: number;
 }
 
 export type UserRole = 'customer' | 'admin';
@@ -23,6 +25,7 @@ interface AuthState {
 
   hydrate: () => void;
   setAuth: (token: string, user: User, targetRole?: UserRole) => void;
+  updateUser: (patch: Partial<User>, targetRole?: UserRole) => void;
   logout: (targetRole?: UserRole) => void;
   getRoleAuth: (role: UserRole) => { token: string | null; user: User | null };
 }
@@ -132,6 +135,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
+  updateUser: (patch, targetRole) => {
+    const role: UserRole = targetRole || getActiveRoleContext();
+    set((state) => {
+      let nextCustomerUser = state.customerUser;
+      let nextAdminUser = state.adminUser;
+
+      if (role === 'customer' && state.customerUser) {
+        nextCustomerUser = { ...state.customerUser, ...patch };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('customer_user', JSON.stringify(nextCustomerUser));
+          localStorage.setItem('user', JSON.stringify(nextCustomerUser));
+        }
+      } else if (role === 'admin' && state.adminUser) {
+        nextAdminUser = { ...state.adminUser, ...patch };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('admin_user', JSON.stringify(nextAdminUser));
+          localStorage.setItem('user', JSON.stringify(nextAdminUser));
+        }
+      }
+
+      const currentRole = getActiveRoleContext();
+      const currentUser = currentRole === 'admin'
+        ? (nextAdminUser || nextCustomerUser)
+        : (nextCustomerUser || nextAdminUser);
+
+      return {
+        customerUser: nextCustomerUser,
+        adminUser: nextAdminUser,
+        user: currentUser,
+      };
+    });
+  },
+
   logout: (targetRole) => {
     const role: UserRole = targetRole || getActiveRoleContext();
     if (typeof window !== 'undefined') {
@@ -191,6 +227,7 @@ export function useCustomerAuth() {
     ready: store.ready,
     hydrate: store.hydrate,
     setAuth: (token: string, user: User) => store.setAuth(token, user, 'customer'),
+    updateUser: (patch: Partial<User>) => store.updateUser(patch, 'customer'),
     logout: () => store.logout('customer'),
   };
 }

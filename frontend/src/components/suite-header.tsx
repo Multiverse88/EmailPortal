@@ -11,6 +11,7 @@ interface SuiteHeaderProps {
   description?: string;
   userName?: string | null;
   userEmail?: string | null;
+  avatarUrl?: string | null;
   search?: ReactNode;
   actions?: ReactNode;
   onMenu?: () => void;
@@ -31,6 +32,7 @@ export function SuiteHeader({
   description,
   userName,
   userEmail,
+  avatarUrl,
   search,
   actions,
   onMenu,
@@ -96,9 +98,17 @@ export function SuiteHeader({
           className="ml-1 flex items-center gap-2 rounded-xl border border-transparent p-1 transition-colors hover:border-border-subtle hover:bg-white"
           title="Pengaturan akun"
         >
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
-            {initials(userName || userEmail)}
-          </span>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={userName || 'Logo'}
+              className="size-8 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs"
+            />
+          ) : (
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
+              {initials(userName || userEmail)}
+            </span>
+          )}
           <span className="hidden max-w-[150px] text-left lg:block">
             <span className="block truncate text-[11px] font-semibold text-slate-800">
               {userName || (admin ? 'Administrator' : 'Customer')}

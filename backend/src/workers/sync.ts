@@ -48,8 +48,12 @@ export class SyncWorker {
           } else {
             await this.syncCustomer(customer);
           }
-        } catch (error) {
-          console.error(`sync failed for ${customer.mailboxAddress}:`, error);
+        } catch (error: any) {
+          if (error?.textCode === 'AUTHENTICATIONFAILED') {
+            console.warn(`[IMAP Sync] Akun demo / belum ada di server Hostinger (${customer.mailboxAddress}): autentikasi dilewati.`);
+          } else {
+            console.error(`sync failed for ${customer.mailboxAddress}:`, error);
+          }
         }
       }
     } catch (error) {
@@ -179,9 +183,14 @@ export class SyncWorker {
   private async syncCustomer(customer: Customer) {
     const imap = await this.connect(customer);
     try {
-      await new Promise<void>((resolve, reject) => {
-        imap.openBox('INBOX', true, (err) => (err ? reject(err) : resolve()));
+      const box = await new Promise<Imap.Box>((resolve, reject) => {
+        imap.openBox('INBOX', true, (err, b) => (err ? reject(err) : resolve(b)));
       });
+
+      if (!box || !box.messages || box.messages.total === 0) {
+        // Mailbox is empty; nothing to fetch
+        return;
+      }
 
       const last = await this.prisma.messageCache.findFirst({
         where: { mailboxId: customer.id, folder: 'INBOX' },
@@ -189,9 +198,13 @@ export class SyncWorker {
         select: { uid: true },
       });
       const since = last ? parseInt(last.uid) + 1 : 1;
+      if (since > box.messages.total) {
+        // All messages already synced
+        return;
+      }
 
       await new Promise<void>((resolve, reject) => {
-        const fetch = imap.seq.fetch(`${since}:*`, { bodies: '', struct: true });
+        const fetch = imap.seq.fetch(`${since}:${box.messages.total}`, { bodies: '', struct: true });
         const pending: Promise<unknown>[] = [];
 
         fetch.on('message', (msg, seqno) => {

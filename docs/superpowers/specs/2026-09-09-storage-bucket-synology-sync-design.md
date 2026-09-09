@@ -51,16 +51,19 @@ backend/storage/
                     └── {attachmentId}_{cleanFilename}
 ```
 
-#### Synology Drive Client Mirror (`SYNOLOGY_DIR`)
+#### Synology Drive Client Mirror (`SYNOLOGY_DIR`) - Berbasis Folder per Akun
 ```text
 ~/SynologyDrive/EmailPortal_ColdStorage/
-├── documents/
-│   └── {customerId}/
-│       └── {documentId}_{cleanFilename}
-├── attachments/
-│   └── {mailboxId}/
-│       └── {attachmentId}_{cleanFilename}
-└── .sync-manifest.json    # Catatan riwayat file yang berhasil disinkronkan
+├── accounts/
+│   ├── {AccountName} ({mailboxAddress})/
+│   │   ├── account-info.json      # Metadata akun, status & alokasi kuota 5 GB
+│   │   ├── avatar/                # Logo / foto profil perusahaan
+│   │   │   └── logo.png
+│   │   ├── documents/             # Dokumen legal dengan nama asli berkas
+│   │   │   └── {cleanFilename}
+│   │   └── attachments/           # Lampiran email masuk & keluar
+│   │       └── {cleanFilename}
+└── .sync-manifest.json            # Catatan riwayat file yang berhasil disinkronkan
 ```
 
 ---
