@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Send, Headphones, CheckCircle2, AlertCircle, Loader2, HardDrive } from 'lucide-react';
+import { X, Send, Headphones, CheckCircle2, AlertCircle, Loader2, HardDrive, Clock } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
 
 interface SupportTicketModalProps {
@@ -32,6 +32,17 @@ export function SupportTicketModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [createdTicket, setCreatedTicket] = useState<{ id: string; ticketNumber: string } | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCategory(initialCategory);
+      setPriority(initialPriority);
+      setSubject(initialSubject);
+      setMessage(initialMessage);
+      setError('');
+      setCreatedTicket(null);
+    }
+  }, [isOpen, initialCategory, initialPriority, initialSubject, initialMessage]);
 
   if (!isOpen) return null;
 
@@ -133,15 +144,27 @@ export function SupportTicketModal({
               </div>
             )}
 
-            <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl flex items-start gap-2.5 text-[11px]">
-              <HardDrive className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-semibold">Batas Kuota Standar 5 GB Tercapai</span>
-                <p className="text-amber-800 mt-0.5">
-                  Pengajuan ini akan diteruskan langsung ke Admin Support untuk menambah batas kuota Mailbox Drive Anda.
-                </p>
+            {category === 'Masa Aktif & Retensi Akun' ? (
+              <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl flex items-start gap-2.5 text-[11px]">
+                <Clock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Layanan Bantuan Masa Aktif Akun (1x24 Jam)</span>
+                  <p className="text-amber-800 mt-0.5">
+                    Permohonan perpanjangan atau pemulihan akun non-aktif akan diproses oleh tim kami maksimal dalam kurun waktu 1x24 jam kerja.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : category === 'Penyimpanan & Kuota' ? (
+              <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl flex items-start gap-2.5 text-[11px]">
+                <HardDrive className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Batas Kuota Standar 5 GB Tercapai</span>
+                  <p className="text-amber-800 mt-0.5">
+                    Pengajuan ini akan diteruskan langsung ke Admin Support untuk menambah batas kuota Mailbox Drive Anda.
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -151,6 +174,7 @@ export function SupportTicketModal({
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
                 >
+                  <option value="Masa Aktif & Retensi Akun">Masa Aktif &amp; Retensi Akun</option>
                   <option value="Penyimpanan & Kuota">Penyimpanan &amp; Kuota</option>
                   <option value="Document Review">Document Review</option>
                   <option value="Billing">Billing</option>
@@ -164,7 +188,7 @@ export function SupportTicketModal({
                   onChange={(e) => setPriority(e.target.value as 'normal' | 'urgent')}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
                 >
-                  <option value="urgent">Urgent (Penyimpanan Penuh)</option>
+                  <option value="urgent">Urgent</option>
                   <option value="normal">Normal</option>
                 </select>
               </div>
