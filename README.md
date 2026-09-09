@@ -1,24 +1,48 @@
-# Email Portal Customer - Email Client Custom
+# EasyLegal Hub & Customer Email Portal
 
-Custom email client yang berjalan di atas domain & mail server Hostinger (Titan Mail). Customer bisa login dan mengelola inbox mereka sendiri.
+Platform terintegrasi layanan korporat dan custom email client bergaya Google Minimalist yang berjalan di atas domain & mail server Hostinger (Titan Mail). Pelanggan dapat mengelola email bisnis, repositori dokumen legal, tiket bantuan layanan, serta keamanan akun dalam satu ekosistem terpadu.
+
+## Modul EasyLegal Hub
+
+1. **✉️ EasyLegal Mail (`/inbox`)**
+   - Webmail client minimalis Google-style dengan dukungan folder (Inbox, Terkirim, Draf, Sampah).
+   - Pratinjau email HTML, penandaan bintang, pencarian instan, dan compose/balas/teruskan dengan lampiran hingga 10MB.
+2. **📁 Legal Documents Drive (`/documents`)**
+   - Repositori berkas legal korporasi (Perjanjian Kerjasama, SK Kemenkumham, Invoice, Bukti Bayar).
+   - Modal interaktif **Document Preview** dengan visualizer berkas, pelacak riwayat versi (Version History Timeline), status dokumen (CONFIDENTIAL / Urgent Review), serta unduh berkas asli.
+3. **🎫 Support Helpdesk (`/support`)**
+   - Pusat bantuan pelanggan 24/7 dan FAQ accordion interaktif.
+   - Thread percakapan tiket interaktif (Client bubble, Support Agent bubble, dan Catatan Internal tim berarsip aman) dengan dukungan penutupan tiket (Resolved) dan pengajuan tiket baru.
+4. **⚙️ Account Settings & Security (`/settings`)**
+   - **General**: Bahasa, zona waktu, dan editor tanda tangan email (Rich Signature) dengan pratinjau langsung.
+   - **Profile**: Detail akun pelanggan, nama korporasi, dan ringkasan kuota mailbox.
+   - **Security & Activity** (`/settings?tab=security`):
+     - Sakelar autentikasi 2 faktor (Two-Factor Authentication / 2FA).
+     - Formulir pembaruan kata sandi akun aman dengan kriteria password kuat.
+     - Tabel audit riwayat aktivitas login perangkat (MacBook Pro, iPhone, Windows PC) dengan indikator sesi aktif saat ini.
+     - Tombol darurat terminate all other sessions.
+   - **Notifications**: Preferensi peringatan desktop dan bunyi notifikasi.
+5. **🎛️ Google-Style App Launcher (9-Dots Popover)**
+   - Akses navigasi cepat lintas aplikasi (Mail, Documents, Support, Settings) yang tersedia di header setiap halaman serta sidebar navigasi.
 
 ## Tech Stack
 
 - **Backend:** Node.js + Express + TypeScript
-- **Frontend:** Next.js 14 + TypeScript + Tailwind CSS
-- **Database:** Prisma — SQLite untuk dev, PostgreSQL untuk produksi
-- **Search:** query SQL `LIKE` di message cache (Meilisearch ditunda, lihat catatan)
-- **Storage:** filesystem lokal (`backend/storage`) untuk lampiran
-- **E2E:** Playwright (35 test, desktop + mobile)
+- **Frontend:** Next.js 14 + TypeScript + Tailwind CSS (Lucide Icons)
+- **Database:** Prisma ORM — SQLite untuk dev/test, PostgreSQL untuk produksi
+- **Search:** Query SQL `LIKE` di message cache & berkas
+- **Storage:** Filesystem lokal (`backend/storage`) untuk lampiran email & dokumen legal
+- **E2E & Integration:** Playwright (50 test case otomatis, desktop & mobile)
+- **Backend Tests:** Jest (41 unit & integration test case)
 
 ## Struktur Project
 
 ```
 email-portal/
-├── backend/          # Express API server
-├── frontend/         # Next.js web app
+├── backend/          # Express API server & routes (auth, email, documents, support, security, settings)
+├── frontend/         # Next.js 14 web app & components (AppLauncher, DocumentPreview, TicketThread)
 ├── shared/           # Shared types & utils
-└── prisma/           # Database schema & migrations
+└── prisma/           # Database schema (Customer, MessageCache, LegalDocument, SupportTicket, LoginSession)
 ```
 
 ## Setup (Development)
@@ -27,51 +51,75 @@ email-portal/
 # Install dependencies
 npm install
 
-# Copy env files
+# Setup environment files
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 
-# Start services (requires Docker or manual setup)
-# See DEPLOYMENT.md for full guide
+# Seed database dengan data demo lengkap
+npm run seed:demo
 
-# Run dev server
+# Jalankan backend & frontend concurrently
 npm run dev
 ```
+Backend berjalan di `http://localhost:4000`, Frontend di `http://localhost:3000`.
 
 ## API Endpoints
 
-**Auth**
-- `POST /api/auth/login/customer` — login customer
-- `POST /api/auth/login/admin` — login admin
-- `POST /api/auth/register` — admin membuat mailbox baru
-- `POST /api/auth/change-password` — customer ganti password sendiri
-- `GET  /api/auth/me` — profil customer aktif
+**Auth & Profil**
+- `POST /api/auth/login/customer` — Login customer
+- `POST /api/auth/login/admin` — Login admin
+- `POST /api/auth/register` — Admin membuat mailbox baru
+- `POST /api/auth/change-password` — Customer ganti password sendiri
+- `GET  /api/auth/me` — Profil customer aktif
 
-**Mailbox (admin)**
-- `GET    /api/mailboxes` — daftar mailbox + kuota
-- `GET    /api/mailboxes/:id` — detail mailbox
-- `POST   /api/mailboxes/:id/deactivate` | `/reactivate`
-- `DELETE /api/mailboxes/:id` — soft delete
-- `GET    /api/mailboxes/audit/logs` — audit trail
+**Security & Settings**
+- `GET  /api/security/sessions` — Daftar sesi login aktif & riwayat perangkat
+- `POST /api/security/2fa/toggle` — Aktifkan / nonaktifkan 2FA
+- `POST /api/security/sessions/terminate-others` — Hentikan seluruh sesi selain yang aktif
+- `GET  /api/settings` — Ambil profil dan konfigurasi preferensi customer
+- `PUT  /api/settings/preferences` — Simpan preferensi bahasa, timezone, dan signature
 
-**Email (customer)**
-- `GET    /api/email/folders` — folder + jumlah belum dibaca
-- `GET    /api/email?folder=&q=&page=` — daftar/cari email
-- `GET    /api/email/:uid` — buka email (HTML disanitasi)
-- `POST   /api/email/send` — kirim (multipart, lampiran maks 5 × 10MB)
+**Legal Documents Drive**
+- `GET    /api/documents` — Repositori dokumen legal, filter kategori & bintang, info kuota
+- `GET    /api/documents/:id` — Detail dokumen beserta seluruh riwayat versi
+- `GET    /api/documents/:id/download` — Stream unduh berkas asli dari storage
+- `POST   /api/documents/upload` — Unggah dokumen baru (multipart FormData)
+- `PATCH  /api/documents/:id/star` — Toggle bintang dokumen
+- `DELETE /api/documents/:id` — Hapus dokumen beserta versinya
+
+**Support Helpdesk**
+- `GET  /api/support/tickets` — Daftar tiket bantuan customer
+- `GET  /api/support/tickets/:id` — Thread percakapan tiket lengkap
+- `POST /api/support/tickets` — Buat tiket bantuan baru
+- `POST /api/support/tickets/:id/reply` — Balas pesan dalam thread tiket
+- `POST /api/support/tickets/:id/close` — Tutup tiket sebagai selesai (resolved)
+
+**Email & Mailbox**
+- `GET    /api/email/folders` — Folder + jumlah belum dibaca
+- `GET    /api/email?folder=&q=&page=` — Daftar / cari email
+- `GET    /api/email/:uid` — Buka email (HTML disanitasi)
+- `POST   /api/email/send` — Kirim email (multipart, lampiran maks 5 × 10MB)
 - `POST   /api/email/:uid/read` | `/star` | `/move`
-- `DELETE /api/email/:uid` — ke Trash, atau hapus permanen bila sudah di Trash
-- `GET    /api/email/attachment/:id/download`
-- `POST   /api/search` — pencarian full-text
+- `DELETE /api/email/:uid` — Ke Trash, atau hapus permanen
+- `GET    /api/email/attachment/:id/download` — Unduh lampiran email
 
-## Testing
+## Testing & Verifikasi
 
 ```bash
-npm run test:e2e        # Playwright, build + jalankan kedua server otomatis
-npm run seed            # reset database ke data contoh
+# Menjalankan 50 Playwright E2E tests (Desktop & Mobile)
+npx playwright test
+
+# Menjalankan 41 Jest backend tests
+npm --prefix backend test
+
+# Reset database ke data seed testing
+npm run seed
 ```
 
-Akun contoh: `admin@clienteasylegal.co.id / Admin123!` dan `budi@clienteasylegal.co.id / Customer123!`
+**Akun Demo:**
+- **Customer:** `budi@clienteasylegal.co.id` / `Customer123!`
+- **Trial (14 Hari):** `trial@clienteasylegal.co.id` / `Customer123!`
+- **Administrator:** `admin@clienteasylegal.co.id` / `Admin123!`
 
 ## Catatan implementasi
 

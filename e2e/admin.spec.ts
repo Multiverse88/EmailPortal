@@ -10,7 +10,7 @@ test.describe('Admin mailbox', () => {
 
   test('menampilkan tabel mailbox dan kuota', async ({ page }) => {
     await expect(page.getByTestId('quota')).toContainText('/ 100');
-    await expect(page.getByTestId('mailbox-row')).toHaveCount(2);
+    await expect(page.getByTestId('mailbox-row')).toHaveCount(9);
   });
 
   test('membuat mailbox baru dan menampilkan password sementara', async ({ page }) => {

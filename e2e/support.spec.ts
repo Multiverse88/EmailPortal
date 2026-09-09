@@ -93,7 +93,9 @@ test.describe('Support Desk & Ticket Thread', () => {
     await page.getByRole('button', { name: /Ajukan Tiket/i }).click();
 
     // Otomatis membuka modal thread tiket yang baru dibuat
-    await expect(page.getByText('Pertanyaan Integrasi API Baru')).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole('heading', { name: 'Pertanyaan Integrasi API Baru' })
+    ).toBeVisible({ timeout: 10000 });
     await expect(
       page.getByText(/Halo tim EasyLegal, kami membutuhkan petunjuk teknis webhook/i)
     ).toBeVisible();
