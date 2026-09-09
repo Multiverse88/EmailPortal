@@ -5,10 +5,12 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import {
   encrypt,
+  decrypt,
   verifyPassword,
   validatePasswordStrength,
   generatePassword,
 } from '../lib/crypto';
+import { verifyTotp } from '../lib/totp';
 import { sendOnboardingNotice } from '../lib/mail';
 import { audit } from '../lib/audit';
 import { authenticateAdmin, authenticateCustomer, authenticateOfficerOrAdmin, UserRole } from '../middleware/auth';
@@ -26,6 +28,9 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 const sign = (id: string, email: string, type: 'customer' | 'admin', role?: UserRole) =>
   jwt.sign({ id, email, type, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
+
+const signChallenge = (id: string, email: string) =>
+  jwt.sign({ id, email, purpose: '2fa-challenge' }, JWT_SECRET, { expiresIn: '5m' } as jwt.SignOptions);
 
 function parseClientInfo(req: Request) {
   const forwarded = req.headers['x-forwarded-for'];
@@ -78,6 +83,14 @@ export default (prisma: PrismaClient) => {
         return res.status(401).json({ error: 'Email atau password salah' });
       }
 
+      if (customer.twoFactorEnabled && customer.twoFactorSecret) {
+        return res.json({
+          requires2FA: true,
+          challengeToken: signChallenge(customer.id, customer.mailboxAddress),
+          message: 'Verifikasi 2 langkah diperlukan. Masukkan kode 6 digit dari aplikasi autentikator Anda.',
+        });
+      }
+
       await prisma.customer.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } });
 
       const clientInfo = parseClientInfo(req);
@@ -112,6 +125,79 @@ export default (prisma: PrismaClient) => {
       });
     } catch (error) {
       console.error('Login error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  router.post('/login/customer/2fa-verify', loginLimiter, async (req: Request, res: Response) => {
+    try {
+      const { challengeToken, code } = req.body ?? {};
+      if (!challengeToken || !code) {
+        return res.status(400).json({ error: 'Token verifikasi dan kode 2FA wajib diisi' });
+      }
+
+      let payload: any;
+      try {
+        payload = jwt.verify(challengeToken, JWT_SECRET);
+      } catch {
+        return res.status(401).json({ error: 'Sesi verifikasi 2FA telah kedaluwarsa. Silakan login kembali.' });
+      }
+
+      if (payload.purpose !== '2fa-challenge' || !payload.id) {
+        return res.status(401).json({ error: 'Token verifikasi tidak valid' });
+      }
+
+      const customer = await prisma.customer.findUnique({ where: { id: payload.id } });
+      if (!customer || customer.status !== 'active' || !customer.twoFactorSecret) {
+        return res.status(401).json({ error: 'Akun tidak valid atau 2FA belum dikonfigurasi' });
+      }
+
+      let secret: string;
+      try {
+        secret = decrypt(customer.twoFactorSecret);
+      } catch (err) {
+        return res.status(500).json({ error: 'Gagal mendekripsi kunci rahasia 2FA' });
+      }
+
+      const isValid = verifyTotp(code, secret);
+      if (!isValid) {
+        return res.status(401).json({ error: 'Kode 2FA salah atau kedaluwarsa' });
+      }
+
+      await prisma.customer.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } });
+
+      const clientInfo = parseClientInfo(req);
+      await prisma.loginSession.updateMany({
+        where: { customerId: customer.id },
+        data: { isCurrent: false },
+      });
+      await prisma.loginSession.create({
+        data: {
+          customerId: customer.id,
+          deviceName: clientInfo.deviceName,
+          deviceType: clientInfo.deviceType,
+          browser: clientInfo.browser,
+          ipAddress: clientInfo.ipAddress,
+          location: clientInfo.location,
+          isCurrent: true,
+          lastActiveAt: new Date(),
+        },
+      });
+
+      res.json({
+        token: sign(customer.id, customer.mailboxAddress, 'customer', 'customer'),
+        user: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.mailboxAddress,
+          type: 'customer',
+          role: 'customer',
+          avatarUrl: customer.avatarUrl,
+          storageQuota: customer.storageQuota,
+        },
+      });
+    } catch (error) {
+      console.error('2FA login verify error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
