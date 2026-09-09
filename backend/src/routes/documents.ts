@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
+import { storage } from '../lib/storage';
 
 const storageBase = process.env.STORAGE_DIR || './storage';
 export const STORAGE_DIR = path.isAbsolute(storageBase)
@@ -22,6 +23,11 @@ const upload = multer({
 
 const DEFAULT_FOLDERS = ['Client Agreements', 'Tax Filings', 'NDA Templates'];
 const STORAGE_LIMIT = 15 * 1024 * 1024 * 1024; // 15 GB in bytes
+
+const COLD_STORAGE_THRESHOLD_MS = 90 * 24 * 60 * 60 * 1000;
+export const isDocumentColdStorage = (createdAt: Date | string) => {
+  return (Date.now() - new Date(createdAt).getTime()) > COLD_STORAGE_THRESHOLD_MS;
+};
 
 export default (prisma: PrismaClient) => {
   const router = Router();
@@ -93,8 +99,13 @@ export default (prisma: PrismaClient) => {
 
       const storageUsed = storageAggregate._sum.size || 0;
 
+      const mappedDocuments = documents.map((doc) => ({
+        ...doc,
+        isColdStorage: isDocumentColdStorage(doc.createdAt),
+      }));
+
       res.json({
-        documents,
+        documents: mappedDocuments,
         folders,
         storageUsed,
         storageLimit: STORAGE_LIMIT,
@@ -120,6 +131,18 @@ export default (prisma: PrismaClient) => {
       const category = req.body.category?.trim() || 'Client Agreements';
       const status = req.body.status?.trim() || 'Reviewed';
       const ownerName = req.body.ownerName?.trim() || customer?.name || 'Legal Team';
+
+      // Persist to storage adapter & mirror to Synology
+      if (fs.existsSync(file.path)) {
+        try {
+          const fileBuffer = await fs.promises.readFile(file.path);
+          const storageKey = `documents/${customerId}/${path.basename(file.path)}`;
+          await storage.putObject(storageKey, fileBuffer, file.mimetype || 'application/pdf');
+          await storage.mirrorToSynology(storageKey, fileBuffer);
+        } catch (storageErr) {
+          console.warn('Warning: could not mirror to storage adapter:', storageErr);
+        }
+      }
 
       const document = await prisma.legalDocument.create({
         data: {
@@ -151,7 +174,12 @@ export default (prisma: PrismaClient) => {
         },
       });
 
-      res.status(201).json({ document });
+      res.status(201).json({
+        document: {
+          ...document,
+          isColdStorage: false,
+        },
+      });
     } catch (error) {
       console.error('Upload document error:', error);
       res.status(500).json({ error: 'Gagal mengunggah dokumen' });
@@ -176,7 +204,10 @@ export default (prisma: PrismaClient) => {
       }
 
       res.json({
-        document,
+        document: {
+          ...document,
+          isColdStorage: isDocumentColdStorage(document.createdAt),
+        },
         versions: document.versions,
       });
     } catch (error) {
@@ -197,19 +228,39 @@ export default (prisma: PrismaClient) => {
         return res.status(404).json({ error: 'Dokumen tidak ditemukan' });
       }
 
+      const isColdStorage = isDocumentColdStorage(document.createdAt);
       const filePath = path.resolve(STORAGE_DIR, path.basename(document.path));
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'File tidak ada di storage' });
+      const bucketKey = `documents/${customerId}/${path.basename(document.path)}`;
+
+      // 1. Check legacy storage path on disk
+      if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', document.mimeType || 'application/pdf');
+        if (req.query.inline === 'true') {
+          res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.filename)}"`);
+          return res.sendFile(filePath);
+        } else {
+          return res.download(filePath, document.filename);
+        }
       }
 
-      res.setHeader('Content-Type', document.mimeType || 'application/pdf');
-
-      if (req.query.inline === 'true') {
-        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.filename)}"`);
-        res.sendFile(filePath);
-      } else {
-        res.download(filePath, document.filename);
+      // 2. Check storage adapter (e.g. bucket or s3)
+      if (await storage.objectExists(bucketKey)) {
+        res.setHeader('Content-Type', document.mimeType || 'application/pdf');
+        const dispositionType = req.query.inline === 'true' ? 'inline' : 'attachment';
+        res.setHeader('Content-Disposition', `${dispositionType}; filename="${encodeURIComponent(document.filename)}"`);
+        const stream = await storage.getObjectStream(bucketKey);
+        return stream.pipe(res);
       }
+
+      // 3. If file missing in hot storage, check if cold storage retention applies
+      if (isColdStorage) {
+        return res.status(404).json({
+          error: 'Berkas telah diarsipkan ke Cold Storage (> 3 Bulan)',
+          isColdStorage: true,
+        });
+      }
+
+      return res.status(404).json({ error: 'File tidak ada di storage', isColdStorage: false });
     } catch (error) {
       console.error('Download document error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -238,7 +289,10 @@ export default (prisma: PrismaClient) => {
 
       res.json({
         isStarred: updated.isStarred,
-        document: updated,
+        document: {
+          ...updated,
+          isColdStorage: isDocumentColdStorage(updated.createdAt),
+        },
       });
     } catch (error) {
       console.error('Star document error:', error);
@@ -261,6 +315,13 @@ export default (prisma: PrismaClient) => {
       await prisma.legalDocument.delete({
         where: { id: document.id },
       });
+
+      const bucketKey = `documents/${customerId}/${path.basename(document.path)}`;
+      try {
+        await storage.deleteObject(bucketKey);
+      } catch (adapterErr) {
+        console.warn('Could not remove file from storage adapter:', adapterErr);
+      }
 
       try {
         const filePath = path.resolve(STORAGE_DIR, path.basename(document.path));

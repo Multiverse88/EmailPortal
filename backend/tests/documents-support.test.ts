@@ -607,4 +607,70 @@ describe('Documents & Support API Routes (TDD)', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  // ==========================================
+  // Cold Storage 90-Day Retention Detection
+  // ==========================================
+  describe('Cold Storage 90-day retention detection', () => {
+    let oldDoc: any;
+
+    beforeAll(async () => {
+      oldDoc = await prisma.legalDocument.create({
+        data: {
+          customerId: customerA.id,
+          title: 'Arsip Dokumen Lama (> 90 Hari)',
+          category: 'Client Agreements',
+          filename: 'arsip-lama.pdf',
+          mimeType: 'application/pdf',
+          size: 12000,
+          path: 'non-existent-old-doc.pdf',
+          status: 'Approved',
+          isStarred: false,
+          createdAt: new Date(Date.now() - 95 * 24 * 60 * 60 * 1000),
+        },
+      });
+    });
+
+    afterAll(async () => {
+      try {
+        await prisma.legalDocument.delete({ where: { id: oldDoc.id } });
+      } catch {}
+    });
+
+    it('flags documents older than 90 days as isColdStorage: true in GET /api/documents', async () => {
+      const res = await request(app)
+        .get('/api/documents')
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(200);
+      const docs = res.body.documents;
+      const recent = docs.find((d: any) => d.id === testDoc1.id);
+      const old = docs.find((d: any) => d.id === oldDoc.id);
+
+      expect(recent).toBeDefined();
+      expect(recent.isColdStorage).toBe(false);
+      expect(old).toBeDefined();
+      expect(old.isColdStorage).toBe(true);
+    });
+
+    it('flags document in GET /api/documents/:id detail', async () => {
+      const res = await request(app)
+        .get(`/api/documents/${oldDoc.id}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.document.isColdStorage).toBe(true);
+    });
+
+    it('returns cold storage notification when downloading missing hot file older than 90 days', async () => {
+      const res = await request(app)
+        .get(`/api/documents/${oldDoc.id}/download`)
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.isColdStorage).toBe(true);
+      expect(res.body.error).toMatch(/Cold Storage/i);
+    });
+  });
 });
+
