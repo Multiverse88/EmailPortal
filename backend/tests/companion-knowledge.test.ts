@@ -63,6 +63,47 @@ describe('Backend Companion Knowledge Base', () => {
     expect(match?.quickActions?.[0]?.priority).toBe('urgent');
   });
 
+  it('should match portal profile and features queries', () => {
+    const match = findMatchingKnowledge('website ini tentang apa dan apa saja fitur portal?');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('about-easylegal-portal');
+    expect(match?.content).toContain('EasyLegal Customer Portal');
+    expect(match?.content).toContain('/inbox');
+    expect(match?.content).toContain('/documents');
+  });
+
+  it('should match backend architecture queries', () => {
+    const match = findMatchingKnowledge('bagaimana arsitektur backend dan teknologi sistem ini?');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('backend-tech-architecture');
+    expect(match?.content).toContain('Node.js');
+    expect(match?.content).toContain('Express');
+    expect(match?.content).toContain('Prisma ORM');
+  });
+
+  it('should match hybrid storage location queries', () => {
+    const match = findMatchingKnowledge('di mana berkas dokumen saya disimpan secara cloud?');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('storage-cloud-synology');
+    expect(match?.content).toContain('Cloud S3 IDCloudHost');
+    expect(match?.content).toContain('Synology NAS Kantor');
+  });
+
+  it('should match data security and encryption queries', () => {
+    const match = findMatchingKnowledge('apakah keamanan data saya terjamin dan ada enkripsi password?');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('security-data-encryption');
+    expect(match?.content).toContain('AES-256-GCM');
+    expect(match?.content).toContain('2FA TOTP');
+  });
+
+  it('should match theme and dark mode queries', () => {
+    const match = findMatchingKnowledge('apakah website ini ada dark mode tema gelap?');
+    expect(match).not.toBeNull();
+    expect(match?.id).toBe('portal-theme-appearance');
+    expect(match?.content).toContain('Mode Gelap');
+  });
+
   it('should return null for unmatched random query', () => {
     const match = findMatchingKnowledge('siapa presiden pertama indonesia?');
     expect(match).toBeNull();
