@@ -104,7 +104,7 @@ export const authenticateSuperAdmin = async (
       return res.status(403).json({ error: 'Forbidden: not an admin' });
     }
 
-    const role = payload.role || 'admin';
+    const role = (payload.role || 'admin').toLowerCase().replace('_', '');
     if (role !== 'superadmin' && role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden: Super Admin access required' });
     }
@@ -135,7 +135,7 @@ export const authenticateOfficerOrAdmin = async (
       return res.status(403).json({ error: 'Forbidden: not an admin' });
     }
 
-    const role = payload.role || 'admin';
+    const role = (payload.role || 'admin').toLowerCase().replace('_', '');
     if (role !== 'officer' && role !== 'superadmin' && role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden: Officer or Admin access required' });
     }
