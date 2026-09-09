@@ -4,11 +4,16 @@ Dokumen ini menjelaskan arsitektur infrastruktur sistem **Email Portal Customer*
 
 ---
 
-## 1. Ringkasan Eksekutif
+### 1. Ringkasan Eksekutif
 
 | Parameter | Spesifikasi & Strategi |
 |---|---|
 | **Estimasi Beban** | 1.000 Customer / Bulan |
+| **Mail Server (Email)** | Hostinger Cloud Mail (Titan Engine, SMTP 465, IMAP 993, Developers API) |
+| **Mailbox Drive (File & Dokumen)** | IDCloudHost Object Storage (S3-Compatible, Bucket `emailportal`) |
+| **Batas Kuota Mailbox Drive** | **Maksimal 5 GB / Customer** |
+| **Foto Profil / Logo Perusahaan** | IDCloudHost Object Storage (Path S3: `avatars/{customerId}/`) |
+| **Penyimpanan Berkas di Hostinger** | **TIDAK** (Hostinger murni menampung pesan email masuk/keluar & lampiran mentah email; berkas Drive & Logo 100% tersimpan di IDCloudHost S3) |
 | **Hot Storage (Cloud)** | IDCloudHost Object Storage (S3-Compatible) |
 | **Masa Retensi Hot Storage** | 3 Bulan (Rolling Window / Steady-State) |
 | **Kapasitas Hot Storage Stabil** | ~150 GB – 250 GB |
@@ -21,7 +26,7 @@ Dokumen ini menjelaskan arsitektur infrastruktur sistem **Email Portal Customer*
 
 ## 2. Diagram Arsitektur Infrastruktur (System Architecture)
 
-Diagram berikut memetakan relasi antara pengguna, server VPS Dokploy di IDCloudHost, S3 Object Storage, dan Synology NAS lokal:
+Diagram berikut memetakan relasi antara pengguna, server VPS Dokploy di IDCloudHost, Hostinger Mail Cloud, IDCloudHost S3 Object Storage, dan Synology NAS lokal:
 
 ```mermaid
 flowchart TD
@@ -29,6 +34,7 @@ flowchart TD
     classDef client fill:#EBF5FB,stroke:#2980B9,stroke-width:2px,color:#1B4F72;
     classDef cloud fill:#E8F8F5,stroke:#16A085,stroke-width:2px,color:#0E6251;
     classDef storage fill:#FEF9E7,stroke:#F39C12,stroke-width:2px,color:#7D6608;
+    classDef hostinger fill:#FDF2E9,stroke:#E67E22,stroke-width:2px,color:#7E5109;
     classDef local fill:#F4ECF7,stroke:#8E44AD,stroke-width:2px,color:#512E5F;
 
     subgraph USERS["Public Internet & Pengguna"]
@@ -36,18 +42,25 @@ flowchart TD
         Admin["Admin / Legal Staff<br/>(Dashboard Browser)"]:::client
     end
 
+    subgraph HOSTINGER_INFRA["Hostinger Cloud Infrastructure (Mail Server)"]
+        HostingerAPI["Developers API v1<br/>(api.hostinger.com)"]:::hostinger
+        HostingerSMTP["SMTP Service :465<br/>(smtp.hostinger.com)"]:::hostinger
+        HostingerIMAP["IMAP Service :993<br/>(imap.hostinger.com)"]:::hostinger
+        HostingerMailbox[("Mailbox Storage<br/>(Pesan Email & Raw Attachment)")]:::hostinger
+    end
+
     subgraph IDCLOUDHOST["IDCloudHost Data Center (Indonesia)"]
         subgraph VPS_DOKPLOY["VPS Dokploy Server"]
             Traefik["Reverse Proxy Traefik<br/>(SSL / Auto HTTPS)"]:::cloud
-            Frontend["Frontend Next.js<br/>(Portal UI)"]:::cloud
+            Frontend["Frontend Next.js<br/>(Portal UI & Drive Client)"]:::cloud
             Backend["Backend Express.js<br/>(API & Business Logic)"]:::cloud
             Worker["Sync Worker Service<br/>(IMAP / Mail Sync)"]:::cloud
             Postgres[("PostgreSQL DB<br/>(Metadata, Auth & Logs)")]:::cloud
             Redis[("Redis Cache<br/>(Session & Queue)")]:::cloud
         end
 
-        subgraph HOT_STORAGE["Hot Storage (0 - 3 Bulan)"]
-            S3Storage[("IDCloudHost Object Storage<br/>(S3-Compatible Bucket)<br/>Kapasitas: ~150-250 GB")]:::storage
+        subgraph HOT_STORAGE["IDCloudHost Object Storage (Hot Storage: 0 - 3 Bulan)"]
+            S3Drive[("S3: Bucket 'emailportal'<br/>- Mailbox Drive Dokumen (Maks 5 GB/user)<br/>- Logo & Foto Profil Perusahaan<br/>- Cold Buffer Arsip (Total: ~150-250 GB)")]:::storage
         end
     end
 
@@ -63,9 +76,9 @@ flowchart TD
         end
     end
 
-    %% Network & Data Flows
-    Customer -->|HTTPS / Akses Portal| Traefik
-    Admin -->|HTTPS / Akses Dashboard| Traefik
+    %% Network & User Flows
+    Customer -->|HTTPS / Akses Portal & Drive| Traefik
+    Admin -->|HTTPS / Akses Admin Console| Traefik
     Traefik --> Frontend
     Traefik --> Backend
 
@@ -74,15 +87,24 @@ flowchart TD
     Backend <--> Redis
     Worker <--> Backend
 
-    Backend -->|1. Simpan & Baca Berkas Lampiran| S3Storage
+    %% Email Server Flows (Hostinger)
+    Admin -->|Provision Mailbox Baru| Backend
+    Backend -->|1. Auto Provision Mailbox| HostingerAPI
+    Backend -->|2. Kirim Email Customer| HostingerSMTP
+    Worker -->|3. Sinkronisasi Pesan Masuk| HostingerIMAP
+    HostingerSMTP --> HostingerMailbox
+    HostingerIMAP <--> HostingerMailbox
 
-    %% Archival Flows
-    ArchiveTool -.->|2. Download Arsip Berkala| S3Storage
+    %% Object Storage Flows (IDCloudHost S3)
+    Backend -->|4. Upload / Unduh Dokumen Drive & Logo (Maks 5 GB)| S3Drive
+    Backend -.->|5. Bridge: 'Simpan Lampiran ke Drive'| S3Drive
+
+    %% Archival Flows (Synology NAS)
+    ArchiveTool -.->|6. Download Arsip Berkala > 90 Hari| S3Drive
     ArchiveTool -.->|Simpan File Lama| LocalFolder
     LocalFolder <--> SyncClient
-    SyncClient ==|3. Otomatis Sync via QuickConnect / LAN|==> NAS
-
-    ArchiveTool -.->|4. Purge File Lama dari S3| S3Storage
+    SyncClient ==|7. Otomatis Sync via QuickConnect / LAN|==> NAS
+    ArchiveTool -.->|8. Purge File Lama dari S3| S3Drive
 ```
 
 ---
@@ -153,15 +175,31 @@ sequenceDiagram
 * **Backend & Worker**: Menjalankan Node.js untuk menangani REST API, IMAP sync dengan Hostinger, adapter S3, dan deteksi usia berkas (Smart Age Detection).
 * **Database (PostgreSQL)**: Menyimpan metadata dokumen (nama file, hash, ukuran, relasi user, timestamp asli), bukan file fisik biner.
 
-### B. Hot Storage Layer (IDCloudHost Object Storage S3)
-* **Standard**: S3-Compatible API.
-* **Fungsi**: Menyimpan berkas biner aktif (PDF kontrak, scan identitas, lampiran email) selama **maksimal 90 hari (3 bulan)**.
-* **Keunggulan**:
-  * **Zero VPS Disk Bloat**: Hard disk SSD VPS tetap bersih dan tidak akan kehabisan ruang.
-  * **Intranet Speed**: Karena VPS dan S3 berada di data center IDCloudHost yang sama, latensi transfer data sangat rendah (< 2 ms).
-  * **Auto Purge via Lifecycle**: Menggunakan Native S3 Lifecycle Rule untuk otomatis menghapus berkas > 90 hari tanpa membebani resource komputasi VPS.
+### B. Mail Server Layer (Hostinger Cloud Mail)
+* **Standard**: SMTP (Port 465 SSL), IMAP (Port 993 SSL), dan Hostinger Developers REST API (`https://api.hostinger.com/v1/email`).
+* **Fungsi**: 
+  * Menangani pengiriman email langsung melalui kredensial masing-masing customer (`smtp.hostinger.com`).
+  * Menyinkronkan kotak masuk (Inbox), email terkirim, draf, dan folder IMAP pelanggan (`imap.hostinger.com`).
+  * Auto-provisioning mailbox baru melalui API Hostinger saat admin mendaftarkan klien.
+* **Tanggung Jawab Data**: **HANYA** menyimpan data pesan email (body HTML, subject, headers) dan berkas yang menempel langsung sebagai *attachment* email mentah.
+* **Penegasan**: Hostinger Email **TIDAK** memiliki fungsi file drive/repositori, sehingga **TIDAK menyimpan dokumen Mailbox Drive maupun foto profil/logo korporat**.
 
-### C. Cold Storage Layer (Synology NAS & Drive Client)
+### C. Hot Storage Layer (IDCloudHost Object Storage S3)
+* **Standard**: S3-Compatible API (`https://is3.cloudhost.id`, Bucket: `emailportal`).
+* **Fungsi**: 
+  * **Mailbox Drive (Legal Documents)**: Menampung seluruh berkas digital korporasi (akta pendirian, kontrak, SK Kemenkumham, invoice) dengan batasan kuota **maksimal 5 GB per akun customer**.
+  * **Aset Logo & Profil**: Menampung foto profil / logo resmi perusahaan klien (`avatars/{customerId}/`) dalam format PNG/JPG/WebP/SVG (maks 3 MB).
+  * **Lampiran Email yang Disimpan ke Drive**: Lampiran email yang disalin oleh customer via fitur *"Simpan ke Drive"* dialihkan ke S3 agar tidak memakan kuota email Hostinger.
+* **Keunggulan**:
+  * **Zero VPS Disk Bloat**: Hard disk SSD VPS tetap bersih dan bebas dari beban berkas berukuran gigabyte.
+  * **Intranet Speed**: Karena VPS Dokploy dan S3 berada di dalam satu data center IDCloudHost (Indonesia), transfer berkas berlatensi ultra-rendah (< 2 ms).
+  * **Struktur Prefix S3 Terisolasi**:
+    * `documents/{customerId}/` — Repositori dokumen Mailbox Drive.
+    * `avatars/{customerId}/` — Foto profil dan logo perusahaan klien.
+    * `attachments/{customerId}/` — Lampiran email yang dialihkan ke cloud drive.
+  * **Auto Purge via Lifecycle**: Menggunakan Native S3 Lifecycle Rule untuk otomatis mengeliminasi berkas berumur > 90 hari setelah dicadangkan ke NAS.
+
+### D. Cold Storage Layer (Synology NAS & Drive Client)
 * **Fungsi**: Arsip permanen jangka panjang untuk keperluan audit hukum dan retensi data bertahun-tahun.
 * **Mekanisme Bridge**:
   * Menggunakan **Synology Drive Client** yang terpasang di komputer/laptop administrator.
@@ -170,7 +208,96 @@ sequenceDiagram
 
 ---
 
-## 5. Analisis Kapasitas & Estimasi Biaya
+## 5. Pemisahan Peran Penyimpanan: Hostinger vs IDCloudHost
+
+Bagian ini menegaskan batas arsitektur antara layanan **Hostinger Cloud Mail** dan **IDCloudHost Object Storage (S3)** untuk mencegah ambiguitas penempatan berkas dalam sistem:
+
+### 5.1 Apakah Berkas Dokumen & Logo Tersimpan di Hostinger?
+
+> [!IMPORTANT]
+> **Jawabannya: TIDAK.** 
+> Berkas dokumen (Mailbox Drive) dan foto profil / logo korporasi **SAMA SEKALI TIDAK TERSIMPAN DI SERVER HOSTINGER**.
+> Seluruh berkas tersebut **100% murni tersimpan di IDCloudHost Object Storage S3** (Bucket: `emailportal`).
+
+#### Alasan Teknis & Arsitektural:
+1. **Hostinger Murni Layanan Mail Server**:
+   Hostinger Email Hosting hanya menyediakan protokol IMAP/SMTP/POP3 dan antarmuka webmail. Hostinger tidak menyediakan API Object Storage (seperti S3 atau Google Drive API) untuk menyimpan berkas aplikasi atau repositori folder dinamis.
+2. **Perlindungan Kuota Email**:
+   Jika dokumen korporasi (kontrak, akta ratusan MB) dipaksakan masuk ke server email Hostinger, kuota email akan sangat cepat habis (*quota exceeded*), yang dapat menyebabkan email penting dari pihak eksternal gagal masuk (*bounce*).
+3. **Kecepatan & Kedaulatan Data Lokal**:
+   IDCloudHost S3 berlokasi di data center Indonesia, menghasilkan latensi sangat rendah untuk pratinjau (*preview*) dokumen instan dan unduh berkas biner, serta sepenuhnya mematuhi UU Pelindungan Data Pribadi (UU PDP).
+
+---
+
+### 5.2 Matriks Perbandingan & Pembagian Tanggung Jawab
+
+| Kategori / Parameter | Hostinger Email Hosting | IDCloudHost Object Storage (S3) |
+|---|---|---|
+| **Peran Utama** | Mail Server Korporasi (Kirim/Terima Surat) | Repositori Dokumen Legal & Aset Portal |
+| **Protokol Komunikasi** | SMTP (`:465`), IMAP (`:993`), REST API | S3 REST API (AWS Signature V4, HTTPS) |
+| **Data yang Disimpan** | Pesan email (HTML/Text), subject, mailbox folder, attachment mentah email | File PDF dokumen legal, DOCX, scan identitas, foto profil / logo perusahaan |
+| **Penyimpanan Mailbox Drive** | ❌ **Tidak Ada** |  **100% Tersimpan (Bucket: `emailportal`)** |
+| **Penyimpanan Logo Perusahaan** | ❌ **Tidak Ada** |  **100% Tersimpan (Prefix: `avatars/`)** |
+| **Alokasi Batas Kuota** | Kuota bawaan paket Hostinger Email | **Maksimal 5 GB per Akun Customer** |
+| **Masa Retensi Data** | Permanen di server Hostinger (selama kuota cukup) | Hot Tier 90 hari $\rightarrow$ Cold Tier Synology NAS |
+| **Konektivitas ke Portal** | NodeMailer (SMTP) + ImapFlow (IMAP) | AWS SDK `@aws-sdk/client-s3` |
+
+---
+
+### 5.3 Mekanisme Bridging (Konektivitas Antar-Layanan)
+
+Meskipun disimpan di dua penyedia infrastruktur yang berbeda, portal menghubungkan keduanya secara mulus (*seamless bridging*):
+
+```mermaid
+flowchart LR
+    subgraph Hostinger["Hostinger Email Server"]
+        EmailMsg["Pesan Email Masuk"]
+        Attach["Lampiran Email Kontrak (PDF)"]
+        EmailMsg --> Attach
+    end
+
+    subgraph BackendAPI["Backend Express API"]
+        BridgeLogic["Fitur Jembatan:<br/>'Simpan Lampiran ke Drive'"]
+        DriveLogic["Drive Upload Controller<br/>(Validasi Kuota <= 5 GB)"]
+        AvatarLogic["Profile Logo Controller<br/>(Upload & Resize Aset)"]
+    end
+
+    subgraph S3Bucket["IDCloudHost S3 (Bucket: emailportal)"]
+        DocStorage["Mailbox Drive (Dokumen Legal)<br/>Kuota Maks: 5 GB"]
+        AvatarStorage["Logo / Foto Profil Perusahaan<br/>(avatars/{customerId}/)"]
+    end
+
+    Attach -->|"1. Klik 'Simpan ke Drive'"| BridgeLogic
+    BridgeLogic -->|"2. Stream Salin ke S3"| DocStorage
+    DriveLogic -->|"Upload Dokumen Manual"| DocStorage
+    AvatarLogic -->|"Upload Logo Perusahaan"| AvatarStorage
+```
+
+#### Alur Kerja Jembatan (*Bridge Workflow*):
+1. **Alur Email Standar**: Customer membaca dan mengirim email melalui protokol Hostinger IMAP & SMTP.
+2. **Alur Mailbox Drive & Logo**: Customer mengunggah berkas dokumen legal di menu `/documents` atau memperbarui logo korporat di `/settings?tab=profile`. Backend memvalidasi ukuran dan menyimpannya langsung ke IDCloudHost S3.
+3. **Alur "Simpan Lampiran ke Drive"**: Ketika email masuk berisi lampiran penting (misal: kontrak kerja sama atau bukti bayar), customer cukup menekan tombol *"Simpan ke Drive"*. Backend akan membaca stream berkas dari pesan email Hostinger dan menyalinnya ke bucket S3 IDCloudHost, sekaligus mencatatnya ke repositori dokumen resmi customer tanpa menghabiskan kuota email Hostinger.
+
+---
+
+### 5.4 Kebijakan Kuota 5 GB & Pengelolaan Logo Perusahaan
+
+1. **Batas Kuota Mailbox Drive (5 GB)**:
+   * Setiap akun customer dialokasikan ruang penyimpanan Mailbox Drive sebesar **5 GB** (`5 * 1024 * 1024 * 1024` byte) pada bucket IDCloudHost S3.
+   * **Validasi Sisi Server (Backend)**: Sebelum file diunggah ke S3, backend menghitung akumulasi total kapasitas berkas yang sudah digunakan oleh customer. Jika penambahan file baru melebihi 5 GB, server menolak permintaan dengan kode HTTP `413 Payload Too Large` beserta pesan: *"Kapasitas penyimpanan Mailbox Drive Anda telah mencapai batas maksimal (5 GB)."*
+   * **Visualisasi Sisi Klien (Frontend)**: Halaman Dokumen (`/documents`) dan Pengaturan (`/settings`) menampilkan indikator kapasitas penyimpanan dinamis (progress bar) berbasis 5 GB secara transparan.
+
+2. **Pengunggahan Logo Perusahaan di Menu Pengaturan (`/settings?tab=profile`)**:
+   * Customer dapat mengunggah logo resmi perusahaan untuk personalisasi identitas bisnis.
+   * Aset disimpan ke S3 dengan format: `avatars/{customerId}/logo_{timestamp}.[png|jpg|webp|svg]`.
+   * Logo yang berhasil diunggah otomatis diintegrasikan dan ditampilkan pada:
+     - Header aplikasi utama ([`SuiteHeader`](file:///home/fullstackiteasylegal/Documents/Email%20Portal%20Customer/frontend/src/components/suite-header.tsx)) menggantikan inisial nama.
+     - Kartu identitas profil perusahaan di menu Pengaturan.
+     - Pratinjau dokumen legal korporat.
+
+---
+
+## 6. Analisis Kapasitas & Estimasi Biaya
 
 ### Proyeksi Kapasitas (1.000 Pengguna / Bulan)
 
@@ -197,7 +324,7 @@ $$\text{Steady-State Storage S3} = 75\text{ GB} \times 3 = \mathbf{225\text{ GB}
 
 ---
 
-## 6. Aspek Keamanan & Kepatuhan Regulasi
+## 7. Aspek Keamanan & Kepatuhan Regulasi
 
 1. **Kedaulatan Data (UU Pelindungan Data Pribadi / PDP)**:
    * Seluruh data aktif tersimpan di pusat data lokal Indonesia (IDCloudHost Data Center).
@@ -210,9 +337,9 @@ $$\text{Steady-State Storage S3} = 75\text{ GB} \times 3 = \mathbf{225\text{ GB}
 
 ---
 
-## 7. Kebijakan Retensi 3 Bulan & Integrasi Tiket Bantuan (Cold Storage Restore)
+## 8. Kebijakan Retensi 3 Bulan & Integrasi Tiket Bantuan (Cold Storage Restore)
 
-### 7.1 Kebijakan S3 Native Lifecycle Rule (90 Hari)
+### 8.1 Kebijakan S3 Native Lifecycle Rule (90 Hari)
 Bucket S3 IDCloudHost (`emailportal`) dikonfigurasi dengan aturan siklus hidup (lifecycle policy) resmi Ceph S3:
 * **Target Bucket**: `emailportal`
 * **Filter Prefix**: `attachments/` dan `documents/` (atau seluruh objek dalam bucket)
@@ -238,7 +365,7 @@ Bucket S3 IDCloudHost (`emailportal`) dikonfigurasi dengan aturan siklus hidup (
 
 ---
 
-### 7.2 Backend Smart Age Detection (Deteksi Usia Cerdas)
+### 8.2 Backend Smart Age Detection (Deteksi Usia Cerdas)
 Untuk mencegah error `404 Not Found` saat customer mencoba mengunduh file yang sudah dibersihkan oleh S3 setelah 90 hari:
 
 1. **Kalkulasi Usia Berkas**:
@@ -271,7 +398,7 @@ Untuk mencegah error `404 Not Found` saat customer mencoba mengunduh file yang s
 
 ---
 
-### 7.3 Pengalaman Pengguna (UI/UX) & 1-Klik Buka Tiket
+### 8.3 Pengalaman Pengguna (UI/UX) & 1-Klik Buka Tiket
 Di portal frontend (`/documents` dan `/inbox`):
 
 1. **Indikator Status (Badge)**:
@@ -299,7 +426,7 @@ Di portal frontend (`/documents` dan `/inbox`):
 
 ---
 
-### 7.4 Standard Operating Procedure (SOP) Admin: Pemulihan dari Synology NAS
+### 8.4 Standard Operating Procedure (SOP) Admin: Pemulihan dari Synology NAS
 1. **Penerimaan Tiket**: Staf Admin/Legal menerima notifikasi tiket baru di modul Helpdesk (`/support`).
 2. **Pencarian Berkas di NAS**:
    * Admin membuka folder sinkronisasi Synology Drive di laptop/PC kantor:

@@ -57,7 +57,7 @@ Setiap panduan dan spesifikasi telah dikelompokkan ke dalam folder masing-masing
 
 | Modul / Topik | Lokasi Folder & File | Ringkasan Konten |
 |---|---|---|
-| **Infrastruktur & Storage** | [`docs/infrastructure/`](docs/infrastructure/INFRASTRUCTURE.md) | Arsitektur Hybrid Storage (Hot S3 IDCloudHost + Cold Synology NAS), Lifecycle Rule 90 hari, dan integrasi tiket bantuan. |
+| **Infrastruktur & Storage** | [`docs/infrastructure/`](docs/infrastructure/INFRASTRUCTURE.md) | Arsitektur Dual-Storage (Hostinger Mail vs IDCloudHost S3 Mailbox Drive 5GB & Logo), Hybrid Storage S3 + Synology NAS, Lifecycle 90 hari, dan integrasi tiket bantuan. |
 | **Deployment & Server** | [`docs/deployment/`](docs/deployment/DEPLOYMENT.md) | Panduan instalasi dan deployment via Dokploy VPS, Docker Compose, manual installation, dan environment variables. |
 | **Perencanaan & Requirement** | [`docs/planning/`](docs/planning/Planning-Development.md) | Analisis kebutuhan sistem, batasan fungsional (FR-01 s.d. FR-24), arsitektur modul, dan implementasi bertahap. |
 | **Integrasi Mail (SMTP/IMAP)** | [`docs/smtp/`](docs/smtp/SMTP_SETUP_GUIDE.md) | Panduan langkah demi langkah konfigurasi mail server Hostinger Titan Mail untuk pengiriman dan penerimaan email. |
