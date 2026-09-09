@@ -20,7 +20,8 @@
     "seed:demo": "tsx prisma/seed-demo.ts",
     "db:push": "prisma db push",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "storage:sync-synology": "npm --prefix backend run storage:sync-synology --"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

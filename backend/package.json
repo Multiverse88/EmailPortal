@@ -9,7 +9,8 @@
     "lint": "eslint src --ext .ts",
     "test": "jest",
     "migrate": "prisma migrate dev",
-    "generate": "prisma generate --schema ../prisma/schema.prisma"
+    "generate": "prisma generate --schema ../prisma/schema.prisma",
+    "storage:sync-synology": "tsx scripts/sync-synology.ts"
   },
   "dependencies": {
     "aws-sdk": "^2.1530.0",
