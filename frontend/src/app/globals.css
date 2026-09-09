@@ -153,3 +153,23 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #a79e9b;
 }
+
+/* AI Companion El 3D Breathing Float Animation */
+@keyframes el-breathe-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-el-breathe {
+  animation: el-breathe-float 3.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-el-breathe {
+    animation: none !important;
+  }
+}
