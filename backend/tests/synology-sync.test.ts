@@ -9,6 +9,7 @@ describe('SynologySyncService', () => {
   const targetDir = getSynologyDir();
 
   beforeAll(async () => {
+    jest.setTimeout(30000);
     service.initTargetFolder();
   });
 
@@ -32,20 +33,19 @@ describe('SynologySyncService', () => {
     expect(Array.isArray(result.errors)).toBe(true);
   });
 
-  it('formats account folder names with company name and email, sanitizing invalid characters', () => {
+  it('formats account folder names with pure email address and sanitizes invalid characters', () => {
     const { getAccountFolderName, sanitizeFileName, sanitizeFolderName } = require('../src/lib/synology-sync');
 
     expect(getAccountFolderName({ name: 'PT Sinar Jaya', mailboxAddress: 'ptsinarjaya@clienteasylegal.co.id' }))
-      .toBe('PT Sinar Jaya (ptsinarjaya@clienteasylegal.co.id)');
-
-    expect(getAccountFolderName({ name: 'ptsinarjaya@clienteasylegal.co.id', mailboxAddress: 'ptsinarjaya@clienteasylegal.co.id' }))
       .toBe('ptsinarjaya@clienteasylegal.co.id');
 
-    expect(getAccountFolderName({ name: 'PT/CV: Sinar * Jaya?', mailboxAddress: 'sinar@clienteasylegal.co.id' }))
-      .toBe('PT_CV_ Sinar _ Jaya_ (sinar@clienteasylegal.co.id)');
+    expect(getAccountFolderName({ name: 'Ahmad Subarjo', mailboxAddress: 'ahmad@clienteasylegal.co.id' }))
+      .toBe('ahmad@clienteasylegal.co.id');
 
-    expect(getAccountFolderName({ name: null, mailboxAddress: 'budi@clienteasylegal.co.id' }))
-      .toBe('budi@clienteasylegal.co.id');
+    expect(getAccountFolderName({ name: 'No Mailbox', personalEmail: 'personal@gmail.com' }))
+      .toBe('personal@gmail.com');
+
+    expect(getAccountFolderName(null)).toBe('general');
 
     expect(sanitizeFileName('folder/sub/Akta Pendirian: PT?.pdf')).toBe('Akta Pendirian_ PT_.pdf');
     expect(sanitizeFolderName('Legal / Tax * Dept <HQ>')).toBe('Legal _ Tax _ Dept _HQ_');

@@ -35,15 +35,16 @@ export function sanitizeFileName(filename: string): string {
   return path.basename(filename).replace(/[/\\:*?"<>|]/g, '_').trim();
 }
 
-export function getAccountFolderName(customer?: { name?: string | null; mailboxAddress?: string | null } | null): string {
-  if (!customer) return 'General';
-  const email = customer.mailboxAddress ? sanitizeFolderName(customer.mailboxAddress.trim()) : '';
-  const name = customer.name ? sanitizeFolderName(customer.name.trim()) : '';
-
-  if (name && email && name.toLowerCase() !== email.toLowerCase()) {
-    return `${name} (${email})`;
+export function getAccountFolderName(
+  customer?: { name?: string | null; mailboxAddress?: string | null; personalEmail?: string | null } | null
+): string {
+  if (!customer) return 'general';
+  const email = (customer.mailboxAddress || customer.personalEmail || '').trim().toLowerCase();
+  if (email) {
+    return sanitizeFolderName(email);
   }
-  return email || name || 'General';
+  const fallback = (customer.name || '').trim().toLowerCase();
+  return sanitizeFolderName(fallback) || 'general';
 }
 
 export class SynologySyncService {
