@@ -5,6 +5,7 @@ import path from 'node:path';
 import { storage } from '../lib/storage';
 import { getCustomerStorageStats } from '../lib/quota';
 import { getAccountFolderName } from '../lib/synology-sync';
+import { computeRetention } from '../lib/retention';
 
 const uploadAvatar = multer({
   storage: multer.memoryStorage(),
@@ -58,6 +59,7 @@ export default (prisma: PrismaClient) => {
         },
         preferences,
         storageStats,
+        retention: computeRetention(customer.createdAt),
       });
     } catch (error) {
       console.error('Get settings error:', error);
