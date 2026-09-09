@@ -9,6 +9,7 @@ export interface User {
   role?: 'superadmin' | 'officer' | 'admin' | 'customer';
   avatarUrl?: string | null;
   storageQuota?: number;
+  twoFactorEnabled?: boolean;
 }
 
 export type UserRole = 'customer' | 'admin';

@@ -32,6 +32,9 @@ import {
   Upload,
   Trash2,
   Headphones,
+  Copy,
+  QrCode,
+  X,
 } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
 import { useCustomerAuth } from '@/store/auth';
@@ -153,6 +156,20 @@ function SettingsContent() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean>(false);
   const [toggling2FA, setToggling2FA] = useState(false);
   const [twoFactorFeedback, setTwoFactorFeedback] = useState<string>('');
+
+  // 2FA Setup & Disable Modal States
+  const [show2FASetupModal, setShow2FASetupModal] = useState(false);
+  const [setupData, setSetupData] = useState<{ secret: string; otpauthUri: string; qrCodeUrl: string } | null>(null);
+  const [setupOtpCode, setSetupOtpCode] = useState('');
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState('');
+  const [setupSuccess, setSetupSuccess] = useState(false);
+  const [copiedSecret, setCopiedSecret] = useState(false);
+
+  const [show2FADisableModal, setShow2FADisableModal] = useState(false);
+  const [disablePassword, setDisablePassword] = useState('');
+  const [disableLoading, setDisableLoading] = useState(false);
+  const [disableError, setDisableError] = useState('');
 
   const [currentPassword, setCurrent] = useState('');
   const [newPassword, setNew] = useState('');
@@ -380,21 +397,91 @@ function SettingsContent() {
     }
   };
 
-  // 2FA Toggle
+  // 2FA Toggle & Modals
   const handleToggle2FA = async () => {
-    setToggling2FA(true);
-    setTwoFactorFeedback('');
+    if (twoFactorEnabled) {
+      setDisablePassword('');
+      setDisableError('');
+      setShow2FADisableModal(true);
+    } else {
+      setShow2FASetupModal(true);
+      setSetupData(null);
+      setSetupOtpCode('');
+      setSetupError('');
+      setSetupSuccess(false);
+      setSetupLoading(true);
+      try {
+        const res = await api.post('/security/2fa/setup');
+        setSetupData(res.data);
+      } catch (err) {
+        setSetupError(errMsg(err, 'Gagal memuat konfigurasi 2FA'));
+      } finally {
+        setSetupLoading(false);
+      }
+    }
+  };
+
+  const handleVerify2FASetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!setupOtpCode || setupOtpCode.length !== 6) {
+      setSetupError('Masukkan 6 digit kode dari aplikasi autentikator Anda');
+      return;
+    }
+    setSetupLoading(true);
+    setSetupError('');
     try {
-      const nextState = !twoFactorEnabled;
-      const res = await api.post('/security/2fa/toggle', { enabled: nextState });
-      const active = !!res.data.twoFactorEnabled;
-      setTwoFactorEnabled(active);
-      setTwoFactorFeedback(active ? '2FA telah aktif terlindungi' : '2FA telah dinonaktifkan');
-      setTimeout(() => setTwoFactorFeedback(''), 4000);
+      const res = await api.post('/security/2fa/verify-setup', { code: setupOtpCode });
+      if (res.data.success) {
+        setSetupSuccess(true);
+        setTwoFactorEnabled(true);
+        if (user) {
+          updateUser({ ...user, twoFactorEnabled: true });
+        }
+        setTwoFactorFeedback('2FA telah aktif terlindungi');
+        setTimeout(() => {
+          setShow2FASetupModal(false);
+          setSetupSuccess(false);
+          setTwoFactorFeedback('');
+        }, 1500);
+      }
     } catch (err) {
-      setTwoFactorFeedback(errMsg(err, 'Gagal mengubah status 2FA'));
+      setSetupError(errMsg(err, 'Kode 2FA salah atau telah kedaluwarsa'));
     } finally {
-      setToggling2FA(false);
+      setSetupLoading(false);
+    }
+  };
+
+  const handleConfirm2FADisable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!disablePassword) {
+      setDisableError('Kata sandi saat ini wajib diisi');
+      return;
+    }
+    setDisableLoading(true);
+    setDisableError('');
+    try {
+      const res = await api.post('/security/2fa/disable', { currentPassword: disablePassword });
+      if (res.data.success) {
+        setTwoFactorEnabled(false);
+        if (user) {
+          updateUser({ ...user, twoFactorEnabled: false });
+        }
+        setShow2FADisableModal(false);
+        setTwoFactorFeedback('2FA telah dinonaktifkan');
+        setTimeout(() => setTwoFactorFeedback(''), 4000);
+      }
+    } catch (err) {
+      setDisableError(errMsg(err, 'Kata sandi salah'));
+    } finally {
+      setDisableLoading(false);
+    }
+  };
+
+  const handleCopySecret = () => {
+    if (setupData?.secret) {
+      navigator.clipboard.writeText(setupData.secret);
+      setCopiedSecret(true);
+      setTimeout(() => setCopiedSecret(false), 2000);
     }
   };
 
@@ -1648,6 +1735,211 @@ function SettingsContent() {
         initialMessage={ticketConfig.message}
         initialPriority={ticketConfig.priority}
       />
+
+      {/* 2FA Setup Modal */}
+      {show2FASetupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Aktivasi Autentikasi 2-Faktor (2FA)</h3>
+                  <p className="text-[11px] text-slate-500">Google Authenticator / Authy / 1Password</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShow2FASetupModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            {setupSuccess ? (
+              <div className="p-6 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-slate-900">2FA Berhasil Diaktifkan!</h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Akun Anda kini terlindungi dengan kode autentikasi 2 langkah setiap kali login.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleVerify2FASetup} className="p-6 space-y-5">
+                {setupError && (
+                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                    <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                    <span>{setupError}</span>
+                  </div>
+                )}
+
+                {setupLoading && !setupData ? (
+                  <div className="flex flex-col items-center justify-center py-8 gap-3">
+                    <Loader2 className="w-7 h-7 text-primary animate-spin" />
+                    <p className="text-xs text-slate-500">Menyiapkan kode QR keamanan...</p>
+                  </div>
+                ) : setupData ? (
+                  <>
+                    <div className="space-y-3">
+                      <p className="text-xs text-slate-600">
+                        <strong>Langkah 1:</strong> Pindai kode QR berikut menggunakan aplikasi autentikator di ponsel Anda:
+                      </p>
+                      <div className="flex justify-center p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={setupData.qrCodeUrl}
+                          alt="Kode QR 2FA"
+                          className="w-44 h-44 rounded-lg bg-white p-1 border border-slate-200"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] text-slate-500">
+                        Atau masukkan kunci rahasia ini secara manual:
+                      </p>
+                      <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg p-2 font-mono text-xs text-slate-800 justify-between">
+                        <span className="truncate select-all">{setupData.secret}</span>
+                        <button
+                          type="button"
+                          onClick={handleCopySecret}
+                          className="shrink-0 flex items-center gap-1 text-[11px] font-sans font-semibold text-primary hover:underline"
+                        >
+                          {copiedSecret ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                          <span>{copiedSecret ? 'Tersalin' : 'Salin'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-2">
+                      <label htmlFor="setupOtp" className="block text-xs font-semibold text-slate-700">
+                        <strong>Langkah 2:</strong> Masukkan 6 digit kode dari aplikasi untuk konfirmasi:
+                      </label>
+                      <input
+                        id="setupOtp"
+                        data-testid="input-setup-otp"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        required
+                        autoFocus
+                        value={setupOtpCode}
+                        onChange={(e) => setSetupOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="w-full text-center tracking-[0.3em] font-mono text-xl font-bold rounded-xl border border-border-subtle bg-white py-2.5 px-3 text-slate-900 shadow-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setShow2FASetupModal(false)}
+                        className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="submit"
+                        data-testid="submit-verify-setup"
+                        disabled={setupLoading || setupOtpCode.length !== 6}
+                        className="flex items-center gap-1.5 bg-primary hover:bg-primary-container text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-60 transition shadow-sm"
+                      >
+                        {setupLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                        <span>Verifikasi &amp; Aktifkan</span>
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2FA Disable Modal */}
+      {show2FADisableModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-red-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                  <ShieldAlert className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Nonaktifkan Autentikasi 2-Faktor?</h3>
+                  <p className="text-[11px] text-slate-500">Konfirmasi keamanan akun</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShow2FADisableModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirm2FADisable} className="p-6 space-y-4">
+              {disableError && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                  <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                  <span>{disableError}</span>
+                </div>
+              )}
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Menonaktifkan 2FA akan menghapus verifikasi OTP saat login. Akun Anda hanya akan dilindungi oleh kata sandi tunggal.
+              </p>
+
+              <div>
+                <label htmlFor="disablePassword" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Masukkan kata sandi akun untuk konfirmasi:
+                </label>
+                <input
+                  id="disablePassword"
+                  data-testid="input-disable-2fa-password"
+                  type="password"
+                  required
+                  autoFocus
+                  value={disablePassword}
+                  onChange={(e) => setDisablePassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full rounded-xl border border-border-subtle bg-white py-2.5 px-3 text-sm text-slate-900 shadow-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShow2FADisableModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  data-testid="submit-confirm-disable-2fa"
+                  disabled={disableLoading || !disablePassword}
+                  className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-60 transition shadow-sm"
+                >
+                  {disableLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Konfirmasi Nonaktifkan</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
