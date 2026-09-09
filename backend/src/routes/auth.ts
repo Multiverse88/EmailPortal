@@ -29,7 +29,12 @@ const sign = (id: string, email: string, type: 'customer' | 'admin', role?: User
 
 function parseClientInfo(req: Request) {
   const forwarded = req.headers['x-forwarded-for'];
-  const ipAddress = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress) || '127.0.0.1';
+  let ipAddress = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress) || '127.0.0.1';
+  if (ipAddress === '::1' || ipAddress === '::ffff:127.0.0.1') {
+    ipAddress = '127.0.0.1';
+  }
+  const isLocal = ipAddress === '127.0.0.1' || ipAddress.startsWith('192.168.') || ipAddress.startsWith('10.');
+  const location = isLocal ? 'Lokal (Development)' : 'Indonesia';
   const ua = req.headers['user-agent'] || 'Unknown Device';
   
   let deviceType = 'desktop';
@@ -40,12 +45,15 @@ function parseClientInfo(req: Request) {
   }
 
   let browser = 'Browser Web';
-  if (/chrome/i.test(ua) && !/edg/i.test(ua)) browser = 'Chrome';
-  else if (/firefox/i.test(ua)) browser = 'Firefox';
-  else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browser = 'Safari';
+  if (/firefox/i.test(ua)) browser = 'Firefox';
   else if (/edg/i.test(ua)) browser = 'Edge';
+  else if (/chrome/i.test(ua)) browser = 'Chrome';
+  else if (/safari/i.test(ua)) browser = 'Safari';
 
-  return { ipAddress, deviceName: `${browser} on ${deviceType}`, deviceType, browser, location: 'Indonesia' };
+  const os = /linux/i.test(ua) ? 'Linux' : /macintosh|mac os/i.test(ua) ? 'macOS' : /windows/i.test(ua) ? 'Windows' : 'Desktop';
+  const deviceName = `${browser} on ${os}`;
+
+  return { ipAddress, deviceName, deviceType, browser, location };
 }
 
 // FR-8: brute-force guard on the login endpoints only.

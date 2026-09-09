@@ -156,6 +156,8 @@ function Admin_() {
 
   // Security Radar state
   const [radarSearch, setRadarSearch] = useState('');
+  const [radarActiveOnly, setRadarActiveOnly] = useState(false);
+  const [refreshingRadar, setRefreshingRadar] = useState(false);
   const [terminatingSessionId, setTerminatingSessionId] = useState<string | null>(null);
   const [terminatingAccountId, setTerminatingAccountId] = useState<string | null>(null);
 
@@ -171,10 +173,11 @@ function Admin_() {
     fetcher
   );
 
-  // Security Radar data (Super Admin only)
+  // Security Radar data (Super Admin only, 5s live polling)
   const { data: radarData, mutate: mutateRadar, isLoading: isRadarLoading } = useSWR<SecurityRadarData>(
     isSuperAdmin ? '/security/admin/radar' : null,
-    fetcher
+    fetcher,
+    { refreshInterval: 5000, revalidateOnFocus: true }
   );
 
   const handleSeedDemo = async () => {
@@ -313,6 +316,7 @@ function Admin_() {
   });
 
   const filteredRadarAccounts = (radarData?.accounts || []).filter((acc) => {
+    if (radarActiveOnly && acc.activeSessionsCount === 0) return false;
     if (!radarSearch.trim()) return true;
     const q = radarSearch.toLowerCase();
     return (
@@ -1045,7 +1049,7 @@ function Admin_() {
 
               {/* Search & Account Sessions List */}
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">Radar Sesi Perangkat & IP Pengakses</h3>
                     <p className="text-xs text-slate-500">
@@ -1053,14 +1057,60 @@ function Admin_() {
                     </p>
                   </div>
 
-                  <div className="relative flex-1 max-w-xs">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-                    <input
-                      value={radarSearch}
-                      onChange={(e) => setRadarSearch(e.target.value)}
-                      placeholder="Cari akun atau IP..."
-                      className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Live status badge */}
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-700">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Live 5s</span>
+                    </div>
+
+                    {/* Manual Refresh */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setRefreshingRadar(true);
+                        await mutateRadar();
+                        setTimeout(() => setRefreshingRadar(false), 400);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all shadow-xs"
+                      title="Segarkan data radar sekarang"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${refreshingRadar ? 'animate-spin text-primary' : ''}`} />
+                      <span>Segarkan</span>
+                    </button>
+
+                    {/* Filter Active Only Toggle */}
+                    <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setRadarActiveOnly(false)}
+                        className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                          !radarActiveOnly ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        Semua ({radarData?.accounts.length ?? 0})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRadarActiveOnly(true)}
+                        className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                          radarActiveOnly ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        Sesi Aktif ({radarData?.accounts.filter((a) => a.activeSessionsCount > 0).length ?? 0})
+                      </button>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative min-w-[180px]">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        value={radarSearch}
+                        onChange={(e) => setRadarSearch(e.target.value)}
+                        placeholder="Cari akun atau IP..."
+                        className="w-full pl-9 pr-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1144,15 +1194,26 @@ function Admin_() {
                                   )}
                                 </div>
                                 <div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-xs font-bold text-slate-800">{session.deviceName}</span>
                                     {session.isCurrent && (
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">
-                                        Sesi Terakhir
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                        Sesi Terkini
+                                      </span>
+                                    )}
+                                    {(session.ipAddress === '127.0.0.1' || session.location?.includes('Lokal')) && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
+                                        Localhost (Laptop Ini)
+                                      </span>
+                                    )}
+                                    {new Date().getTime() - new Date(session.lastActiveAt).getTime() < 10 * 60 * 1000 && (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        Baru Saja Aktif
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-0.5">
+                                  <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-0.5 flex-wrap">
                                     <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
                                       IP: {session.ipAddress}
                                     </span>

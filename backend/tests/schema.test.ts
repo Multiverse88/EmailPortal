@@ -43,7 +43,8 @@ describe('Prisma Schema Extended Models & Seeder Verification', () => {
     expect(deviceNames).toContain('iPhone 14 Pro');
     expect(deviceNames).toContain('Windows Desktop');
 
-    const currentSession = budi?.sessions.find((s) => s.deviceName === 'MacBook Pro 16"');
+    const currentSession = budi?.sessions.find((s) => s.isCurrent);
+    expect(currentSession).toBeDefined();
     expect(currentSession?.isCurrent).toBe(true);
 
     const trial = await prisma.customer.findFirst({

@@ -117,6 +117,19 @@ export default (prisma: PrismaClient) => {
         };
       });
 
+      // Sort accounts: multi-IP alert first, active sessions next (most recent first), inactive last
+      accountReports.sort((a, b) => {
+        if (a.isMultiIpAlert && !b.isMultiIpAlert) return -1;
+        if (!a.isMultiIpAlert && b.isMultiIpAlert) return 1;
+
+        if (a.activeSessionsCount > 0 && b.activeSessionsCount === 0) return -1;
+        if (a.activeSessionsCount === 0 && b.activeSessionsCount > 0) return 1;
+
+        const aLast = a.sessions[0]?.lastActiveAt ? new Date(a.sessions[0].lastActiveAt).getTime() : 0;
+        const bLast = b.sessions[0]?.lastActiveAt ? new Date(b.sessions[0].lastActiveAt).getTime() : 0;
+        return bLast - aLast;
+      });
+
       res.json({
         summary: {
           totalAccounts: customers.length,
