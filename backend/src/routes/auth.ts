@@ -11,6 +11,7 @@ import {
   generatePassword,
 } from '../lib/crypto';
 import { verifyTotp } from '../lib/totp';
+import { checkAndSendNewDeviceAlert } from '../lib/security-alerts';
 import { sendOnboardingNotice } from '../lib/mail';
 import { audit } from '../lib/audit';
 import { authenticateAdmin, authenticateCustomer, authenticateOfficerOrAdmin, UserRole } from '../middleware/auth';
@@ -94,6 +95,10 @@ export default (prisma: PrismaClient) => {
       await prisma.customer.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } });
 
       const clientInfo = parseClientInfo(req);
+      checkAndSendNewDeviceAlert(prisma, customer, clientInfo).catch((err) =>
+        console.error('New device alert dispatch failed:', err)
+      );
+
       await prisma.loginSession.updateMany({
         where: { customerId: customer.id },
         data: { isCurrent: false },
@@ -167,6 +172,10 @@ export default (prisma: PrismaClient) => {
       await prisma.customer.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } });
 
       const clientInfo = parseClientInfo(req);
+      checkAndSendNewDeviceAlert(prisma, customer, clientInfo).catch((err) =>
+        console.error('New device alert dispatch failed:', err)
+      );
+
       await prisma.loginSession.updateMany({
         where: { customerId: customer.id },
         data: { isCurrent: false },
