@@ -78,7 +78,8 @@ Jawablah dengan ringkas, jelas, dan ramah (maksimal 2-3 paragraf). Berikan langk
           ];
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 12000);
+          const timeoutMs = parseInt(process.env.NINEROUTER_TIMEOUT_MS || '35000', 10);
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
           const aiRes = await fetch(endpoint, {
             method: 'POST',
@@ -90,6 +91,7 @@ Jawablah dengan ringkas, jelas, dan ramah (maksimal 2-3 paragraf). Berikan langk
               model,
               messages: messagesPayload,
               temperature: 0.7,
+              stream: false,
             }),
             signal: controller.signal,
           });
@@ -97,8 +99,30 @@ Jawablah dengan ringkas, jelas, dan ramah (maksimal 2-3 paragraf). Berikan langk
           clearTimeout(timeoutId);
 
           if (aiRes.ok) {
-            const data: any = await aiRes.json();
-            const reply = data?.choices?.[0]?.message?.content;
+            const rawText = await aiRes.text();
+            let reply: string | undefined;
+
+            try {
+              const data = JSON.parse(rawText);
+              reply = data?.choices?.[0]?.message?.content;
+            } catch {
+              const lines = rawText.split('\n');
+              const parts: string[] = [];
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('data:') && !trimmed.includes('[DONE]')) {
+                  try {
+                    const chunk = JSON.parse(trimmed.slice(5).trim());
+                    const delta = chunk?.choices?.[0]?.delta?.content || chunk?.choices?.[0]?.message?.content;
+                    if (delta) parts.push(delta);
+                  } catch {}
+                }
+              }
+              if (parts.length > 0) {
+                reply = parts.join('');
+              }
+            }
+
             if (reply && typeof reply === 'string' && reply.trim()) {
               return res.json({
                 text: reply.trim(),

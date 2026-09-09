@@ -19,6 +19,20 @@ describe('Companion Routes', () => {
   });
 
   describe('POST /api/companion/chat', () => {
+    const originalApiKey = process.env.NINEROUTER_API_KEY;
+
+    beforeEach(() => {
+      delete process.env.NINEROUTER_API_KEY;
+    });
+
+    afterEach(() => {
+      if (originalApiKey !== undefined) {
+        process.env.NINEROUTER_API_KEY = originalApiKey;
+      } else {
+        delete process.env.NINEROUTER_API_KEY;
+      }
+    });
+
     it('should reject request without query', async () => {
       const res = await request(app)
         .post('/api/companion/chat')
