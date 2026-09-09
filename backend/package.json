@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
-    "test": "jest",
+    "test": "jest --runInBand",
     "migrate": "prisma migrate dev",
     "generate": "prisma generate --schema ../prisma/schema.prisma",
     "storage:sync-synology": "tsx scripts/sync-synology.ts"
