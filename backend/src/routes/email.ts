@@ -132,12 +132,17 @@ export default (prisma: PrismaClient) => {
         result = await sendMail({
           user: customer.mailboxAddress,
           pass: decrypt(customer.passwordEnc),
+          name: customer.name,
           to,
           cc,
           subject: subject || '(tanpa subjek)',
           text,
           attachments: files.map((f) => ({ filename: f.originalname, path: f.path })),
         });
+      }
+
+      if (!result.delivered) {
+        return res.status(502).json({ error: (result as any).reason || 'Gagal mengirim email ke server SMTP' });
       }
 
       const message = await prisma.messageCache.create({
@@ -164,9 +169,9 @@ export default (prisma: PrismaClient) => {
       });
 
       res.status(201).json({ message: 'Email terkirim', id: message.id, delivered: result.delivered });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Send email error:', error);
-      res.status(500).json({ error: 'Gagal mengirim email' });
+      res.status(500).json({ error: error?.message || 'Gagal mengirim email' });
     }
   });
 

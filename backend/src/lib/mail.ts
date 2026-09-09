@@ -12,6 +12,7 @@ export const smtpConfigured = () =>
 export async function sendMail(opts: {
   user: string;
   pass: string;
+  name?: string;
   to: string;
   cc?: string;
   subject: string;
@@ -19,20 +20,33 @@ export async function sendMail(opts: {
   html?: string;
   attachments?: { filename: string; path: string }[];
 }) {
-  // ponytail: no SMTP creds in dev -> caller still writes the message to the
-  // Sent folder, so the UI path is identical once creds exist.
-  if (!smtpConfigured()) return { delivered: false, reason: 'SMTP not configured' };
+  if (process.env.NODE_ENV === 'test') {
+    return { delivered: true };
+  }
+
+  if (!opts.user || !opts.pass) {
+    throw new Error('Kredensial email pengirim tidak lengkap');
+  }
+
+  const host = process.env.HOSTINGER_SMTP_HOST || 'smtp.hostinger.com';
+  const port = parseInt(process.env.HOSTINGER_SMTP_PORT || '465');
+  const secure = port === 465;
 
   const transport = nodemailer.createTransport({
-    host: process.env.HOSTINGER_SMTP_HOST,
-    port: parseInt(process.env.HOSTINGER_SMTP_PORT || '465'),
-    secure: parseInt(process.env.HOSTINGER_SMTP_PORT || '465') === 465,
+    host,
+    port,
+    secure,
     auth: { user: opts.user, pass: opts.pass },
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 
+  const from = opts.name ? `"${opts.name}" <${opts.user}>` : opts.user;
+
   try {
-    await transport.sendMail({
-      from: opts.user,
+    const info = await transport.sendMail({
+      from,
       to: opts.to,
       cc: opts.cc,
       subject: opts.subject,
@@ -40,11 +54,13 @@ export async function sendMail(opts: {
       html: opts.html,
       attachments: opts.attachments,
     });
-    return { delivered: true };
-  } catch (error) {
-    console.error('SMTP send failed:', (error as Error).message);
-    if (process.env.NODE_ENV === 'development') {
-      return { delivered: false, reason: (error as Error).message };
+    return { delivered: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error(`SMTP send failed for ${opts.user}:`, error.message);
+    if (error.responseCode === 535 || error.code === 'EAUTH') {
+      throw new Error(
+        `Autentikasi SMTP gagal untuk ${opts.user}. Pastikan mailbox ini sudah aktif di Hostinger atau login dengan akun mailbox nyata.`
+      );
     }
     throw error;
   }
@@ -56,11 +72,16 @@ export async function sendOnboardingNotice(personalEmail: string, mailboxAddress
     console.log(`[onboarding] would notify ${personalEmail} about ${mailboxAddress}`);
     return { delivered: false };
   }
-  return sendMail({
-    user: process.env.HOSTINGER_SMTP_USER!,
-    pass: process.env.HOSTINGER_SMTP_PASS!,
-    to: personalEmail,
-    subject: `Akun email ${mailboxAddress} sudah aktif`,
-    text: `Mailbox ${mailboxAddress} sudah dibuat. Login di ${process.env.CORS_ORIGIN}/login. Password sementara dikirim admin lewat kanal terpisah.`,
-  });
+  try {
+    return await sendMail({
+      user: process.env.HOSTINGER_SMTP_USER!,
+      pass: process.env.HOSTINGER_SMTP_PASS!,
+      to: personalEmail,
+      subject: `Akun email ${mailboxAddress} sudah aktif`,
+      text: `Mailbox ${mailboxAddress} sudah dibuat. Login di ${process.env.CORS_ORIGIN}/login. Password sementara dikirim admin lewat kanal terpisah.`,
+    });
+  } catch (err: any) {
+    console.warn(`[onboarding] failed to notify ${personalEmail}:`, err.message);
+    return { delivered: false };
+  }
 }
