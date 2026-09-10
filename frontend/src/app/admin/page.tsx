@@ -175,6 +175,18 @@ function Admin_() {
     fetcher
   );
 
+  // Synology Laptop Runner Status (Super Admin only, 5s polling)
+  const { data: runnerStatus, mutate: mutateRunner } = useSWR<{
+    isOnline: boolean;
+    lastSeenSecondsAgo: number | null;
+    hostname: string | null;
+    targetDir: string | null;
+    activeJob: any;
+  }>(isSuperAdmin ? '/storage/sync-agent/status' : null, fetcher, {
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+  });
+
   // Security Radar data (Super Admin only, 5s live polling)
   const { data: radarData, mutate: mutateRadar, isLoading: isRadarLoading } = useSWR<SecurityRadarData>(
     isSuperAdmin ? '/security/admin/radar' : null,
@@ -211,17 +223,51 @@ function Admin_() {
   const handleSyncSynology = async () => {
     setSyncingSynology(true);
     try {
-      const res = await api.post('/storage/sync-synology', { dryRun: false });
-      const { syncedCount, skippedCount, totalBytesCopied } = res.data;
-      const sizeMb = (totalBytesCopied / (1024 * 1024)).toFixed(2);
-      setToast(`Sinkronisasi selesai! ${syncedCount} file baru disalin, ${skippedCount} file dilewati (${sizeMb} MB)`);
-      mutateStorage();
-      setTimeout(() => setToast(''), 5000);
-    } catch (err) {
-      setToast(errMsg(err, 'Gagal menyinkronkan data ke Synology'));
-      setTimeout(() => setToast(''), 4000);
-    } finally {
+      if (!runnerStatus?.isOnline) {
+        setToast('⚠️ Laptop runner sedang offline. Nyalakan laptop Fedora Anda untuk menjalankan sinkronisasi.');
+        setTimeout(() => setToast(''), 5000);
+        setSyncingSynology(false);
+        return;
+      }
+
+      setToast('🚀 Mengirim perintah sinkronisasi ke laptop Anda...');
+      const queueRes = await api.post('/storage/sync-queue', { dryRun: false });
+      const jobId = queueRes.data.jobId;
+
+      let attempts = 0;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        try {
+          const checkRes = await api.get(`/storage/sync-queue/status/${jobId}`);
+          const job = checkRes.data;
+          if (job.status === 'COMPLETED') {
+            clearInterval(pollInterval);
+            setSyncingSynology(false);
+            const { syncedCount, skippedCount, totalBytesCopied } = job.result || {};
+            const sizeMb = ((totalBytesCopied || 0) / (1024 * 1024)).toFixed(2);
+            setToast(`✅ Berhasil! ${syncedCount ?? 0} berkas baru disalin ke Synology laptop Anda, ${skippedCount ?? 0} dilewati (${sizeMb} MB)`);
+            mutateStorage();
+            mutateRunner();
+            setTimeout(() => setToast(''), 6000);
+          } else if (job.status === 'FAILED') {
+            clearInterval(pollInterval);
+            setSyncingSynology(false);
+            setToast(`❌ Sinkronisasi gagal: ${job.error || 'Terjadi kesalahan di runner laptop'}`);
+            setTimeout(() => setToast(''), 5000);
+          } else if (attempts > 30) {
+            clearInterval(pollInterval);
+            setSyncingSynology(false);
+            setToast('⚠️ Waktu tunggu sinkronisasi habis. Periksa log runner di laptop.');
+            setTimeout(() => setToast(''), 5000);
+          }
+        } catch {
+          // ignore transient poll error
+        }
+      }, 1500);
+    } catch (err: any) {
       setSyncingSynology(false);
+      setToast(errMsg(err, 'Gagal memicu sinkronisasi ke laptop'));
+      setTimeout(() => setToast(''), 5000);
     }
   };
 
@@ -845,17 +891,19 @@ function Admin_() {
                           <span>Synology Drive Cold Storage</span>
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                              storageData?.synology.isAvailable
+                              runnerStatus?.isOnline
                                 ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-600'
                             }`}
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${storageData?.synology.isAvailable ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                            {storageData?.synology.isAvailable ? 'Folder Terdeteksi' : 'Belum Terpasang'}
+                            <span className={`w-1.5 h-1.5 rounded-full ${runnerStatus?.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                            {runnerStatus?.isOnline
+                              ? `Laptop Online (${runnerStatus.hostname || 'fedora'})`
+                              : 'Laptop Offline'}
                           </span>
                         </h2>
                         <p className="text-xs text-slate-500">
-                          Penyimpanan arsip dingin di laptop/NAS berbasis nama email akun murni untuk kemudahan pencarian setelah masa retensi 3 bulan.
+                          Penyimpanan arsip dingin khusus dieksekusi di laptop Fedora Super Admin ke Synology Drive Client untuk diunggah ke NAS kantor.
                         </p>
                       </div>
                     </div>
@@ -863,14 +911,15 @@ function Admin_() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/70">
                         <span className="text-[10px] font-semibold text-slate-400 block uppercase">Jalur Target Laptop</span>
-                        <span className="text-xs font-mono font-medium text-slate-800 truncate block mt-0.5" title={storageData?.synology.targetPath}>
-                          {storageData?.synology.targetPath || '/home/fullstackiteasylegal/SynologyDrive/EmailPortal_ColdStorage'}
+                        <span className="text-xs font-mono font-medium text-slate-800 truncate block mt-0.5" title={runnerStatus?.targetDir || storageData?.synology.targetPath}>
+                          {runnerStatus?.targetDir || storageData?.synology.targetPath || '/home/fullstackiteasylegal/SynologyDrive/EmailPortal_ColdStorage'}
                         </span>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/70">
-                        <span className="text-[10px] font-semibold text-slate-400 block uppercase">Struktur Folder</span>
-                        <span className="text-xs font-mono font-medium text-emerald-700 block mt-0.5">
-                          accounts/&#123;email_akun&#125;/
+                        <span className="text-[10px] font-semibold text-slate-400 block uppercase">Status Runner Laptop</span>
+                        <span className="text-xs font-medium text-emerald-700 block mt-0.5 flex items-center gap-1.5">
+                          <Laptop className="w-3.5 h-3.5" />
+                          <span>{runnerStatus?.isOnline ? 'Daemon Terhubung' : 'Belum Menyala'}</span>
                         </span>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/70">
@@ -887,15 +936,22 @@ function Admin_() {
                     <button
                       type="button"
                       onClick={handleSyncSynology}
-                      disabled={syncingSynology || !storageData?.synology.isAvailable}
+                      disabled={syncingSynology || !runnerStatus?.isOnline}
                       className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                      title={!runnerStatus?.isOnline ? 'Nyalakan runner di laptop Fedora Anda untuk mengaktifkan tombol ini' : undefined}
                     >
                       {syncingSynology ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <Play className="w-4 h-4 fill-white" />
+                        <Laptop className="w-4 h-4" />
                       )}
-                      <span>{syncingSynology ? 'Menyinkronkan...' : 'Sinkronkan ke Synology Sekarang'}</span>
+                      <span>
+                        {syncingSynology
+                          ? 'Menyinkronkan ke Laptop...'
+                          : runnerStatus?.isOnline
+                          ? 'Sinkronkan ke Synology Sekarang'
+                          : 'Laptop Runner Sedang Offline'}
+                      </span>
                     </button>
 
                     <button
