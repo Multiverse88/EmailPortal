@@ -23,6 +23,9 @@ import {
   ArrowRight,
   Database,
   Archive,
+  Bell,
+  ExternalLink,
+  HelpCircle,
 } from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
 
@@ -114,6 +117,54 @@ export function SupportTicketsDesk({ onNotify }: Props) {
   const [markAsResolved, setMarkAsResolved] = useState(false);
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+
+  // Telegram Notification Center state
+  const [testingTg, setTestingTg] = useState(false);
+  const [sendingDigest, setSendingDigest] = useState(false);
+  const [showTgGuide, setShowTgGuide] = useState(false);
+
+  const { data: tgStatus, mutate: mutateTgStatus } = useSWR<{
+    configured: boolean;
+    enabled: boolean;
+    maskedChatId: string;
+    cronSchedule: string;
+    timezone: string;
+    hasBotToken: boolean;
+  }>('/admin/telegram/status', fetcher);
+
+  const handleTestTelegram = async () => {
+    setTestingTg(true);
+    try {
+      const res = await api.post('/admin/telegram/test');
+      if (res.data.success) {
+        onNotify('Pesan uji coba Telegram berhasil terkirim!');
+      } else {
+        onNotify('Peringatan: ' + (res.data.error || 'Gagal mengirim pesan'));
+      }
+      mutateTgStatus();
+    } catch (err: any) {
+      onNotify(errMsg(err, 'Gagal menguji notifikasi Telegram'));
+    } finally {
+      setTestingTg(false);
+    }
+  };
+
+  const handleSendDigestNow = async () => {
+    setSendingDigest(true);
+    try {
+      const res = await api.post('/admin/telegram/send-digest');
+      if (res.data.success) {
+        onNotify('Rangkuman Harian Sistem & Keamanan berhasil dikirim ke Telegram!');
+      } else {
+        onNotify('Peringatan: ' + (res.data.error || 'Gagal mengirim rangkuman'));
+      }
+      mutateTgStatus();
+    } catch (err: any) {
+      onNotify(errMsg(err, 'Gagal memicu pengiriman rangkuman'));
+    } finally {
+      setSendingDigest(false);
+    }
+  };
 
   const handleGetAiSuggestion = async () => {
     if (!selectedTicketId) return;
@@ -241,6 +292,103 @@ export function SupportTicketsDesk({ onNotify }: Props) {
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
+      </div>
+
+      {/* Telegram Notification & Automated Daily Digest Center */}
+      <div className="app-panel p-5 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white border border-slate-700/60 shadow-md">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center shrink-0 mt-0.5">
+              <Bell className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-semibold tracking-tight text-white">
+                  Pusat Notifikasi &amp; Rangkuman Harian Telegram
+                </h3>
+                {tgStatus?.configured ? (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Bot Aktif Terhubung
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    <AlertCircle className="w-3 h-3" />
+                    Belum Dikonfigurasi di .env
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                {tgStatus?.configured ? (
+                  <>
+                    Target Obrolan: <code className="text-blue-300 bg-white/10 px-1.5 py-0.5 rounded">{tgStatus.maskedChatId}</code> &bull; Jadwal Rangkuman: <span className="font-semibold text-emerald-300">Setiap Hari 08:00 WIB</span> &bull; Alert Tiket: <span className="font-semibold text-blue-300">Real-time</span>
+                  </>
+                ) : (
+                  <>
+                    Atur <code className="text-amber-300 bg-white/10 px-1 py-0.5 rounded">TELEGRAM_BOT_TOKEN</code> &amp; <code className="text-amber-300 bg-white/10 px-1 py-0.5 rounded">TELEGRAM_CHAT_ID</code> di server backend agar notifikasi tiket baru &amp; rangkuman harian dikirim otomatis.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            <button
+              type="button"
+              onClick={handleTestTelegram}
+              disabled={testingTg}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-colors disabled:opacity-50 cursor-pointer"
+              title="Kirim pesan verifikasi ke Telegram"
+            >
+              {testingTg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              <span>{testingTg ? 'Mengirim...' : 'Tes Bot'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSendDigestNow}
+              disabled={sendingDigest}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
+              title="Kirim laporan kondisi website & keamanan sekarang"
+            >
+              {sendingDigest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              <span>{sendingDigest ? 'Memproses...' : 'Kirim Rangkuman Sekarang'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowTgGuide(!showTgGuide)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title="Panduan Pengaturan Bot Telegram"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible Setup Guide */}
+        {showTgGuide && (
+          <div className="mt-4 pt-4 border-t border-slate-700/80 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div className="p-3 rounded-lg bg-black/20 border border-white/5 space-y-1">
+              <div className="font-semibold text-blue-300">1. Buat Bot di Telegram</div>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                Chat dengan <b>@BotFather</b> di Telegram, kirim perintah <code>/newbot</code>, ikuti petunjuk, lalu salin HTTP API Token yang diberikan.
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-black/20 border border-white/5 space-y-1">
+              <div className="font-semibold text-blue-300">2. Dapatkan Chat ID</div>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                Tambahkan bot ke grup/channel Super Admin EasyLegal, lalu periksa Chat ID (misal: <code>-100xxxxxxx</code>) via bot <b>@userinfobot</b> atau Webhook update.
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-black/20 border border-white/5 space-y-1">
+              <div className="font-semibold text-blue-300">3. Masukkan ke .env Backend</div>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                Tambahkan <code>TELEGRAM_BOT_TOKEN=...</code> dan <code>TELEGRAM_CHAT_ID=...</code> pada file <code>backend/.env</code>, lalu restart server.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Workspace Split Layout */}

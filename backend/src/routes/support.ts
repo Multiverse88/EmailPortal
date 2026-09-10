@@ -1,5 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { notifyNewSupportTicket } from '../lib/telegram';
 
 export default (prisma: PrismaClient) => {
   const router = Router();
@@ -106,6 +107,11 @@ export default (prisma: PrismaClient) => {
             orderBy: { createdAt: 'asc' },
           },
         },
+      });
+
+      // Dispatch real-time Telegram alert to Super Admin (non-blocking)
+      notifyNewSupportTicket(ticket, customer, messageContent).catch((tgErr) => {
+        console.warn('Failed to send Telegram ticket notification:', tgErr);
       });
 
       res.status(201).json({ ticket });

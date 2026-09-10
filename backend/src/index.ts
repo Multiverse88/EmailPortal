@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import app, { prisma, syncWorker } from './app';
+import { startScheduler, stopScheduler } from './workers/scheduler';
 
 const PORT = process.env.PORT || 4000;
 const worker = syncWorker;
@@ -71,6 +72,7 @@ async function startServer() {
     });
 
     await worker.start();
+    startScheduler(prisma);
   } catch (error) {
     console.error('✗ Failed to start server:', error);
     process.exit(1);
@@ -79,6 +81,7 @@ async function startServer() {
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sig, async () => {
+    stopScheduler();
     worker.stop();
     await prisma.$disconnect();
     process.exit(0);

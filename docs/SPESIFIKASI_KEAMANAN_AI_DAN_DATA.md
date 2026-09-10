@@ -231,4 +231,56 @@ model DocumentMetadata {
    - Memastikan data hasil parsing disimpan secara persisten ke SQLite `DocumentMetadata` dan dapat di-*query* kembali berdasarkan ID dokumen dan ID pelanggan.
 4. **Kompilasi & Integritas Kode**:
    - Seluruh modul backend (`tsc`) dan frontend (`next build`) berhasil dikompilasi dengan kode keluar `0`.
-   - Seluruh 22 test suite (`jest --runInBand`) lulus 100% (143/143 unit & integration tests lolos).
+   - Seluruh test suite (`jest --runInBand`) lulus 100% (termasuk `tests/telegram-notifications.test.ts`).
+
+---
+
+## 7. Integrasi Monitoring Keamanan & Notifikasi Telegram
+
+Untuk memperkuat respon insiden tanpa harus selalu membuka dashboard, EasyLegal mengintegrasikan saluran siaga resmi **Telegram Bot API**:
+
+1. **Rangkuman Harian Kondisi & Keamanan Website (Scheduled 08:00 WIB)**:
+   - Dijalankan otomatis oleh worker `backend/src/workers/scheduler.ts` menggunakan cron expression `0 8 * * *` (Timezone: `Asia/Jakarta`).
+   - Melaporkan 4 pilar utama:
+     - **Kesehatan Webmail & Portal**: Status cluster Titan Mail (IMAP 993 / SMTP 465), total mailbox aktif/nonaktif, cache pesan email.
+     - **Radar Keamanan & Anomali**: Sesi aktif, deteksi login multi-IP simultan, 24-jam audit log, status in-memory zero-leakage.
+     - **Kapasitas Hot S3 & Cold Storage**: Kuota IDCloudHost terpakai, jumlah berkas legal, konektivitas Synology NAS.
+     - **Status Tiket Support Klien**: Jumlah tiket open, tiket prioritas urgent (&lt; 4 Jam SLA), tiket selesai.
+2. **Notifikasi Real-time Tiket Support Baru**:
+   - Dipicu seketika (*instant non-blocking event*) saat klien mengirimkan tiket baru di `/api/support/tickets`.
+   - Menampilkan nomor tiket (`#TK-XXXX`), prioritas SLA, kategori, nama klien, mailbox resmi, dan ringkasan pesan keluhan.
+3. **Peringatan Seketika Anomali Login Multi-IP**:
+   - Dikirimkan saat sebuah akun terdeteksi masuk dari 2 atau lebih alamat IP berbeda secara bersamaan.
+4. **Keamanan Transmisi**:
+   - Seluruh payload dikirim langsung melalui enkripsi TLS 1.3 ke server resmi `api.telegram.org`.
+   - Fungsi `escapeHtml()` diterapkan untuk mencegah eksploitasi injeksi teks formatting Telegram.
+   - Hak kontrol pengujian dan manual trigger digest dibatasi eksklusif untuk **Super Admin** (`/api/admin/telegram/*`).
+
+### Diagram 4: Alur Notifikasi Tiket & Rangkuman Harian Telegram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as Klien / Browser
+    participant API as EasyLegal Backend API
+    participant Scheduler as Scheduler Worker (Cron 08:00 WIB)
+    participant DB as Database (Prisma ORM)
+    participant TG as Telegram Bot API
+    actor SuperAdmin as Super Admin (HP / Desktop Telegram)
+
+    rect rgb(240, 248, 255)
+    Note over Customer,TG: Alur 1: Notifikasi Real-time Tiket Baru
+    Customer->>API: POST /api/support/tickets (Kirim Permohonan)
+    API->>DB: Simpan Tiket & Pesan Awal
+    API-)TG: POST /sendMessage (Format HTML, Prioritas, SLA)
+    TG-->>SuperAdmin: 🔔 Notifikasi Suara: [TIKET BARU #TK-XXXX]
+    end
+
+    rect rgb(255, 250, 240)
+    Note over Scheduler,TG: Alur 2: Rangkuman Otomatis Harian (08:00 WIB)
+    Scheduler->>DB: Agregasi Metrik (Mailbox, Storage S3, Anomali IP, Tiket Open)
+    DB-->>Scheduler: Data Statistik Sistem Terkini
+    Scheduler->>TG: POST /sendMessage (Laporan Komprehensif 4 Pilar)
+    TG-->>SuperAdmin: 🌅 Rangkuman Harian Website & Keamanan
+    end
+```

@@ -18,6 +18,7 @@ import storageRoutes from './routes/storage';
 import companionRoutes from './routes/companion';
 import adminDocumentsRoutes from './routes/admin-documents';
 import adminSupportRoutes from './routes/admin-support';
+import adminTelegramRoutes from './routes/admin-telegram';
 import { SyncWorker } from './workers/sync';
 
 const app = express();
@@ -72,6 +73,7 @@ app.use('/api/storage', storageRoutes(prisma));
 app.use('/api/companion', companionRoutes(prisma));
 app.use('/api/admin/documents', authenticateOfficerOrAdmin, adminDocumentsRoutes(prisma));
 app.use('/api/admin/support', authenticateSuperAdmin, adminSupportRoutes(prisma));
+app.use('/api/admin/telegram', authenticateSuperAdmin, adminTelegramRoutes(prisma));
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
