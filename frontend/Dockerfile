@@ -13,6 +13,8 @@ COPY frontend ./
 # Build Next.js in standalone mode
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ARG BACKEND_INTERNAL_URL=http://backend:4000
+ENV BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL}
 RUN npm run build
 
 # Runtime Stage
@@ -26,12 +28,18 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV BACKEND_INTERNAL_URL="http://backend:4000"
 
 # Copy standalone build output
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+# Copy entrypoint script
+COPY frontend/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 EXPOSE 3000
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "server.js"]
