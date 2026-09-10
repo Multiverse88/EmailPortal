@@ -57,6 +57,9 @@ describe('Synology Runner API', () => {
       .set('X-Runner-Secret-Token', RUNNER_TOKEN);
     expect(pollRes.status).toBe(200);
     expect(pollRes.body.job?.id).toBe(jobId);
+    expect(pollRes.body.manifest).toBeDefined();
+    expect(Array.isArray(pollRes.body.manifest?.accounts)).toBe(true);
+    expect(Array.isArray(pollRes.body.manifest?.files)).toBe(true);
 
     const completeRes = await request(app)
       .post('/api/storage/sync-agent/complete')
@@ -74,5 +77,24 @@ describe('Synology Runner API', () => {
     expect(checkJobRes.status).toBe(200);
     expect(checkJobRes.body.status).toBe('COMPLETED');
     expect(checkJobRes.body.result.syncedCount).toBe(3);
+  });
+
+  it('handles sync-agent/download authentication and error states', async () => {
+    // 1. Without token -> 401
+    const unauthRes = await request(app).get('/api/storage/sync-agent/download/document/doc-123');
+    expect(unauthRes.status).toBe(401);
+
+    // 2. Invalid type -> 400
+    const badTypeRes = await request(app)
+      .get('/api/storage/sync-agent/download/unknown/doc-123')
+      .set('X-Runner-Secret-Token', RUNNER_TOKEN);
+    expect(badTypeRes.status).toBe(400);
+
+    // 3. Not found -> 404
+    mockPrisma.legalDocument.findUnique = jest.fn().mockResolvedValue(null);
+    const notFoundRes = await request(app)
+      .get('/api/storage/sync-agent/download/document/non-existent')
+      .set('X-Runner-Secret-Token', RUNNER_TOKEN);
+    expect(notFoundRes.status).toBe(404);
   });
 });

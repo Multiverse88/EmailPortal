@@ -3,6 +3,36 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getSynologyDir, storage } from './storage';
 
+export interface SynologyExportFile {
+  id: string;
+  type: 'document' | 'attachment' | 'avatar';
+  accountFolder: string;
+  relPath: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+}
+
+export interface SynologyExportAccount {
+  accountFolder: string;
+  info: {
+    accountId: string;
+    companyName: string;
+    mailboxAddress: string;
+    personalEmail: string;
+    status: string;
+    storageQuotaBytes: number;
+    storageQuotaFormatted: string;
+    lastSyncedAt: string;
+  };
+}
+
+export interface SynologyExportManifest {
+  generatedAt: string;
+  accounts: SynologyExportAccount[];
+  files: SynologyExportFile[];
+}
+
 export interface SynologyStatus {
   isAvailable: boolean;
   targetPath: string;
@@ -120,20 +150,9 @@ export class SynologySyncService {
     };
   }
 
-  async sync(options?: { dryRun?: boolean }): Promise<SynologySyncResult> {
-    const dryRun = Boolean(options?.dryRun);
-    this.initTargetFolder();
-
-    const manifest = this.readManifest();
-    const result: SynologySyncResult = {
-      syncedCount: 0,
-      skippedCount: 0,
-      failedCount: 0,
-      totalBytesCopied: 0,
-      errors: [],
-    };
-
+  async generateExportManifest(): Promise<SynologyExportManifest> {
     const usedRelPaths = new Set<string>();
+    const files: SynologyExportFile[] = [];
 
     // 1. Scan legal documents with customer info
     const documents = await this.prisma.legalDocument.findMany({
@@ -143,78 +162,22 @@ export class SynologySyncService {
     for (const doc of documents) {
       const accountFolder = getAccountFolderName(doc.customer);
       const cleanName = sanitizeFileName(doc.filename || doc.title || 'document.pdf');
-      
+
       let relPath = `accounts/${accountFolder}/documents/${cleanName}`;
       if (usedRelPaths.has(relPath)) {
         relPath = `accounts/${accountFolder}/documents/${path.parse(cleanName).name}_${doc.id.slice(0, 6)}${path.extname(cleanName)}`;
       }
       usedRelPaths.add(relPath);
 
-      const destPath = path.join(this.targetDir, relPath);
-
-      if (manifest.files[relPath] && fs.existsSync(destPath)) {
-        result.skippedCount++;
-        continue;
-      }
-
-      try {
-        let buffer: Buffer | null = null;
-        
-        // Priority 1: Check isolated account bucket key in storage adapter
-        const accountBucketKey = `accounts/${doc.customerId}/documents/${path.basename(doc.path)}`;
-        if (await storage.objectExists(accountBucketKey)) {
-          buffer = await storage.getObject(accountBucketKey);
-        }
-
-        // Priority 2: Check legacy bucket key
-        if (!buffer) {
-          const legacyBucketKey = `documents/${doc.customerId}/${path.basename(doc.path)}`;
-          if (await storage.objectExists(legacyBucketKey)) {
-            buffer = await storage.getObject(legacyBucketKey);
-          }
-        }
-
-        // Priority 3: Check storage directory on local disk
-        if (!buffer) {
-          const legacyBase = process.env.STORAGE_DIR || './storage';
-          const legacyPath = path.resolve(legacyBase, path.basename(doc.path));
-          if (fs.existsSync(legacyPath)) {
-            buffer = await fs.promises.readFile(legacyPath);
-          }
-        }
-
-        // Priority 4: Check by original filename on local disk
-        if (!buffer) {
-          const legacyBase = process.env.STORAGE_DIR || './storage';
-          const altPath = path.resolve(legacyBase, doc.filename);
-          if (fs.existsSync(altPath)) {
-            buffer = await fs.promises.readFile(altPath);
-          }
-        }
-
-        if (!buffer) {
-          result.failedCount++;
-          result.errors.push({ path: relPath, error: 'Source file not found in storage' });
-          continue;
-        }
-
-        if (!dryRun) {
-          fs.mkdirSync(path.dirname(destPath), { recursive: true });
-          await fs.promises.writeFile(destPath, buffer);
-          manifest.files[relPath] = {
-            size: buffer.length,
-            syncedAt: new Date().toISOString(),
-            account: accountFolder,
-            docId: doc.id,
-          };
-        }
-
-        result.syncedCount++;
-        result.totalBytesCopied += buffer.length;
-      } catch (err: any) {
-        result.failedCount++;
-        result.errors.push({ path: relPath, error: err.message || 'Unknown error' });
-      }
+      files.push({
+        id: doc.id,
+        type: 'document',
+        accountFolder,
+        relPath,
+        filename: cleanName,
+        size: doc.size || 0,
+        mimeType: doc.mimeType || 'application/pdf',
+      });
     }
 
     // 2. Scan attachments with mailbox customer info
@@ -233,73 +196,25 @@ export class SynologySyncService {
       const customer = att.message?.mailbox;
       const accountFolder = getAccountFolderName(customer);
       const cleanName = sanitizeFileName(att.filename || 'attachment');
-      
+
       let relPath = `accounts/${accountFolder}/attachments/${cleanName}`;
       if (usedRelPaths.has(relPath)) {
         relPath = `accounts/${accountFolder}/attachments/${path.parse(cleanName).name}_${att.id.slice(0, 6)}${path.extname(cleanName)}`;
       }
       usedRelPaths.add(relPath);
 
-      const destPath = path.join(this.targetDir, relPath);
-
-      if (manifest.files[relPath] && fs.existsSync(destPath)) {
-        result.skippedCount++;
-        continue;
-      }
-
-      try {
-        let buffer: Buffer | null = null;
-        
-        // Priority 1: Check account attachments key
-        if (customer) {
-          const attKey = `accounts/${customer.id}/attachments/${path.basename(att.path)}`;
-          if (await storage.objectExists(attKey)) {
-            buffer = await storage.getObject(attKey);
-          }
-        }
-
-        // Priority 2: Check legacy storage dir
-        if (!buffer) {
-          const legacyBase = process.env.STORAGE_DIR || './storage';
-          const legacyPath = path.resolve(legacyBase, path.basename(att.path));
-          if (fs.existsSync(legacyPath)) {
-            buffer = await fs.promises.readFile(legacyPath);
-          }
-        }
-
-        // Priority 3: Check legacy mailbox attachments key
-        if (!buffer && att.message?.mailboxId) {
-          const legacyKey = `attachments/${att.message.mailboxId}/${path.basename(att.path)}`;
-          if (await storage.objectExists(legacyKey)) {
-            buffer = await storage.getObject(legacyKey);
-          }
-        }
-
-        if (!buffer) {
-          result.failedCount++;
-          result.errors.push({ path: relPath, error: 'Attachment source file not found' });
-          continue;
-        }
-
-        if (!dryRun) {
-          fs.mkdirSync(path.dirname(destPath), { recursive: true });
-          await fs.promises.writeFile(destPath, buffer);
-          manifest.files[relPath] = {
-            size: buffer.length,
-            syncedAt: new Date().toISOString(),
-            account: accountFolder,
-          };
-        }
-
-        result.syncedCount++;
-        result.totalBytesCopied += buffer.length;
-      } catch (err: any) {
-        result.failedCount++;
-        result.errors.push({ path: relPath, error: err.message || 'Unknown error' });
-      }
+      files.push({
+        id: att.id,
+        type: 'attachment',
+        accountFolder,
+        relPath,
+        filename: cleanName,
+        size: att.size || 0,
+        mimeType: att.mimeType || 'application/octet-stream',
+      });
     }
 
-    // 3. Scan customer avatars (company logos)
+    // 3. Scan customer avatars
     const customersWithAvatars = await this.prisma.customer.findMany({
       where: { avatarUrl: { not: null } },
     });
@@ -309,66 +224,259 @@ export class SynologySyncService {
       const accountFolder = getAccountFolderName(cust);
       const ext = path.extname(cust.avatarUrl).toLowerCase() || '.png';
       const relPath = `accounts/${accountFolder}/avatar/logo${ext}`;
-      const destPath = path.join(this.targetDir, relPath);
 
-      if (manifest.files[relPath] && fs.existsSync(destPath)) {
+      files.push({
+        id: cust.id,
+        type: 'avatar',
+        accountFolder,
+        relPath,
+        filename: `logo${ext}`,
+        size: 0,
+        mimeType: ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png',
+      });
+    }
+
+    // 4. Accounts metadata
+    const allCustomers = await this.prisma.customer.findMany();
+    const accounts: SynologyExportAccount[] = allCustomers.map((cust) => {
+      const accountFolder = getAccountFolderName(cust);
+      const quota = cust.storageQuota || 5368709120;
+      return {
+        accountFolder,
+        info: {
+          accountId: cust.id,
+          companyName: cust.name,
+          mailboxAddress: cust.mailboxAddress,
+          personalEmail: cust.personalEmail,
+          status: cust.status,
+          storageQuotaBytes: quota,
+          storageQuotaFormatted: `${(quota / (1024 * 1024 * 1024)).toFixed(1)} GB`,
+          lastSyncedAt: new Date().toISOString(),
+        },
+      };
+    });
+
+    return {
+      generatedAt: new Date().toISOString(),
+      accounts,
+      files,
+    };
+  }
+
+  async getFileData(
+    type: 'document' | 'attachment' | 'avatar',
+    id: string
+  ): Promise<{ buffer: Buffer; filename: string; mimeType: string; size: number } | null> {
+    if (type === 'document') {
+      const doc = await this.prisma.legalDocument.findUnique({
+        where: { id },
+        include: { customer: true },
+      });
+      if (!doc) return null;
+
+      const cleanName = sanitizeFileName(doc.filename || doc.title || 'document.pdf');
+      let buffer: Buffer | null = null;
+
+      // Priority 1: Check isolated account bucket key in storage adapter
+      const accountBucketKey = `accounts/${doc.customerId}/documents/${path.basename(doc.path)}`;
+      if (await storage.objectExists(accountBucketKey)) {
+        buffer = await storage.getObject(accountBucketKey);
+      }
+
+      // Priority 2: Check legacy bucket key
+      if (!buffer) {
+        const legacyBucketKey = `documents/${doc.customerId}/${path.basename(doc.path)}`;
+        if (await storage.objectExists(legacyBucketKey)) {
+          buffer = await storage.getObject(legacyBucketKey);
+        }
+      }
+
+      // Priority 3: Check storage directory on local disk
+      if (!buffer) {
+        const legacyBase = process.env.STORAGE_DIR || './storage';
+        const legacyPath = path.resolve(legacyBase, path.basename(doc.path));
+        if (fs.existsSync(legacyPath)) {
+          buffer = await fs.promises.readFile(legacyPath);
+        }
+      }
+
+      // Priority 4: Check by original filename on local disk
+      if (!buffer) {
+        const legacyBase = process.env.STORAGE_DIR || './storage';
+        const altPath = path.resolve(legacyBase, doc.filename);
+        if (fs.existsSync(altPath)) {
+          buffer = await fs.promises.readFile(altPath);
+        }
+      }
+
+      // Priority 5: Check direct path
+      if (!buffer && fs.existsSync(doc.path)) {
+        buffer = await fs.promises.readFile(doc.path);
+      }
+
+      if (!buffer) return null;
+      return {
+        buffer,
+        filename: cleanName,
+        mimeType: doc.mimeType || 'application/pdf',
+        size: buffer.length,
+      };
+    }
+
+    if (type === 'attachment') {
+      const att = await this.prisma.attachment.findUnique({
+        where: { id },
+        include: {
+          message: {
+            include: {
+              mailbox: true,
+            },
+          },
+        },
+      });
+      if (!att) return null;
+
+      const customer = att.message?.mailbox;
+      const cleanName = sanitizeFileName(att.filename || 'attachment');
+      let buffer: Buffer | null = null;
+
+      // Priority 1: Check account attachments key
+      if (customer) {
+        const attKey = `accounts/${customer.id}/attachments/${path.basename(att.path)}`;
+        if (await storage.objectExists(attKey)) {
+          buffer = await storage.getObject(attKey);
+        }
+      }
+
+      // Priority 2: Check legacy storage dir
+      if (!buffer) {
+        const legacyBase = process.env.STORAGE_DIR || './storage';
+        const legacyPath = path.resolve(legacyBase, path.basename(att.path));
+        if (fs.existsSync(legacyPath)) {
+          buffer = await fs.promises.readFile(legacyPath);
+        }
+      }
+
+      // Priority 3: Check legacy mailbox attachments key
+      if (!buffer && att.message?.mailboxId) {
+        const legacyKey = `attachments/${att.message.mailboxId}/${path.basename(att.path)}`;
+        if (await storage.objectExists(legacyKey)) {
+          buffer = await storage.getObject(legacyKey);
+        }
+      }
+
+      // Priority 4: Check direct path
+      if (!buffer && fs.existsSync(att.path)) {
+        buffer = await fs.promises.readFile(att.path);
+      }
+
+      if (!buffer) return null;
+      return {
+        buffer,
+        filename: cleanName,
+        mimeType: att.mimeType || 'application/octet-stream',
+        size: buffer.length,
+      };
+    }
+
+    if (type === 'avatar') {
+      const cust = await this.prisma.customer.findUnique({
+        where: { id },
+      });
+      if (!cust || !cust.avatarUrl) return null;
+
+      const ext = path.extname(cust.avatarUrl).toLowerCase() || '.png';
+      let buffer: Buffer | null = null;
+
+      if (await storage.objectExists(cust.avatarUrl)) {
+        buffer = await storage.getObject(cust.avatarUrl);
+      }
+
+      if (!buffer) {
+        const legacyBase = process.env.STORAGE_DIR || './storage';
+        const legacyPath = path.resolve(legacyBase, path.basename(cust.avatarUrl));
+        if (fs.existsSync(legacyPath)) {
+          buffer = await fs.promises.readFile(legacyPath);
+        }
+      }
+
+      if (!buffer && fs.existsSync(cust.avatarUrl)) {
+        buffer = await fs.promises.readFile(cust.avatarUrl);
+      }
+
+      if (!buffer) return null;
+      return {
+        buffer,
+        filename: `logo${ext}`,
+        mimeType: ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png',
+        size: buffer.length,
+      };
+    }
+
+    return null;
+  }
+
+  async sync(options?: { dryRun?: boolean }): Promise<SynologySyncResult> {
+    const dryRun = Boolean(options?.dryRun);
+    this.initTargetFolder();
+
+    const manifest = this.readManifest();
+    const result: SynologySyncResult = {
+      syncedCount: 0,
+      skippedCount: 0,
+      failedCount: 0,
+      totalBytesCopied: 0,
+      errors: [],
+    };
+
+    const exportManifest = await this.generateExportManifest();
+
+    // 1. Write account-info.json for all accounts
+    if (!dryRun) {
+      for (const acc of exportManifest.accounts) {
+        try {
+          const infoPath = path.join(this.targetDir, `accounts/${acc.accountFolder}/account-info.json`);
+          fs.mkdirSync(path.dirname(infoPath), { recursive: true });
+          fs.writeFileSync(infoPath, JSON.stringify(acc.info, null, 2), 'utf8');
+        } catch (infoErr: any) {
+          console.warn(`Could not write account-info for ${acc.accountFolder}:`, infoErr.message);
+        }
+      }
+    }
+
+    // 2. Sync files
+    for (const file of exportManifest.files) {
+      const destPath = path.join(this.targetDir, file.relPath);
+
+      if (manifest.files[file.relPath] && fs.existsSync(destPath)) {
         result.skippedCount++;
         continue;
       }
 
       try {
-        let buffer: Buffer | null = null;
-        if (await storage.objectExists(cust.avatarUrl)) {
-          buffer = await storage.getObject(cust.avatarUrl);
-        }
-
-        if (!buffer) {
+        const fileData = await this.getFileData(file.type, file.id);
+        if (!fileData) {
           result.failedCount++;
-          result.errors.push({ path: relPath, error: 'Avatar file not found in storage' });
+          result.errors.push({ path: file.relPath, error: 'Source file not found in storage' });
           continue;
         }
 
         if (!dryRun) {
           fs.mkdirSync(path.dirname(destPath), { recursive: true });
-          await fs.promises.writeFile(destPath, buffer);
-          manifest.files[relPath] = {
-            size: buffer.length,
+          await fs.promises.writeFile(destPath, fileData.buffer);
+          manifest.files[file.relPath] = {
+            size: fileData.buffer.length,
             syncedAt: new Date().toISOString(),
-            account: accountFolder,
+            account: file.accountFolder,
+            docId: file.id,
           };
         }
 
         result.syncedCount++;
-        result.totalBytesCopied += buffer.length;
+        result.totalBytesCopied += fileData.buffer.length;
       } catch (err: any) {
         result.failedCount++;
-        result.errors.push({ path: relPath, error: err.message || 'Unknown error' });
-      }
-    }
-
-    // 4. Generate account summary metadata for each customer
-    const allCustomers = await this.prisma.customer.findMany();
-    for (const cust of allCustomers) {
-      const accountFolder = getAccountFolderName(cust);
-      const infoPath = path.join(this.targetDir, `accounts/${accountFolder}/account-info.json`);
-
-      if (!dryRun) {
-        try {
-          fs.mkdirSync(path.dirname(infoPath), { recursive: true });
-          const infoData = {
-            accountId: cust.id,
-            companyName: cust.name,
-            mailboxAddress: cust.mailboxAddress,
-            personalEmail: cust.personalEmail,
-            status: cust.status,
-            storageQuotaBytes: cust.storageQuota,
-            storageQuotaFormatted: `${(cust.storageQuota / (1024 * 1024 * 1024)).toFixed(1)} GB`,
-            lastSyncedAt: new Date().toISOString(),
-          };
-          fs.writeFileSync(infoPath, JSON.stringify(infoData, null, 2), 'utf8');
-        } catch (infoErr) {
-          console.warn(`Could not write account-info for ${accountFolder}:`, infoErr);
-        }
+        result.errors.push({ path: file.relPath, error: err.message || 'Unknown error' });
       }
     }
 

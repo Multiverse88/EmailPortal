@@ -127,14 +127,47 @@ export default (prisma: PrismaClient) => {
   });
 
   // GET /api/storage/sync-agent/poll (Runner ONLY)
-  router.get('/sync-agent/poll', authenticateRunner, (_req: Request, res: Response) => {
+  router.get('/sync-agent/poll', authenticateRunner, async (_req: Request, res: Response) => {
     const pendingJob = syncJobs.find((j) => j.status === 'PENDING');
     if (!pendingJob) {
       return res.json({ job: null });
     }
     pendingJob.status = 'RUNNING';
     pendingJob.startedAt = new Date();
-    res.json({ job: pendingJob });
+
+    try {
+      const manifest = await syncService.generateExportManifest();
+      res.json({ job: pendingJob, manifest });
+    } catch (err: any) {
+      console.error('Failed to generate export manifest for runner:', err);
+      res.json({ job: pendingJob, manifest: null });
+    }
+  });
+
+  // GET /api/storage/sync-agent/download/:type/:id (Runner ONLY)
+  router.get('/sync-agent/download/:type/:id', authenticateRunner, async (req: Request, res: Response) => {
+    try {
+      const { type, id } = req.params;
+      if (type !== 'document' && type !== 'attachment' && type !== 'avatar') {
+        return res.status(400).json({ error: 'Tipe berkas tidak valid' });
+      }
+
+      const fileData = await syncService.getFileData(type as any, id);
+      if (!fileData) {
+        return res.status(404).json({ error: 'Berkas tidak ditemukan di storage' });
+      }
+
+      res.setHeader('Content-Type', fileData.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Length', fileData.size);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${encodeURIComponent(fileData.filename)}"`
+      );
+      return res.send(fileData.buffer);
+    } catch (error) {
+      console.error('Download sync-agent error:', error);
+      res.status(500).json({ error: 'Gagal mengunduh berkas' });
+    }
   });
 
   // POST /api/storage/sync-agent/complete (Runner ONLY)

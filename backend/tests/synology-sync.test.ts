@@ -11,9 +11,24 @@ describe('SynologySyncService', () => {
   beforeAll(async () => {
     jest.setTimeout(30000);
     service.initTargetFolder();
+    await prisma.customer.upsert({
+      where: { mailboxAddress: 'test-sync@clienteasylegal.co.id' },
+      update: {},
+      create: {
+        id: 'test-sync-cust-1',
+        name: 'Test Sync PT',
+        personalEmail: 'test-sync@personal.com',
+        mailboxAddress: 'test-sync@clienteasylegal.co.id',
+        passwordEnc: 'mockpass',
+        status: 'active',
+      },
+    });
   });
 
   afterAll(async () => {
+    await prisma.customer.deleteMany({
+      where: { mailboxAddress: 'test-sync@clienteasylegal.co.id' },
+    });
     await prisma.$disconnect();
   });
 
