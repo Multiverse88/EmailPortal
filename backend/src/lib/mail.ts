@@ -88,6 +88,7 @@ export async function sendOnboardingNotice(
   const htmlBody = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px; color: #1e293b;">
       <div style="text-align: center; margin-bottom: 24px;">
+        <img src="${portalUrl}/companion/el/el-avatar-kepala.png" width="56" height="56" alt="EasyLegal Portal" style="width: 56px; height: 56px; border-radius: 12px; margin-bottom: 12px; display: inline-block; object-fit: contain; border: 1px solid #e2e8f0;" />
         <h1 style="color: #0f172a; font-size: 20px; font-weight: 700; margin: 0;">EasyLegal Customer Portal</h1>
         <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Aktivasi Akun & Akses Mailbox Resmi</p>
       </div>

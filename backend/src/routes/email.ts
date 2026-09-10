@@ -29,6 +29,119 @@ const upload = multer({
 
 export const FOLDERS = ['INBOX', 'Sent', 'Drafts', 'Trash'] as const;
 
+export function extractEmailAddress(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const match = raw.match(/<([^>]+)>/) || raw.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  return match ? match[1].trim().toLowerCase() : raw.trim().toLowerCase();
+}
+
+export async function resolveAvatarMap(
+  prisma: PrismaClient,
+  emailAddresses: (string | null | undefined)[],
+  currentCustomerId?: string
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const cleanEmails = Array.from(
+    new Set(emailAddresses.map(extractEmailAddress).filter(Boolean))
+  ) as string[];
+
+  // 1. System/Admin emails -> Official EasyLegal Logo
+  for (const email of cleanEmails) {
+    if (
+      email === 'admin@clienteasylegal.co.id' ||
+      email.includes('admin@clienteasylegal') ||
+      email === 'support@clienteasylegal.co.id'
+    ) {
+      map.set(email, '/companion/el/el-avatar-kepala.png');
+    }
+  }
+
+  // 2. Query matching Customers with avatars
+  if (cleanEmails.length > 0) {
+    const customers = await prisma.customer.findMany({
+      where: {
+        mailboxAddress: { in: cleanEmails },
+        avatarUrl: { not: null },
+      },
+      select: { id: true, mailboxAddress: true, updatedAt: true },
+    });
+
+    for (const c of customers) {
+      map.set(
+        c.mailboxAddress.toLowerCase(),
+        `/api/settings/avatar/${c.id}?v=${new Date(c.updatedAt).getTime()}`
+      );
+    }
+  }
+
+  // 3. Current customer avatar if requested
+  if (currentCustomerId) {
+    const current = await prisma.customer.findUnique({
+      where: { id: currentCustomerId },
+      select: { id: true, mailboxAddress: true, avatarUrl: true, updatedAt: true },
+    });
+    if (current?.avatarUrl) {
+      const url = `/api/settings/avatar/${current.id}?v=${new Date(current.updatedAt).getTime()}`;
+      map.set(current.mailboxAddress.toLowerCase(), url);
+      map.set('__CURRENT_USER__', url);
+    }
+  }
+
+  return map;
+}
+
+export function buildBrandedEmailHtml(opts: {
+  customer: { id: string; name: string; mailboxAddress: string; avatarUrl: string | null };
+  bodyText: string;
+  portalUrl: string;
+}): string {
+  const rawText = opts.bodyText || '';
+  const escapedText = rawText
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  const paragraphs = escapedText
+    .split(/\n\s*\n/)
+    .filter((p) => p.trim().length > 0)
+    .map((p) => `<p style="margin: 0 0 16px 0; line-height: 1.6;">${p.replace(/\n/g, '<br/>')}</p>`)
+    .join('');
+
+  const avatarSrc = opts.customer.avatarUrl
+    ? `${opts.portalUrl}/api/settings/avatar/${opts.customer.id}`
+    : `${opts.portalUrl}/companion/el/el-avatar-kepala.png`;
+
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1e293b; max-width: 650px;">
+      <div style="margin-bottom: 24px;">
+        ${paragraphs || `<p style="margin: 0;">${escapedText.replace(/\n/g, '<br/>')}</p>`}
+      </div>
+
+      <!-- EasyLegal Corporate Signature Block -->
+      <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; width: 100%;">
+        <tr>
+          <td style="width: 54px; vertical-align: middle; padding-right: 14px;">
+            <img src="${avatarSrc}" alt="${opts.customer.name}" width="50" height="50" style="width: 50px; height: 50px; border-radius: 10px; object-fit: contain; border: 1px solid #e2e8f0; display: block; background-color: #ffffff;" />
+          </td>
+          <td style="vertical-align: middle;">
+            <div style="font-size: 14px; font-weight: 700; color: #0f172a; line-height: 1.3;">
+              ${opts.customer.name}
+            </div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 2px; line-height: 1.4;">
+              <a href="mailto:${opts.customer.mailboxAddress}" style="color: #0284c7; text-decoration: none;">${opts.customer.mailboxAddress}</a>
+            </div>
+            <div style="margin-top: 6px; display: inline-block; font-size: 11px; font-weight: 600; color: #0369a1; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 2px 8px;">
+              EasyLegal Verified Corporate Client
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `.trim();
+}
+
 export default (prisma: PrismaClient) => {
   const router = Router();
 
@@ -92,8 +205,26 @@ export default (prisma: PrismaClient) => {
         prisma.messageCache.count({ where }),
       ]);
 
+      const addressesToResolve = messages.map((m) =>
+        folder === 'Sent' ? (m.recipients?.split(',')[0] || m.sender) : m.sender
+      );
+      const avatarMap = await resolveAvatarMap(prisma, addressesToResolve, mailboxId);
+
+      const enrichedMessages = messages.map((m) => {
+        const targetAddress = folder === 'Sent' ? (m.recipients?.split(',')[0] || m.sender) : m.sender;
+        const clean = extractEmailAddress(targetAddress);
+        let senderAvatarUrl = clean ? (avatarMap.get(clean) || null) : null;
+        if (!senderAvatarUrl && folder === 'Sent') {
+          senderAvatarUrl = avatarMap.get('__CURRENT_USER__') || null;
+        }
+        return {
+          ...m,
+          senderAvatarUrl,
+        };
+      });
+
       res.json({
-        data: messages,
+        data: enrichedMessages,
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
       });
     } catch (error) {
@@ -134,6 +265,9 @@ export default (prisma: PrismaClient) => {
         });
       }
 
+      const portalUrl = (process.env.CORS_ORIGIN || 'https://clienteasylegal.co.id').split(',')[0].trim();
+      const html = buildBrandedEmailHtml({ customer, bodyText: text, portalUrl });
+
       // Prefer Hostinger Mail API send when configured; SMTP is the fallback.
       let result: { delivered: boolean };
       if (isMailApiConfigured()) {
@@ -147,7 +281,14 @@ export default (prisma: PrismaClient) => {
         if (!resourceId) {
           return res.status(503).json({ error: 'Mailbox belum terhubung ke Hostinger Mail API' });
         }
-        result = await sendViaApi(resourceId, { to, cc, subject: subject || '(tanpa subjek)', text });
+        result = await sendViaApi(resourceId, {
+          to,
+          cc,
+          subject: subject || '(tanpa subjek)',
+          text,
+          html,
+          displayName: customer.name,
+        });
       } else {
         result = await sendMail({
           user: customer.mailboxAddress,
@@ -157,6 +298,7 @@ export default (prisma: PrismaClient) => {
           cc,
           subject: subject || '(tanpa subjek)',
           text,
+          html,
           attachments: files.map((f) => ({ filename: f.originalname, path: f.path })),
         });
       }
@@ -175,6 +317,7 @@ export default (prisma: PrismaClient) => {
           recipients: [to, cc].filter(Boolean).join(','),
           snippet: toSnippet(text),
           bodyText: text,
+          bodyHtml: html,
           isRead: true,
           receivedAt: new Date(),
           attachments: {
@@ -209,9 +352,18 @@ export default (prisma: PrismaClient) => {
         await prisma.messageCache.update({ where: { id: message.id }, data: { isRead: true } });
       }
 
+      const senderAddress = message.sender;
+      const avatarMap = await resolveAvatarMap(prisma, [senderAddress], mailboxId);
+      const clean = extractEmailAddress(senderAddress);
+      let senderAvatarUrl = clean ? (avatarMap.get(clean) || null) : null;
+      if (!senderAvatarUrl && message.folder === 'Sent') {
+        senderAvatarUrl = avatarMap.get('__CURRENT_USER__') || null;
+      }
+
       res.json({
         ...message,
         isRead: true,
+        senderAvatarUrl,
         bodyHtml: message.bodyHtml ? sanitizeHtml(message.bodyHtml) : null,
       });
     } catch (error) {

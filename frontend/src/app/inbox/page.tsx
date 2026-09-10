@@ -56,6 +56,7 @@ interface Message {
   isStarred: boolean;
   receivedAt: string;
   attachments?: EmailAttachment[];
+  senderAvatarUrl?: string | null;
 }
 
 const FOLDER_META = [
@@ -514,8 +515,22 @@ function Inbox_() {
                   </button>
 
                   {/* Sender Avatar */}
+                  {m.senderAvatarUrl ? (
+                    <img
+                      src={m.senderAvatarUrl}
+                      alt={senderName || 'Avatar'}
+                      className="w-8 h-8 rounded-full object-contain bg-white border border-slate-200 shrink-0 shadow-2xs"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                        const fallback = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+                        if (fallback) fallback.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${avatarClass}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${avatarClass} ${
+                      m.senderAvatarUrl ? 'hidden' : ''
+                    }`}
                   >
                     {initials(senderName)}
                   </div>
@@ -669,10 +684,22 @@ function Inbox_() {
                   {/* Sender Details */}
                   <div className="flex items-start justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
                     <div className="flex items-center gap-3">
+                      {message.senderAvatarUrl ? (
+                        <img
+                          src={message.senderAvatarUrl}
+                          alt={message.sender || 'Avatar'}
+                          className="w-11 h-11 rounded-full object-contain bg-white border border-slate-200 shrink-0 shadow-xs"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                            const fallback = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+                            if (fallback) fallback.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
                       <div
                         className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shadow-xs ${avatarColor(
                           message.sender
-                        )}`}
+                        )} ${message.senderAvatarUrl ? 'hidden' : ''}`}
                       >
                         {initials(message.sender)}
                       </div>
