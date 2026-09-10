@@ -90,6 +90,15 @@ describe('Quota Enforcement & Account Isolated Storage (TDD)', () => {
       expect(res.header['content-type']).toContain('image/png');
     });
 
+    it('streams company logo publicly via GET /api/settings/avatar/:customerId without token', async () => {
+      const res = await request(app)
+        .get(`/api/settings/avatar/${customerA.id}`);
+
+      expect(res.status).toBe(200);
+      expect(res.header['content-type']).toContain('image/png');
+      expect(res.header['cache-control']).toContain('public');
+    });
+
     it('deletes company logo and resets avatarUrl in DB and storage', async () => {
       const custBefore = await prisma.customer.findUnique({ where: { id: customerA.id } });
       const avatarKey = custBefore!.avatarUrl!;

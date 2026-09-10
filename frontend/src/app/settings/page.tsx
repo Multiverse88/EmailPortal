@@ -190,6 +190,8 @@ function SettingsContent() {
   // Profile data & Logo state
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarDragActive, setAvatarDragActive] = useState(false);
+  const [avatarImgError, setAvatarImgError] = useState(false);
   const [avatarErr, setAvatarErr] = useState('');
   const [avatarOk, setAvatarOk] = useState('');
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
@@ -303,10 +305,8 @@ function SettingsContent() {
     }
   };
 
-  // Upload Logo Perusahaan to IDCloudHost S3
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Reusable Upload Logo Perusahaan to IDCloudHost S3
+  const uploadAvatarFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setAvatarErr('File harus berupa gambar (PNG, JPG, WebP, SVG)');
       return;
@@ -330,7 +330,36 @@ function SettingsContent() {
       setAvatarErr(errMsg(err, 'Gagal mengunggah logo perusahaan'));
     } finally {
       setAvatarUploading(false);
-      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await uploadAvatarFile(file);
+    }
+    if (e.target) e.target.value = '';
+  };
+
+  const handleAvatarDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!avatarDragActive) setAvatarDragActive(true);
+  };
+
+  const handleAvatarDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAvatarDragActive(false);
+  };
+
+  const handleAvatarDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAvatarDragActive(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      await uploadAvatarFile(file);
     }
   };
 
@@ -370,6 +399,27 @@ function SettingsContent() {
   useEffect(() => {
     fetchSettings();
     fetchSessions();
+  }, []);
+
+  useEffect(() => {
+    setAvatarImgError(false);
+  }, [user?.avatarUrl, profileData?.avatarUrl]);
+
+  useEffect(() => {
+    const handleGlobalDragOver = (e: DragEvent) => {
+      // Prevent browser default action of opening dragged files as file:///
+      e.preventDefault();
+    };
+    const handleGlobalDrop = (e: DragEvent) => {
+      // Prevent browser default action of navigating to file:///
+      e.preventDefault();
+    };
+    window.addEventListener('dragover', handleGlobalDragOver);
+    window.addEventListener('drop', handleGlobalDrop);
+    return () => {
+      window.removeEventListener('dragover', handleGlobalDragOver);
+      window.removeEventListener('drop', handleGlobalDrop);
+    };
   }, []);
 
   // Save General Preferences
@@ -1026,20 +1076,45 @@ function SettingsContent() {
               )}
 
               {/* Company Logo / Avatar Card */}
-              <section className="bg-white rounded-2xl border border-border-subtle p-6 sm:p-7 shadow-xs">
+              <section
+                onDragOver={handleAvatarDragOver}
+                onDragEnter={handleAvatarDragOver}
+                onDragLeave={handleAvatarDragLeave}
+                onDrop={handleAvatarDrop}
+                className={`bg-white rounded-2xl border transition-all p-6 sm:p-7 shadow-xs ${
+                  avatarDragActive
+                    ? 'border-primary ring-2 ring-primary/20 bg-primary/[0.02]'
+                    : 'border-border-subtle'
+                }`}
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-slate-100">
                   <div className="flex items-center gap-4">
-                    <div className="relative group size-20 rounded-2xl border-2 border-dashed border-slate-300 hover:border-primary overflow-hidden flex items-center justify-center bg-slate-50 transition-colors shrink-0">
-                      {user?.avatarUrl || profileData?.avatarUrl ? (
+                    <div
+                      onDragOver={handleAvatarDragOver}
+                      onDrop={handleAvatarDrop}
+                      className={`relative group size-20 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center transition-all shrink-0 ${
+                        avatarDragActive
+                          ? 'border-primary bg-primary/10 scale-105'
+                          : 'border-slate-300 hover:border-primary bg-slate-50'
+                      }`}
+                    >
+                      {(user?.avatarUrl || profileData?.avatarUrl) && !avatarImgError ? (
                         <img
                           src={user?.avatarUrl || profileData?.avatarUrl || ''}
                           alt="Logo Perusahaan"
+                          onError={() => setAvatarImgError(true)}
                           className="size-full object-contain p-1.5"
                         />
                       ) : (
                         <span className="text-2xl font-bold text-primary">
                           {initials(displayName)}
                         </span>
+                      )}
+                      {avatarDragActive && (
+                        <div className="absolute inset-0 bg-primary/90 text-white flex flex-col items-center justify-center text-[10px] font-bold gap-1 animate-fade-in">
+                          <Upload className="size-5 animate-bounce" />
+                          <span>Drop Logo</span>
+                        </div>
                       )}
                       {avatarUploading && (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-2xs flex items-center justify-center">
@@ -1050,7 +1125,7 @@ function SettingsContent() {
                     <div>
                       <h2 className="text-base font-bold text-slate-900">Logo Perusahaan / Avatar</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Tampil di header utama dan identitas perusahaan Anda.
+                        Tampil di header utama dan identitas perusahaan Anda. Drag & drop file atau klik tombol unggah.
                       </p>
                       <div className="mt-2 flex items-center gap-2">
                         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">

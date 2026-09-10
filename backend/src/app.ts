@@ -61,7 +61,7 @@ app.use('/api/mailboxes', authenticateOfficerOrAdmin, mailboxRoutes(prisma));
 app.use('/api/email', authenticateCustomer, emailRoutes(prisma));
 app.use('/api/search', authenticateCustomer, searchRoutes(prisma));
 app.use('/api/security', securityRoutes(prisma));
-app.use('/api/settings', authenticateCustomer, settingsRoutes(prisma));
+app.use('/api/settings', settingsRoutes(prisma));
 app.use('/api/documents', authenticateCustomer, documentsRoutes(prisma));
 app.use('/api/support', authenticateCustomer, supportRoutes(prisma));
 app.use('/api/storage', storageRoutes(prisma));

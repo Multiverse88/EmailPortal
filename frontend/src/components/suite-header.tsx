@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, Menu, Scale } from 'lucide-react';
 import { AppLauncher, AppId } from '@/components/app-launcher';
@@ -41,6 +41,11 @@ export function SuiteHeader({
   admin = false,
 }: SuiteHeaderProps) {
   const router = useRouter();
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [avatarUrl]);
 
   return (
     <>
@@ -106,10 +111,11 @@ export function SuiteHeader({
             className="ml-1 flex items-center gap-2 rounded-xl border border-transparent p-1 transition-colors hover:border-border-subtle hover:bg-white"
             title="Pengaturan akun"
           >
-            {avatarUrl ? (
+            {avatarUrl && !imgError ? (
               <img
                 src={avatarUrl}
                 alt={userName || 'Logo'}
+                onError={() => setImgError(true)}
                 className="size-8 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs"
               />
             ) : (

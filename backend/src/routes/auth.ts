@@ -126,7 +126,7 @@ export default (prisma: PrismaClient) => {
           email: customer.mailboxAddress,
           type: 'customer',
           role: 'customer',
-          avatarUrl: customer.avatarUrl,
+          avatarUrl: customer.avatarUrl ? `/api/settings/avatar/${customer.id}?v=${new Date(customer.updatedAt).getTime()}` : null,
           storageQuota: customer.storageQuota,
         },
       });
@@ -203,7 +203,7 @@ export default (prisma: PrismaClient) => {
           email: customer.mailboxAddress,
           type: 'customer',
           role: 'customer',
-          avatarUrl: customer.avatarUrl,
+          avatarUrl: customer.avatarUrl ? `/api/settings/avatar/${customer.id}?v=${new Date(customer.updatedAt).getTime()}` : null,
           storageQuota: customer.storageQuota,
         },
       });
@@ -458,7 +458,7 @@ export default (prisma: PrismaClient) => {
           email: customer.mailboxAddress,
           type: 'customer',
           role: 'customer',
-          avatarUrl: customer.avatarUrl,
+          avatarUrl: customer.avatarUrl ? `/api/settings/avatar/${customer.id}?v=${new Date(customer.updatedAt).getTime()}` : null,
           storageQuota: customer.storageQuota,
         },
         impersonatedBy: {
@@ -475,10 +475,13 @@ export default (prisma: PrismaClient) => {
   router.get('/me', authenticateCustomer, async (req: Request, res: Response) => {
     const customer = await prisma.customer.findUnique({
       where: { id: req.user!.id },
-      select: { id: true, name: true, mailboxAddress: true, personalEmail: true, status: true },
+      select: { id: true, name: true, mailboxAddress: true, personalEmail: true, status: true, avatarUrl: true, updatedAt: true },
     });
     if (!customer) return res.status(404).json({ error: 'Not found' });
-    res.json(customer);
+    res.json({
+      ...customer,
+      avatarUrl: customer.avatarUrl ? `/api/settings/avatar/${customer.id}?v=${new Date(customer.updatedAt).getTime()}` : null,
+    });
   });
 
   return router;
