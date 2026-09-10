@@ -2,6 +2,8 @@ import { Request, Response, Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { audit } from '../lib/audit';
 import { purgeDummyData } from '../lib/clean-data';
+import { decrypt, encrypt, generatePassword } from '../lib/crypto';
+import { sendOnboardingNotice } from '../lib/mail';
 
 export default (prisma: PrismaClient) => {
   const router = Router();
@@ -126,6 +128,56 @@ export default (prisma: PrismaClient) => {
       include: { actor: { select: { name: true, email: true } } },
     });
     res.json({ data: logs });
+  });
+
+  // POST /api/mailboxes/:id/resend-credentials
+  // Allows Superadmin and Officer to resend account info (email, password, login link) to customer's personal email
+  router.post('/:id/resend-credentials', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const customer = await prisma.customer.findUnique({ where: { id } });
+      if (!customer) return res.status(404).json({ error: 'Customer tidak ditemukan' });
+
+      // Decrypt stored password, or if unreadable, generate and save a new one
+      let password = '';
+      try {
+        password = decrypt(customer.passwordEnc);
+      } catch {
+        password = generatePassword();
+        await prisma.customer.update({
+          where: { id: customer.id },
+          data: { passwordEnc: encrypt(password) },
+        });
+      }
+
+      const sendResult = await sendOnboardingNotice(
+        customer.personalEmail,
+        customer.mailboxAddress,
+        password,
+        customer.name
+      );
+
+      await audit(prisma, req, 'mailbox.resend_credentials', 'customer', id, {
+        mailboxAddress: customer.mailboxAddress,
+        personalEmail: customer.personalEmail,
+        delivered: sendResult.delivered,
+      });
+
+      res.json({
+        success: true,
+        message: sendResult.delivered
+          ? `Informasi akun dan kredensial berhasil dikirimkan ke email pribadi ${customer.personalEmail}`
+          : `Informasi akun telah disiapkan untuk ${customer.name}. (Pengiriman email otomatis di-skip karena HOSTINGER_SMTP_PASS belum diset di .env)`,
+        delivered: sendResult.delivered,
+        name: customer.name,
+        mailboxAddress: customer.mailboxAddress,
+        personalEmail: customer.personalEmail,
+        temporaryPassword: password,
+      });
+    } catch (error) {
+      console.error('Resend credentials error:', error);
+      res.status(500).json({ error: 'Gagal mengirim ulang informasi akun' });
+    }
   });
 
   return router;

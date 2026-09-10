@@ -161,6 +161,16 @@ function Admin_() {
   const [terminatingSessionId, setTerminatingSessionId] = useState<string | null>(null);
   const [terminatingAccountId, setTerminatingAccountId] = useState<string | null>(null);
   const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [resendResult, setResendResult] = useState<{
+    name: string;
+    mailboxAddress: string;
+    personalEmail: string;
+    temporaryPassword?: string;
+    delivered: boolean;
+    message: string;
+  } | null>(null);
+  const [copiedResend, setCopiedResend] = useState(false);
 
   // Mailboxes data
   const { data, mutate, isLoading } = useSWR<{ data: Mailbox[]; quota: { used: number; limit: number } }>(
@@ -363,6 +373,38 @@ function Admin_() {
     } finally {
       setImpersonatingId(null);
     }
+  };
+
+  const handleResendCredentials = async (mailbox: { id: string; name: string; mailboxAddress: string; personalEmail: string }) => {
+    if (!window.confirm(`Kirim ulang informasi akun & kata sandi untuk "${mailbox.name}" (${mailbox.mailboxAddress}) ke email pribadi ${mailbox.personalEmail}?`)) {
+      return;
+    }
+    setResendingId(mailbox.id);
+    try {
+      const res = await api.post(`/mailboxes/${mailbox.id}/resend-credentials`);
+      setResendResult({
+        name: res.data.name || mailbox.name,
+        mailboxAddress: res.data.mailboxAddress || mailbox.mailboxAddress,
+        personalEmail: res.data.personalEmail || mailbox.personalEmail,
+        temporaryPassword: res.data.temporaryPassword,
+        delivered: Boolean(res.data.delivered),
+        message: res.data.message || 'Kredensial berhasil disiapkan',
+      });
+      setToast(res.data.delivered ? '✅ Kredensial berhasil dikirim ke email pribadi!' : 'ℹ️ Kredensial berhasil disiapkan!');
+      setTimeout(() => setToast(''), 4000);
+    } catch (err) {
+      setToast(errMsg(err, 'Gagal mengirim ulang kredensial'));
+      setTimeout(() => setToast(''), 4000);
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  const copyResendTemplate = (info: { name: string; mailboxAddress: string; personalEmail: string; temporaryPassword?: string }) => {
+    const text = `Halo ${info.name},\n\nBerikut informasi akun resmi EasyLegal Portal Anda:\n📧 Alamat Email : ${info.mailboxAddress}\n🔑 Password : ${info.temporaryPassword || '(Gunakan kata sandi akun Anda)'}\n🌐 Portal Akses : https://clienteasylegal.co.id/login\n\nHarap segera amankan kata sandi Anda di menu Pengaturan Keamanan setelah berhasil masuk.\n\nSalam,\nTim Layanan EasyLegal`;
+    navigator.clipboard.writeText(text);
+    setCopiedResend(true);
+    setTimeout(() => setCopiedResend(false), 2500);
   };
 
   const mailboxes = data?.data ?? [];
@@ -853,6 +895,23 @@ function Admin_() {
                                     className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200/80"
                                   >
                                     Aktifkan
+                                  </button>
+                                )}
+                                {m.status !== 'deleted' && (
+                                  <button
+                                    type="button"
+                                    data-testid={`resend-cred-${m.id}`}
+                                    onClick={() => handleResendCredentials(m)}
+                                    disabled={resendingId === m.id}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/10 rounded-lg transition-colors border border-primary/30 hover:border-primary shrink-0"
+                                    title={`Kirim ulang rincian akun & kata sandi ke email pribadi ${m.personalEmail}`}
+                                  >
+                                    {resendingId === m.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Mail className="w-3.5 h-3.5" />
+                                    )}
+                                    <span>Kirim Info</span>
                                   </button>
                                 )}
                                 {m.status !== 'deleted' && (
@@ -1429,20 +1488,36 @@ function Admin_() {
                         <span className="block text-xs font-bold text-slate-800 truncate">{m.name}</span>
                         <span className="block text-[11px] font-mono text-slate-500 truncate">{m.mailboxAddress}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleImpersonate(m.id)}
-                        disabled={impersonatingId === m.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark transition-colors shrink-0 shadow-xs disabled:opacity-50 cursor-pointer"
-                      >
-                        {impersonatingId === m.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-                        )}
-                        <span>Buka Webmail</span>
-                        <ExternalLink className="w-3 h-3 ml-0.5 opacity-75" />
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleResendCredentials(m)}
+                          disabled={resendingId === m.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors shrink-0 shadow-2xs border border-slate-200 cursor-pointer"
+                          title={`Kirim ulang rincian akun & kata sandi ke email pribadi ${m.personalEmail}`}
+                        >
+                          {resendingId === m.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Mail className="w-3.5 h-3.5 text-primary" />
+                          )}
+                          <span>Kirim Info</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleImpersonate(m.id)}
+                          disabled={impersonatingId === m.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark transition-colors shrink-0 shadow-xs disabled:opacity-50 cursor-pointer"
+                        >
+                          {impersonatingId === m.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                          )}
+                          <span>Buka Webmail</span>
+                          <ExternalLink className="w-3 h-3 ml-0.5 opacity-75" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1504,6 +1579,101 @@ Tim Legal EasyLegal`}
             mutate();
           }}
         />
+      )}
+
+      {/* Resend Credentials Result Modal */}
+      {resendResult && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="modal-panel max-w-lg w-full overflow-hidden bg-white rounded-2xl shadow-2xl border border-slate-200">
+            <header className="flex items-center justify-between px-5 py-4 bg-primary text-white select-none">
+              <div className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-white" />
+                <h2 className="font-semibold text-sm">Informasi Akun &amp; Kredensial Customer</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResendResult(null)}
+                className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </header>
+
+            <div className="p-6 space-y-4 text-xs">
+              {/* Status Delivery Badge */}
+              <div className={`p-3.5 rounded-xl border flex items-start gap-3 ${
+                resendResult.delivered
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  : 'bg-amber-50 border-amber-200 text-amber-900'
+              }`}>
+                {resendResult.delivered ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <h4 className="font-bold text-xs">
+                    {resendResult.delivered
+                      ? 'Email Berhasil Terkirim ke Inbox Klien!'
+                      : 'Kredensial Siap Disampaikan Manual'}
+                  </h4>
+                  <p className="text-[11px] mt-0.5 opacity-90 leading-relaxed">
+                    {resendResult.message}
+                  </p>
+                </div>
+              </div>
+
+              {/* Detail Credentials Table */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5">
+                <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                  <span className="text-slate-500 font-medium">Nama Pelanggan:</span>
+                  <span className="font-bold text-slate-800">{resendResult.name}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                  <span className="text-slate-500 font-medium">Email Portal Resmi:</span>
+                  <span className="font-mono font-bold text-primary">{resendResult.mailboxAddress}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                  <span className="text-slate-500 font-medium">Email Pribadi Tujuan:</span>
+                  <span className="font-mono text-slate-700">{resendResult.personalEmail}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                  <span className="text-slate-500 font-medium">Password Akun:</span>
+                  <code className="px-2 py-0.5 bg-white border border-slate-300 rounded font-mono font-bold text-primary text-xs shadow-2xs">
+                    {resendResult.temporaryPassword || '(Kata sandi terenkripsi)'}
+                  </code>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-slate-500 font-medium">URL Portal:</span>
+                  <span className="text-slate-700 font-mono text-[11px]">https://clienteasylegal.co.id/login</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Anda dapat langsung menyalin format pesan resmi di bawah ini untuk dikirimkan melalui WhatsApp atau balasan tiket bantuan klien.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setResendResult(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200 cursor-pointer"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyResendTemplate(resendResult)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl transition-all shadow-xs cursor-pointer"
+                >
+                  {copiedResend ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedResend ? 'Tersalin ke Clipboard!' : 'Salin Format Pesan'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast Notification */}

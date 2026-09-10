@@ -342,6 +342,16 @@ function SupportContent() {
 
               <details className="group pt-3">
                 <summary className="flex items-center justify-between text-xs font-bold text-slate-800 cursor-pointer list-none hover:text-primary transition-colors">
+                  <span>Bagaimana jika butuh pengiriman ulang email akun / sandi?</span>
+                  <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
+                </summary>
+                <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  Jika Anda membutuhkan pengiriman ulang kredensial atau password sementara, buat tiket dengan kategori <strong>Permohonan Kredensial &amp; Password</strong>. Tim Officer kami akan memverifikasi dan mengirimkan ulang rincian ke email pribadi Anda.
+                </p>
+              </details>
+
+              <details className="group pt-3">
+                <summary className="flex items-center justify-between text-xs font-bold text-slate-800 cursor-pointer list-none hover:text-primary transition-colors">
                   <span>Bagaimana jika lupa sandi akun mailbox?</span>
                   <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
                 </summary>
@@ -405,6 +415,7 @@ function SupportContent() {
                     <option value="Document Review">Document Review</option>
                     <option value="Billing & Tagihan">Billing & Tagihan</option>
                     <option value="Access & Security">Access & Security</option>
+                    <option value="Permohonan Kredensial & Password">Permohonan Kredensial & Password</option>
                     <option value="Mailbox Technical">Mailbox Technical</option>
                     <option value="Umum">Umum</option>
                   </select>
