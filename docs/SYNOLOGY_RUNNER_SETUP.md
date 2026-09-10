@@ -41,7 +41,7 @@ Skrip ini akan:
 3. Di kartu **Synology Drive Cold Storage**, Anda akan melihat:
    - **Status Runner**: `🟢 Laptop Terhubung (Synology Drive Online)`
    - **Hostname**: `fedora`
-   - **Lokasi Folder**: `/home/fullstackiteasylegal/SynologyDrive/EmailPortal_ColdStorage`
+   - **Lokasi Folder**: `/home/fullstackiteasylegal/SynologyDrive/Data Ainan/EmailPortal_ColdStorage` (tertaut juga di `/home/fullstackiteasylegal/SynologyDrive/EmailPortal_ColdStorage`)
 4. Klik tombol **"Sinkronkan ke Synology Sekarang"**.
 5. Laptop Anda akan langsung mengunduh berkas terbaru dari S3 IDCloudHost dan merapikannya ke folder per klien.
 6. Aplikasi **Synology Drive Client** di Fedora akan otomatis mengunggahnya ke perangkat Synology NAS kantor Anda!
