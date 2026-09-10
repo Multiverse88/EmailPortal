@@ -54,4 +54,7 @@ NINEROUTER_MODEL=ArticleAI
 
 ## 📝 Catatan Penting
 - **`SYNOLOGY_RUNNER_TOKEN`**: Harus sama persis dengan token yang ada di laptop Fedora (`easylegal-synology-runner-secret-2026`). Nilai ini digunakan oleh runner laptop untuk mengautentikasi tugas sinkronisasi.
-- **`HOSTINGER_SMTP_PASS`**: Isi dengan password akun email `admin@clienteasylegal.co.id` jika ingin mengaktifkan pengiriman email alert keamanan perangkat baru secara nyata. Jika dibiarkan kosong, notifikasi tetap tercatat di database & Security Radar.
+- **`HOSTINGER_SMTP_PASS`**: Isi dengan password akun email `admin@clienteasylegal.co.id` dari hPanel Hostinger. Variabel ini wajib diisi agar:
+  1. **Email Onboarding Pembuatan Akun**: Kredensial email domain `@clienteasylegal.co.id`, password sementara, dan link login otomatis terkirim ke email pribadi pelanggan (`personalEmail`).
+  2. **Email Alert Keamanan**: Notifikasi peringatan login perangkat baru otomatis terkirim.
+  *(Jika dibiarkan kosong, pengiriman email SMTP akan di-skip untuk mencegah error crash, dan kredensial sementara hanya tampil sekali di modal admin).*
