@@ -114,7 +114,7 @@ describe('Zero-Leakage Local Legal PDF Metadata Extractor & Super Admin Support 
       expect(Array.isArray(res.body.metadata)).toBe(true);
     });
 
-    it('allows Officer to upload and extract PDF with zero leakage', async () => {
+    it('defaults to ephemeral zero-retention mode when extracting PDF (no database storage)', async () => {
       const samplePdfPath = path.resolve(__dirname, '../../storage/sk-kemenkumham-2026.pdf');
 
       const res = await request(app)
@@ -126,12 +126,46 @@ describe('Zero-Leakage Local Legal PDF Metadata Extractor & Super Admin Support 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.privacy.zeroDataLeakage).toBe(true);
+      expect(res.body.privacy.ephemeralMode).toBe(true);
+      expect(res.body.privacy.storageMode).toBe('ephemeral_in_memory_only');
+      expect(res.body.data).toBeNull();
+      expect(res.body.extraction.docType).toBeDefined();
+    });
+
+    it('persists to database when saveToDatabase is explicitly requested or via /save', async () => {
+      const samplePdfPath = path.resolve(__dirname, '../../storage/sk-kemenkumham-2026.pdf');
+
+      const res = await request(app)
+        .post('/api/admin/documents/extract')
+        .set('Authorization', `Bearer ${officerToken}`)
+        .attach('file', samplePdfPath)
+        .field('customerId', testCustomerId)
+        .field('saveToDatabase', 'true');
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
       expect(res.body.privacy.storageMode).toBe('persistent_sqlite_memory');
-      expect(res.body.data.id).toBeDefined();
+      expect(res.body.data?.id).toBeDefined();
+
+      // Test explicit save endpoint as well
+      const explicitSaveRes = await request(app)
+        .post('/api/admin/documents/save')
+        .set('Authorization', `Bearer ${officerToken}`)
+        .send({
+          metadata: res.body.extraction,
+          customerId: testCustomerId,
+        });
+
+      expect(explicitSaveRes.status).toBe(201);
+      expect(explicitSaveRes.body.success).toBe(true);
+      expect(explicitSaveRes.body.data.id).toBeDefined();
 
       // Cleanup
       if (res.body.data?.id) {
         await prisma.documentMetadata.delete({ where: { id: res.body.data.id } });
+      }
+      if (explicitSaveRes.body.data?.id) {
+        await prisma.documentMetadata.delete({ where: { id: explicitSaveRes.body.data.id } });
       }
     });
 

@@ -11,17 +11,19 @@
 
 EasyLegal Customer Portal mengelola korespondensi hukum formal dan dokumen legalitas korporasi sensitif (Akta Pendirian Notaris, SK Pengesahan Kemenkumham AHU, Nomor Induk Berusaha OSS, NPWP Badan Usaha, dan Kontrak Kerjasama).
 
-Sistem menerapkan arsitektur keamanan tingkat tinggi dengan 4 prinsip inti:
+Sistem menerapkan arsitektur keamanan tingkat tinggi dengan fokus utama **Keamanan Data Maksimum**:
 1. **Jaminan Nol Kebocoran Data (Zero Data Leakage Guarantee)**: Pemrosesan berkas PDF hukum dijalankan 100% *on-premise* di dalam memori server internal (RAM). Tidak ada data teks hukum, nama perorangan, atau berkas yang dikirim ke API kecerdasan buatan eksternal, server cloud pihak ketiga, atau set pelatihan publik.
-2. **Penyimpanan Memori Persisten Mandiri (Persistent Database Memory)**: Seluruh metadata yang diekstraksi disimpan ke dalam basis data terenkripsi lokal (`DocumentMetadata` di SQLite/PostgreSQL) yang terisolasi per akun klien.
-3. **Pemisahan Peran dan Hak Akses Ketat (Strict RBAC & AI Task Isolation)**:
+2. **Mode Sekali Pakai Default (Zero-Retention Ephemeral Mode)**: Sesuai prinsip *minimization of data at-rest*, hasil ekstraksi **TIDAK DISIMPAN ke database secara otomatis**. Data hanya hidup di sesi memori browser aktif staf legal dan **LANGSUNG MUSNAH TANPA JEJAK ketika pengguna relog, logout, merefresh halaman, atau menutup browser**.
+3. **Penyimpanan Database Bersyarat (Explicit Persistent Option)**: Penyimpanan ke tabel database `DocumentMetadata` hanya terjadi jika staf secara sadar dan eksplisit memilih tombol *"Simpan ke Database"*.
+4. **Pemusnahan Memori Kriptografis (Cryptographic RAM Buffer Zeroing & Instant Purge)**: Buffer memori server langsung diisi nol (`buffer.fill(0)`) setelah parsing, dan antarmuka dilengkapi tombol *"🔥 Musnahkan dari Memori (Purge)"* untuk sanitasi seketika.
+5. **Pemisahan Peran dan Hak Akses Ketat (Strict RBAC & AI Task Isolation)**:
    - **Officer (Staf Legal)**: Berfokus pada pembuatan email (*mailbox provisioning*) dan verifikasi berkas hukum (*AI Document Extraction*). Tiket *support* klien dihapus dari hak akses Officer.
    - **Super Admin**: Memegang kendali penuh atas *Pusat Tiket Support Klien*, *AI Resolution Assistant*, *Security Radar*, dan *Synology Cold Storage*.
    - **Customer (Klien)**: Didampingi oleh **El** (*AI Portal Guide*) yang ramah untuk swalayan informasi retensi 90 hari, kuota 5 GB, pencadangan mandiri, dan pembuatan tiket bantuan.
 
 ---
 
-## 2. Jaminan Keamanan Zero Data Leakage
+## 2. Jaminan Keamanan Zero Data Leakage & Ephemeral Lifecycle
 
 ### 2.1 Mekanisme Ekstraksi In-Memory (Node.js Buffer)
 Ketika Officer atau Super Admin mengunggah berkas PDF legal:
@@ -36,17 +38,18 @@ Ketika Officer atau Super Admin mengunggah berkas PDF legal:
   - Klasifikasi Baku Lapangan Usaha Indonesia (KBLI)
   - Alamat Domisili Perusahaan
   - Susunan Direksi & Komisaris
+- **Pembersihan RAM Buffer**: Setelah teks diekstrak, objek buffer segera di-overwrite dengan nilai nol (`buffer.fill(0)`) untuk mencegah sisa teks hukum terbaca di memori heap.
 - Berkas sementara di-*unlink* (*zero residual storage*) segera setelah proses pembedahan teks selesai.
 
 ```text
 [PDF Dokumen Klien] 
        │ (Upload via TLS 1.3 / Multipart)
        ▼
-[Node.js RAM Buffer] ──(pdf-parse Lokal)──► [In-Memory Text] ──(RegEx Hukum ID)──► [Metadata Terstruktur]
+[Node.js RAM Buffer] ──(pdf-parse Lokal)──► [In-Memory Text] ──(RegEx Hukum ID)──► [Hasil di Layar Browser]
        │                                                                                   │
-       ▼ (Hapus Buffer RAM)                                                                ▼
-   [DIHANCURKAN]                                                            [Persistent Memory: SQLite]
-                                                                            (TIDAK ADA DATA KELUAR SERVER)
+       ▼ (buffer.fill(0) / Hancurkan RAM)                                                  ▼
+   [DIHANCURKAN BERSIH]                                                       [HILANG SAAT RELOG / TUTUP WEB]
+                                                                              (Opsional: Simpan manual ke DB)
 ```
 
 ---

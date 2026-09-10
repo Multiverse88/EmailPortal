@@ -112,13 +112,23 @@ export default (prisma: PrismaClient) => {
       const rawText = await extractTextFromPdfBuffer(buffer);
       const parsedMetadata = parseIndonesianLegalText(rawText, filename);
 
-      // Save directly into SQLite/Prisma persistent memory
-      const savedRecord = await saveDocumentMetadataToPersistentMemory(prisma, {
-        documentId: documentId || null,
-        customerId: customerId || null,
-        metadata: parsedMetadata,
-        verifiedBy,
-      });
+      // Cryptographic RAM buffer zeroing (prevent plaintext lingering in memory)
+      try {
+        buffer.fill(0);
+      } catch {}
+
+      // Zero-Retention by default: only save to DB if explicitly requested
+      const shouldSaveToDb = req.body.saveToDatabase === 'true' || req.body.saveToDatabase === true;
+
+      let savedRecord = null;
+      if (shouldSaveToDb) {
+        savedRecord = await saveDocumentMetadataToPersistentMemory(prisma, {
+          documentId: documentId || null,
+          customerId: customerId || null,
+          metadata: parsedMetadata,
+          verifiedBy,
+        });
+      }
 
       res.status(201).json({
         success: true,
@@ -126,8 +136,12 @@ export default (prisma: PrismaClient) => {
         extraction: parsedMetadata,
         privacy: {
           zeroDataLeakage: true,
-          storageMode: 'persistent_sqlite_memory',
+          ephemeralMode: !shouldSaveToDb,
+          storageMode: shouldSaveToDb ? 'persistent_sqlite_memory' : 'ephemeral_in_memory_only',
           processedLocally: true,
+          message: !shouldSaveToDb
+            ? 'Mode Sekali Pakai Aktif: Dokumen hanya ada di memori sesi saat ini dan langsung hilang saat relog / tutup halaman.'
+            : 'Tersimpan aman di persistent memory lokal.',
         },
       });
     } catch (error: any) {
@@ -139,6 +153,32 @@ export default (prisma: PrismaClient) => {
           fs.unlinkSync(tempPath);
         } catch {}
       }
+    }
+  });
+
+  // POST /api/admin/documents/save - explicitly save ephemeral extraction to persistent memory
+  router.post('/save', async (req: Request, res: Response) => {
+    try {
+      const { metadata, customerId, documentId } = req.body;
+      if (!metadata || typeof metadata !== 'object') {
+        return res.status(400).json({ error: 'Metadata dokumen wajib disertakan' });
+      }
+
+      const verifiedBy = req.user?.email || 'Officer';
+      const savedRecord = await saveDocumentMetadataToPersistentMemory(prisma, {
+        documentId: documentId || null,
+        customerId: customerId || null,
+        metadata,
+        verifiedBy,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: savedRecord,
+      });
+    } catch (error) {
+      console.error('Explicit save document metadata error:', error);
+      res.status(500).json({ error: 'Gagal menyimpan metadata ke database' });
     }
   });
 

@@ -79,6 +79,8 @@ export function DocumentMetadataExtractor({ mailboxes, isOfficer, isSuperAdmin, 
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedData, setExtractedData] = useState<any | null>(null);
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
+  const [saveToDatabase, setSaveToDatabase] = useState<boolean>(false); // DEFAULT: false (fokus keamanan data maksimum / hilang saat relog)
+  const [isSavingRecord, setIsSavingRecord] = useState<boolean>(false);
   const [showRawText, setShowRawText] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -132,6 +134,9 @@ export function DocumentMetadataExtractor({ mailboxes, isOfficer, isSuperAdmin, 
       if (selectedCustomerId) {
         formData.append('customerId', selectedCustomerId);
       }
+      if (saveToDatabase) {
+        formData.append('saveToDatabase', 'true');
+      }
 
       const res = await api.post('/admin/documents/extract', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -140,8 +145,12 @@ export function DocumentMetadataExtractor({ mailboxes, isOfficer, isSuperAdmin, 
       if (res.data.success) {
         setExtractedData(res.data.extraction);
         setSavedRecordId(res.data.data?.id || null);
-        onNotify('Metadata berhasil diekstrak dan disimpan ke Persistent Memory!');
-        mutate();
+        if (saveToDatabase) {
+          onNotify('Metadata berhasil diekstrak dan disimpan ke Persistent Memory!');
+          mutate();
+        } else {
+          onNotify('Ekstraksi selesai (Mode Sekali Pakai: Data akan langsung hilang saat Anda relog/tutup web)');
+        }
       }
     } catch (err: any) {
       console.error('Extraction failed:', err);
@@ -149,6 +158,35 @@ export function DocumentMetadataExtractor({ mailboxes, isOfficer, isSuperAdmin, 
     } finally {
       setIsExtracting(false);
     }
+  };
+
+  const handleExplicitSave = async () => {
+    if (!extractedData) return;
+    setIsSavingRecord(true);
+    try {
+      const res = await api.post('/admin/documents/save', {
+        metadata: extractedData,
+        customerId: selectedCustomerId || null,
+      });
+      if (res.data.success) {
+        setSavedRecordId(res.data.data?.id || null);
+        onNotify('Salinan metadata berhasil disimpan permanen ke database lokal');
+        mutate();
+      }
+    } catch (err: any) {
+      onNotify(errMsg(err, 'Gagal menyimpan metadata ke database'));
+    } finally {
+      setIsSavingRecord(false);
+    }
+  };
+
+  const handlePurgeMemory = () => {
+    setFile(null);
+    setExtractedData(null);
+    setSavedRecordId(null);
+    setShowRawText(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    onNotify('Data sesi berhasil dimusnahkan bersih dari memori!');
   };
 
   const handleDeleteRecord = async (id: string) => {
@@ -183,7 +221,7 @@ export function DocumentMetadataExtractor({ mailboxes, isOfficer, isSuperAdmin, 
 
   return (
     <div className="space-y-6">
-      {/* Zero Data Leakage Privacy Shield Banner */}
+      {/* Zero Data Leakage & Ephemeral Privacy Shield Banner */}
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 backdrop-blur-xs">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -193,22 +231,22 @@ export function DocumentMetadataExtractor({ mailboxes, isOfficer, isSuperAdmin, 
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-emerald-950">
-                  Zero Data Leakage & Persistent Memory Guarantee
+                  Fokus Keamanan Data Maksimum (Zero-Retention Ephemeral Mode)
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-200/80 text-emerald-900 flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> 100% On-Premise
+                  <Lock className="w-3 h-3" /> 100% In-Memory
                 </span>
               </div>
               <p className="text-xs text-emerald-800/90 mt-1 leading-relaxed">
-                Pemrosesan berkas PDF dilakukan sepenuhnya di memori server Node.js lokal menggunakan mesin parser internal.
-                <strong> Tidak ada data teks, dokumen, atau informasi rahasia yang dikirim ke API luar atau model publik.</strong> Seluruh
-                hasil ekstraksi disimpan aman di database Persistent Memory lokal.
+                Pemrosesan berkas PDF dijalankan 100% secara lokal di dalam memori RAM proses Node.js internal.
+                <strong> Tidak ada data teks, nama perorangan, atau berkas yang dikirim ke API luar atau model publik.</strong>
+                Secara default, <strong>data hanya berada di sesi memori browser Anda dan langsung musnah saat relog/tutup halaman</strong> (0% risiko kebocoran data at-rest).
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-900 bg-emerald-100/80 px-3 py-1.5 rounded-xl border border-emerald-200 shrink-0">
-            <Database className="w-4 h-4 text-emerald-700" />
-            <span>SQLite Persistent Storage</span>
+            <Lock className="w-4 h-4 text-emerald-700" />
+            <span>Zero Data Leakage Protected</span>
           </div>
         </div>
       </div>
@@ -288,6 +326,28 @@ export function DocumentMetadataExtractor({ mailboxes, isOfficer, isSuperAdmin, 
               </select>
             </div>
 
+            {/* Privacy Mode Toggle */}
+            <div className="mt-4 p-3 bg-slate-50/80 rounded-xl border border-slate-200 text-xs">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={saveToDatabase}
+                  onChange={(e) => setSaveToDatabase(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary/20"
+                />
+                <div>
+                  <span className="font-semibold text-slate-800 block">
+                    Simpan salinan ke Persistent Memory Database (Opsional)
+                  </span>
+                  <span className="text-[11px] text-slate-500 block mt-0.5 leading-relaxed">
+                    {saveToDatabase
+                      ? '✅ Data hasil ekstraksi akan disimpan ke basis data lokal SQLite dan tersimpan permanen saat relog.'
+                      : '🛡️ Mode Sekali Pakai (Default): Dokumen HANYA tampil di sesi ini. Begitu relog, refresh, atau tutup browser, data LANGSUNG HILANG TANPA JEJAK (0% data at-rest).'}
+                  </span>
+                </div>
+              </label>
+            </div>
+
             {/* Action Buttons */}
             <div className="mt-5">
               <button
@@ -299,12 +359,16 @@ export function DocumentMetadataExtractor({ mailboxes, isOfficer, isSuperAdmin, 
                 {isExtracting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Mengekstrak Metadata Lokal (In-Memory)...</span>
+                    <span>Mengekstrak Dokumen In-Memory...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Mulai Ekstraksi AI & Simpan ke Persistent Memory</span>
+                    <span>
+                      {saveToDatabase
+                        ? 'Ekstraksi & Simpan ke Persistent Memory'
+                        : 'Ekstraksi (Mode Sekali Pakai / Zero-Retention)'}
+                    </span>
                   </>
                 )}
               </button>
@@ -528,21 +592,45 @@ export function DocumentMetadataExtractor({ mailboxes, isOfficer, isSuperAdmin, 
             </div>
 
             {extractedData && (
-              <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Tersimpan aman di persistent memory lokal
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFile(null);
-                    setExtractedData(null);
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                  }}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer"
-                >
-                  Ekstraksi Berkas Baru
-                </button>
+              <div className="mt-6 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  {savedRecordId ? (
+                    <span className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Tersimpan aman di Persistent Memory SQLite lokal
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-amber-700 font-medium flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-600" /> Mode Sekali Pakai: Data langsung musnah saat relog / tutup halaman
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {!savedRecordId && (
+                    <button
+                      type="button"
+                      onClick={handleExplicitSave}
+                      disabled={isSavingRecord}
+                      className="px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs font-semibold text-primary cursor-pointer transition-colors shadow-2xs"
+                    >
+                      {isSavingRecord ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Menyimpan...
+                        </span>
+                      ) : (
+                        '💾 Simpan ke Database'
+                      )}
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handlePurgeMemory}
+                    className="px-3 py-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-xs font-semibold text-red-700 cursor-pointer transition-colors shadow-2xs"
+                  >
+                    🔥 Musnahkan dari Memori (Purge)
+                  </button>
+                </div>
               </div>
             )}
           </div>
