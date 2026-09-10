@@ -1,9 +1,8 @@
 import bcrypt from 'bcryptjs';
-import app, { prisma } from './app';
-import { SyncWorker } from './workers/sync';
+import app, { prisma, syncWorker } from './app';
 
 const PORT = process.env.PORT || 4000;
-const worker = new SyncWorker(prisma);
+const worker = syncWorker;
 
 async function ensureAdministrativeAccounts() {
   try {

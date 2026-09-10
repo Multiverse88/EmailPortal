@@ -1,5 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { SyncWorker } from '../workers/sync';
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -142,8 +143,23 @@ export function buildBrandedEmailHtml(opts: {
   `.trim();
 }
 
-export default (prisma: PrismaClient) => {
+export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
   const router = Router();
+
+  // POST /api/email/sync - Trigger on-demand sync from Hostinger IMAP
+  router.post('/sync', async (req: Request, res: Response) => {
+    try {
+      const mailboxId = req.user!.id;
+      if (syncWorker) {
+        const result = await syncWorker.syncCustomerMailbox(mailboxId);
+        return res.json({ success: true, ...result });
+      }
+      res.json({ success: true, synced: 0 });
+    } catch (error: any) {
+      console.warn('Manual sync warning for customer', req.user?.id, error.message);
+      res.status(200).json({ success: false, warning: error.message || 'Gagal sinkronisasi IMAP' });
+    }
+  });
 
   // FR-11: folder list with unread counts.
   router.get('/folders', async (req: Request, res: Response) => {

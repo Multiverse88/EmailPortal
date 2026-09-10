@@ -16,9 +16,11 @@ import documentsRoutes from './routes/documents';
 import supportRoutes from './routes/support';
 import storageRoutes from './routes/storage';
 import companionRoutes from './routes/companion';
+import { SyncWorker } from './workers/sync';
 
 const app = express();
 export const prisma = new PrismaClient();
+export const syncWorker = new SyncWorker(prisma);
 
 app.set('trust proxy', 1);
 app.use(helmet());
@@ -58,7 +60,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date()
 
 app.use('/api/auth', authRoutes(prisma));
 app.use('/api/mailboxes', authenticateOfficerOrAdmin, mailboxRoutes(prisma));
-app.use('/api/email', authenticateCustomer, emailRoutes(prisma));
+app.use('/api/email', authenticateCustomer, emailRoutes(prisma, syncWorker));
 app.use('/api/search', authenticateCustomer, searchRoutes(prisma));
 app.use('/api/security', securityRoutes(prisma));
 app.use('/api/settings', settingsRoutes(prisma));

@@ -165,16 +165,26 @@ function Inbox_() {
     },
   });
 
+  const [syncing, setSyncing] = useState(false);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(''), 3000);
     return () => clearTimeout(t);
   }, [toast]);
 
-  const refresh = useCallback(() => {
-    list.mutate();
-    folders.mutate();
+  const refresh = useCallback(async () => {
+    setSyncing(true);
+    try {
+      await api.post('/email/sync');
+    } catch {}
+    await Promise.all([list.mutate(), folders.mutate()]);
+    setSyncing(false);
   }, [list, folders]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const act = async (fn: () => Promise<unknown>, message: string) => {
     try {
@@ -222,10 +232,11 @@ function Inbox_() {
           <button
             data-testid="refresh"
             onClick={refresh}
+            disabled={syncing}
             className="app-icon-button hidden sm:inline-flex"
-            title="Muat ulang"
+            title={syncing ? 'Sinkronisasi email Hostinger...' : 'Muat ulang'}
           >
-            <RefreshCw className={`size-4 ${list.isValidating ? 'animate-spin text-primary' : ''}`} />
+            <RefreshCw className={`size-4 ${syncing || list.isValidating ? 'animate-spin text-primary' : ''}`} />
           </button>
         }
         search={
@@ -439,6 +450,12 @@ function Inbox_() {
               {query && (
                 <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
                   &quot;{query}&quot;
+                </span>
+              )}
+              {syncing && (
+                <span className="flex items-center gap-1 text-[10px] text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-full">
+                  <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                  <span>Sinkronisasi...</span>
                 </span>
               )}
             </div>

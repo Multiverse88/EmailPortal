@@ -19,6 +19,9 @@ services:
       - HOSTINGER_SMTP_PORT=${HOSTINGER_SMTP_PORT:-465}
       - HOSTINGER_SMTP_USER=${HOSTINGER_SMTP_USER:-admin@clienteasylegal.co.id}
       - HOSTINGER_SMTP_PASS=${HOSTINGER_SMTP_PASS:-}
+      - HOSTINGER_IMAP_HOST=${HOSTINGER_IMAP_HOST:-imap.hostinger.com}
+      - HOSTINGER_IMAP_PORT=${HOSTINGER_IMAP_PORT:-993}
+      - SYNC_INTERVAL_MS=${SYNC_INTERVAL_MS:-15000}
       - NINEROUTER_API_KEY=${NINEROUTER_API_KEY:-}
     volumes:
       - easylegal_backend_data:/app/data

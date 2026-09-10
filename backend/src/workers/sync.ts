@@ -6,8 +6,9 @@ import { toSnippet } from '../lib/sanitize';
 import { inferAttachmentMimeType } from '../lib/attachments';
 import { isMailApiConfigured, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody } from '../lib/hostinger';
 
-const IMAP_HOST = process.env.HOSTINGER_IMAP_HOST;
-const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS || '30000'); // NFR: <30s
+const IMAP_HOST = process.env.HOSTINGER_IMAP_HOST || 'imap.hostinger.com';
+const IMAP_PORT = parseInt(process.env.HOSTINGER_IMAP_PORT || '993');
+const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS || '15000'); // Default 15s
 
 // One connection per mailbox, opened per pass. NFR: a failure on one mailbox
 // must not stop the others, so every customer is wrapped in its own try.
@@ -27,17 +28,43 @@ export class SyncWorker {
   }
 
   async start() {
-    if (!IMAP_HOST && !isMailApiConfigured()) {
-      console.log('⚠ Neither HOSTINGER_IMAP_HOST nor HOSTINGER_MAIL_API_KEY set — sync worker idle (cache-only mode)');
+    if (process.env.NODE_ENV === 'test') {
       return;
     }
     if (isMailApiConfigured()) {
       console.log(`✓ Sync worker started via Hostinger Mail API SDK (every ${SYNC_INTERVAL_MS / 1000}s)`);
     } else {
-      console.log(`✓ Sync worker started via IMAP (every ${SYNC_INTERVAL_MS / 1000}s)`);
+      console.log(`✓ Sync worker started via IMAP (${IMAP_HOST}:${IMAP_PORT}) (every ${SYNC_INTERVAL_MS / 1000}s)`);
     }
     this.timer = setInterval(() => void this.syncAll(), SYNC_INTERVAL_MS);
     await this.syncAll();
+  }
+
+  async syncCustomerMailbox(mailboxId: string): Promise<{ synced: number }> {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: mailboxId },
+    });
+    if (!customer || customer.status !== 'active') {
+      return { synced: 0 };
+    }
+
+    this.failedAuthMailboxes.delete(customer.mailboxAddress);
+
+    try {
+      if (isMailApiConfigured()) {
+        await this.syncCustomerViaApi(customer);
+      } else {
+        await this.syncCustomer(customer);
+      }
+    } catch (err: any) {
+      console.warn(`[Sync] On-demand sync warning for ${customer.mailboxAddress}:`, err.message);
+      throw err;
+    }
+
+    const count = await this.prisma.messageCache.count({
+      where: { mailboxId: customer.id },
+    });
+    return { synced: count };
   }
 
   stop() {
@@ -190,10 +217,10 @@ export class SyncWorker {
       const imap = new Imap({
         user: customer.mailboxAddress,
         password: decrypt(customer.passwordEnc),
-        host: IMAP_HOST!,
-        port: parseInt(process.env.HOSTINGER_IMAP_PORT || '993'),
+        host: IMAP_HOST,
+        port: IMAP_PORT,
         tls: true,
-        authTimeout: 5000,
+        authTimeout: 10000,
       });
       imap.once('ready', () => resolve(imap));
       imap.once('error', reject);
@@ -201,7 +228,7 @@ export class SyncWorker {
     });
   }
 
-  private async syncCustomer(customer: Customer) {
+  public async syncCustomer(customer: Customer) {
     const imap = await this.connect(customer);
     try {
       const box = await new Promise<Imap.Box>((resolve, reject) => {
@@ -213,30 +240,33 @@ export class SyncWorker {
         return;
       }
 
-      const last = await this.prisma.messageCache.findFirst({
-        where: { mailboxId: customer.id, folder: 'INBOX' },
-        orderBy: { receivedAt: 'desc' },
-        select: { uid: true },
-      });
-      const since = last ? parseInt(last.uid) + 1 : 1;
-      if (since > box.messages.total) {
-        // All messages already synced
-        return;
-      }
+      const total = box.messages.total;
+      const start = Math.max(1, total - 49); // fetch up to last 50 messages
+      const range = `${start}:${total}`;
 
       await new Promise<void>((resolve, reject) => {
-        const fetch = imap.seq.fetch(`${since}:${box.messages.total}`, { bodies: '', struct: true });
+        const fetch = imap.seq.fetch(range, { bodies: '', struct: true });
         const pending: Promise<unknown>[] = [];
 
         fetch.on('message', (msg, seqno) => {
           const chunks: Buffer[] = [];
+          let msgUid = String(seqno);
+
+          msg.on('attributes', (attrs) => {
+            if (attrs && attrs.uid) {
+              msgUid = String(attrs.uid);
+            }
+          });
+
           msg.on('body', (stream) => {
             stream.on('data', (c: Buffer) => chunks.push(c));
           });
+
           msg.once('end', () => {
-            pending.push(this.store(customer.id, String(seqno), Buffer.concat(chunks)));
+            pending.push(this.store(customer.id, msgUid, Buffer.concat(chunks)));
           });
         });
+
         fetch.once('error', reject);
         fetch.once('end', () => void Promise.all(pending).then(() => resolve(), reject));
       });
