@@ -59,7 +59,7 @@ Setiap panduan dan spesifikasi telah dikelompokkan ke dalam folder masing-masing
 |---|---|---|
 | **Status Pengerjaan Fitur** | [`docs/STATUS_PENGERJAAN.md`](docs/STATUS_PENGERJAAN.md) | Matriks lengkap status pengerjaan seluruh fitur, kepatuhan PRD (FR-01 s/d FR-24), hasil test suite backend/frontend, dan roadmap. |
 | **Infrastruktur & Storage** | [`docs/infrastructure/`](docs/infrastructure/INFRASTRUCTURE.md) | Arsitektur Dual-Storage (Hostinger Mail vs IDCloudHost S3 Mailbox Drive 5GB & Logo), Hybrid Storage S3 + Synology NAS, Lifecycle 90 hari, dan integrasi tiket bantuan. |
-| **Deployment & Server** | [`docs/deployment/`](docs/deployment/DEPLOYMENT.md) | Panduan instalasi dan deployment via Dokploy VPS, Docker Compose, manual installation, dan environment variables. |
+| **Deployment & Dokploy** | [`docs/deployment/`](docs/deployment/DOKPLOY_DEPLOYMENT.md) | Panduan langkah-demi-langkah deployment ke Dokploy VPS (`https://panel.easylegal.my.id`), Docker Compose, standalone Next.js, dan auto-seed database. |
 | **Perencanaan & Requirement** | [`docs/planning/`](docs/planning/Planning-Development.md) | Analisis kebutuhan sistem, batasan fungsional (FR-01 s.d. FR-24), arsitektur modul, dan implementasi bertahap. |
 | **Integrasi Mail (SMTP/IMAP)** | [`docs/smtp/`](docs/smtp/SMTP_SETUP_GUIDE.md) | Panduan langkah demi langkah konfigurasi mail server Hostinger Titan Mail untuk pengiriman dan penerimaan email. |
 | **Spesifikasi Modul Hub** | [`docs/superpowers/`](docs/superpowers/specs/2026-09-08-easylegal-hub-modules-design.md) | Desain modul EasyLegal Mail, Legal Drive, Helpdesk Ticket, Security & Settings. |
