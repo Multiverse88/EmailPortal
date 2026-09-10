@@ -29,6 +29,7 @@ services:
       - NINEROUTER_API_KEY=${NINEROUTER_API_KEY:-}
       - NINEROUTER_BASE_URL=${NINEROUTER_BASE_URL:-}
       - NINEROUTER_MODEL=${NINEROUTER_MODEL:-}
+      - SYNOLOGY_RUNNER_TOKEN=${SYNOLOGY_RUNNER_TOKEN:-easylegal-synology-runner-secret-2026}
     volumes:
       - easylegal_backend_data:/app/data
       - easylegal_backend_storage:/app/storage
