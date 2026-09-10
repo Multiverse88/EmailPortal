@@ -22,7 +22,6 @@ import {
   UserX,
   RefreshCw,
   ExternalLink,
-  Sparkles,
   FolderArchive,
   Play,
   Laptop,
@@ -148,7 +147,6 @@ function Admin_() {
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [seeding, setSeeding] = useState(false);
 
   // Storage tab state
   const [syncingSynology, setSyncingSynology] = useState(false);
@@ -193,32 +191,6 @@ function Admin_() {
     fetcher,
     { refreshInterval: 5000, revalidateOnFocus: true }
   );
-
-  const handleSeedDemo = async () => {
-    if (
-      !window.confirm(
-        'Muat ulang data demo lengkap (8 akun mailbox, 21 email dummy dengan lampiran file asli)?'
-      )
-    ) {
-      return;
-    }
-    setSeeding(true);
-    try {
-      const res = await api.post('/mailboxes/seed-demo');
-      setToast(res.data.message || 'Data demo berhasil dimuat ulang!');
-      await mutate();
-      if (isSuperAdmin) {
-        mutateStorage();
-        mutateRadar();
-      }
-      setTimeout(() => setToast(''), 4000);
-    } catch (err) {
-      setToast(errMsg(err, 'Gagal memuat data demo'));
-      setTimeout(() => setToast(''), 4000);
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   const handleSyncSynology = async () => {
     setSyncingSynology(true);
@@ -683,21 +655,6 @@ function Admin_() {
 
                 {/* Action CTAs */}
                 <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    data-testid="seed-demo-btn"
-                    onClick={handleSeedDemo}
-                    disabled={seeding}
-                    className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-semibold active:scale-[0.98] transition-all border border-slate-200/80 disabled:opacity-50"
-                    title="Muat ulang 8 customer demo & 21 email dummy"
-                  >
-                    {seeding ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600" />
-                    ) : (
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    )}
-                    <span>{seeding ? 'Memuat Demo...' : 'Muat Data Demo'}</span>
-                  </button>
 
                   <button
                     data-testid="new-mailbox"

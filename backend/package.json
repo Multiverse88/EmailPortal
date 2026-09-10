@@ -11,7 +11,8 @@
     "migrate": "prisma migrate dev",
     "generate": "prisma generate --schema ../prisma/schema.prisma",
     "storage:sync-synology": "tsx scripts/sync-synology.ts",
-    "storage:agent": "tsx scripts/sync-agent.ts"
+    "storage:agent": "tsx scripts/sync-agent.ts",
+    "db:clean-dummy": "tsx scripts/clean-dummy.ts"
   },
   "dependencies": {
     "aws-sdk": "^2.1530.0",

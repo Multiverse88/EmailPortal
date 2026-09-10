@@ -1,22 +1,40 @@
+import bcrypt from 'bcryptjs';
 import app, { prisma } from './app';
 import { SyncWorker } from './workers/sync';
-import { seedDemoData } from './lib/demo-data';
 
 const PORT = process.env.PORT || 4000;
 const worker = new SyncWorker(prisma);
 
-async function ensureSeedData() {
+async function ensureSuperAdmin() {
   try {
-    const adminCount = await prisma.adminUser.count();
-    if (adminCount === 0 || process.env.FORCE_SEED_DEMO === 'true') {
-      console.log('🌱 [EasyLegal] No admin accounts detected (or FORCE_SEED_DEMO active). Initializing demo accounts and data...');
-      const res = await seedDemoData(prisma);
-      console.log(`✓ [EasyLegal] Database initialized successfully! Admin: admin@${res.domain} (password: Admin123!)`);
-    } else {
-      console.log(`✓ [EasyLegal] Database verified (${adminCount} admin accounts present).`);
+    const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
+    const adminEmail = `admin@${domain}`;
+    const superAdmin = await prisma.adminUser.findFirst({
+      where: {
+        OR: [
+          { role: 'superadmin' },
+          { email: adminEmail },
+        ],
+      },
+    });
+
+    if (!superAdmin) {
+      console.log(`🌱 [EasyLegal] Menginisialisasi akun Super Admin: ${adminEmail}...`);
+      const defaultPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Admin123!';
+      const passwordHash = await bcrypt.hash(defaultPassword, 10);
+      await prisma.adminUser.create({
+        data: {
+          name: 'Admin Utama EasyLegal',
+          email: adminEmail,
+          passwordHash,
+          role: 'superadmin',
+          isActive: true,
+        },
+      });
+      console.log(`✓ [EasyLegal] Akun Super Admin siap (${adminEmail})!`);
     }
-  } catch (seedErr) {
-    console.error('✗ [EasyLegal] Seeding error during startup:', seedErr);
+  } catch (err) {
+    console.error('✗ [EasyLegal] Error menginisialisasi Super Admin:', err);
   }
 }
 
@@ -25,7 +43,7 @@ async function startServer() {
     await prisma.$connect();
     console.log('✓ Database connected');
 
-    await ensureSeedData();
+    await ensureSuperAdmin();
 
     app.listen(PORT, () => {
       console.log(`✓ Server running on http://localhost:${PORT}`);

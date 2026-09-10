@@ -14,7 +14,6 @@ import { verifyTotp } from '../lib/totp';
 import { checkAndSendNewDeviceAlert } from '../lib/security-alerts';
 import { sendOnboardingNotice } from '../lib/mail';
 import { audit } from '../lib/audit';
-import { seedDemoData } from '../lib/demo-data';
 import { authenticateAdmin, authenticateCustomer, authenticateOfficerOrAdmin, UserRole } from '../middleware/auth';
 import {
   isMailApiConfigured,
@@ -81,15 +80,7 @@ export default (prisma: PrismaClient) => {
       if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
 
       const normalizedEmail = String(email).trim().toLowerCase();
-      let customer = await prisma.customer.findUnique({ where: { mailboxAddress: normalizedEmail } });
-      if (!customer) {
-        const totalCustomers = await prisma.customer.count();
-        if (totalCustomers === 0) {
-          console.log('🌱 [EasyLegal] 0 customers detected on login. Performing emergency auto-seed...');
-          await seedDemoData(prisma);
-          customer = await prisma.customer.findUnique({ where: { mailboxAddress: normalizedEmail } });
-        }
-      }
+      const customer = await prisma.customer.findUnique({ where: { mailboxAddress: normalizedEmail } });
 
       if (!customer || customer.status !== 'active' || !verifyPassword(password, customer.passwordEnc)) {
         return res.status(401).json({ error: 'Email atau password salah' });
@@ -232,9 +223,20 @@ export default (prisma: PrismaClient) => {
       if (!admin) {
         const totalAdmins = await prisma.adminUser.count();
         if (totalAdmins === 0) {
-          console.log('🌱 [EasyLegal] 0 admins detected on admin login. Performing emergency auto-seed...');
-          await seedDemoData(prisma);
-          admin = await prisma.adminUser.findUnique({ where: { email: normalizedEmail } });
+          const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
+          if (normalizedEmail === `admin@${domain}`) {
+            console.log('🌱 [EasyLegal] 0 admins detected on admin login. Initializing Super Admin...');
+            const defaultPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Admin123!';
+            admin = await prisma.adminUser.create({
+              data: {
+                name: 'Admin Utama EasyLegal',
+                email: normalizedEmail,
+                passwordHash: await bcrypt.hash(defaultPassword, 10),
+                role: 'superadmin',
+                isActive: true,
+              },
+            });
+          }
         }
       }
 

@@ -11,7 +11,7 @@ HOSTINGER_DOMAIN=clienteasylegal.co.id
 JWT_SECRET=easy-legal-jwt-secret-dokploy-2026
 ENCRYPTION_KEY=easy-legal-portal-secret-key-2026
 CORS_ORIGIN=*
-AUTO_SEED_DEMO=true
+AUTO_SEED_DEMO=false
 
 # ========================================================
 # 2. Synology Laptop Runner (Cold Storage)

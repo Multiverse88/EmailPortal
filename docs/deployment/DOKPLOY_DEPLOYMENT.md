@@ -89,7 +89,7 @@ HOSTINGER_DOMAIN=clienteasylegal.co.id
 JWT_SECRET=super_secret_jwt_key_dokploy_2026
 ENCRYPTION_KEY=ganti_dengan_32_karakter_acak_rahasia
 CORS_ORIGIN=*
-AUTO_SEED_DEMO=true
+AUTO_SEED_DEMO=false
 
 # Hostinger SMTP (Opsional - untuk notifikasi login perangkat baru)
 HOSTINGER_SMTP_HOST=smtp.hostinger.com

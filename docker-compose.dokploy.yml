@@ -13,7 +13,7 @@ services:
       - JWT_SECRET=${JWT_SECRET:-easy-legal-jwt-secret-dokploy-2026}
       - HOSTINGER_DOMAIN=${HOSTINGER_DOMAIN:-clienteasylegal.co.id}
       - CORS_ORIGIN=*
-      - AUTO_SEED_DEMO=true
+      - AUTO_SEED_DEMO=${AUTO_SEED_DEMO:-false}
       - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
       - HOSTINGER_API_TOKEN=${HOSTINGER_API_TOKEN:-}
       - HOSTINGER_ORDER_ID=${HOSTINGER_ORDER_ID:-}
