@@ -57,6 +57,7 @@ interface Message {
   receivedAt: string;
   attachments?: EmailAttachment[];
   senderAvatarUrl?: string | null;
+  fallbackAvatarUrl?: string | null;
 }
 
 const FOLDER_META = [
@@ -541,10 +542,17 @@ function Inbox_() {
                     <img
                       src={m.senderAvatarUrl}
                       alt={senderName || 'Avatar'}
+                      data-fallback-url={m.fallbackAvatarUrl || ''}
                       className="w-8 h-8 rounded-full object-contain bg-white border border-slate-200 shrink-0 shadow-2xs"
                       onError={(e) => {
-                        (e.currentTarget as HTMLElement).style.display = 'none';
-                        const fallback = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+                        const img = e.currentTarget as HTMLImageElement;
+                        const fallbackUrl = img.dataset.fallbackUrl;
+                        if (fallbackUrl && img.src !== fallbackUrl) {
+                          img.src = fallbackUrl;
+                          return;
+                        }
+                        img.style.display = 'none';
+                        const fallback = img.nextElementSibling as HTMLElement;
                         if (fallback) fallback.classList.remove('hidden');
                       }}
                     />
@@ -710,10 +718,17 @@ function Inbox_() {
                         <img
                           src={message.senderAvatarUrl}
                           alt={message.sender || 'Avatar'}
+                          data-fallback-url={message.fallbackAvatarUrl || ''}
                           className="w-11 h-11 rounded-full object-contain bg-white border border-slate-200 shrink-0 shadow-xs"
                           onError={(e) => {
-                            (e.currentTarget as HTMLElement).style.display = 'none';
-                            const fallback = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+                            const img = e.currentTarget as HTMLImageElement;
+                            const fallbackUrl = img.dataset.fallbackUrl;
+                            if (fallbackUrl && img.src !== fallbackUrl) {
+                              img.src = fallbackUrl;
+                              return;
+                            }
+                            img.style.display = 'none';
+                            const fallback = img.nextElementSibling as HTMLElement;
                             if (fallback) fallback.classList.remove('hidden');
                           }}
                         />

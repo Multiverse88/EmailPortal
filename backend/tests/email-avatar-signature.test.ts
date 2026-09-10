@@ -75,18 +75,35 @@ describe('Email Avatar and Branded Signature Integration', () => {
       expect(html).toContain('Ini adalah pesan resmi legal.');
     });
 
-    it('resolveAvatarMap resolves customer avatars and system admin logo', async () => {
+    it('resolveAvatarMap resolves customer avatars, system admin logo, and external senders', async () => {
       const map = await resolveAvatarMap(
         prisma,
-        [customer.mailboxAddress, 'EasyLegal Portal <admin@clienteasylegal.co.id>', 'unknown@other.com'],
+        [
+          customer.mailboxAddress,
+          'EasyLegal Portal <admin@clienteasylegal.co.id>',
+          'user@gmail.com',
+          'support@tokopedia.com',
+        ],
         customer.id
       );
 
-      expect(map.get(customer.mailboxAddress.toLowerCase())).toContain(
+      // Customer avatar
+      expect(map.get(customer.mailboxAddress.toLowerCase())?.avatarUrl).toContain(
         `/api/settings/avatar/${customer.id}`
       );
-      expect(map.get('admin@clienteasylegal.co.id')).toBe('/companion/el/el-avatar-kepala.png');
-      expect(map.has('unknown@other.com')).toBe(false);
+      // System admin logo
+      expect(map.get('admin@clienteasylegal.co.id')?.avatarUrl).toBe('/companion/el/el-avatar-kepala.png');
+      expect(map.get('admin@clienteasylegal.co.id')?.fallbackAvatarUrl).toBeNull();
+
+      // Public email (gmail): Gravatar with null fallback
+      const gmailAvatar = map.get('user@gmail.com');
+      expect(gmailAvatar?.avatarUrl).toContain('gravatar.com/avatar/');
+      expect(gmailAvatar?.fallbackAvatarUrl).toBeNull();
+
+      // Corporate domain (tokopedia): Gravatar with google favicon fallback
+      const corpAvatar = map.get('support@tokopedia.com');
+      expect(corpAvatar?.avatarUrl).toContain('gravatar.com/avatar/');
+      expect(corpAvatar?.fallbackAvatarUrl).toContain('google.com/s2/favicons?domain=tokopedia.com');
     });
   });
 

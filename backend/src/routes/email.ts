@@ -4,6 +4,7 @@ import type { SyncWorker } from '../workers/sync';
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { sanitizeHtml, toSnippet } from '../lib/sanitize';
 import { decrypt } from '../lib/crypto';
 import { sendMail } from '../lib/mail';
@@ -36,12 +37,54 @@ export function extractEmailAddress(raw: string | null | undefined): string | nu
   return match ? match[1].trim().toLowerCase() : raw.trim().toLowerCase();
 }
 
+export interface ResolvedAvatar {
+  avatarUrl: string;
+  fallbackAvatarUrl: string | null;
+}
+
+export function isPublicEmailDomain(domain: string): boolean {
+  const d = domain.toLowerCase();
+  if (
+    d.startsWith('yahoo.') ||
+    d.startsWith('hotmail.') ||
+    d.startsWith('outlook.') ||
+    d.startsWith('live.') ||
+    d.startsWith('msn.')
+  ) {
+    return true;
+  }
+  const publicList = new Set([
+    'gmail.com',
+    'googlemail.com',
+    'icloud.com',
+    'me.com',
+    'mac.com',
+    'aol.com',
+    'zoho.com',
+    'zoho.in',
+    'proton.me',
+    'protonmail.com',
+    'tutanota.com',
+    'tuta.com',
+    'mail.com',
+    'email.com',
+    'gmx.com',
+    'gmx.net',
+    'gmx.de',
+    'yandex.com',
+    'yandex.ru',
+    'fastmail.com',
+    'hey.com',
+  ]);
+  return publicList.has(d);
+}
+
 export async function resolveAvatarMap(
   prisma: PrismaClient,
   emailAddresses: (string | null | undefined)[],
   currentCustomerId?: string
-): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
+): Promise<Map<string, ResolvedAvatar>> {
+  const map = new Map<string, ResolvedAvatar>();
   const cleanEmails = Array.from(
     new Set(emailAddresses.map(extractEmailAddress).filter(Boolean))
   ) as string[];
@@ -53,7 +96,10 @@ export async function resolveAvatarMap(
       email.includes('admin@clienteasylegal') ||
       email === 'support@clienteasylegal.co.id'
     ) {
-      map.set(email, '/companion/el/el-avatar-kepala.png');
+      map.set(email, {
+        avatarUrl: '/companion/el/el-avatar-kepala.png',
+        fallbackAvatarUrl: null,
+      });
     }
   }
 
@@ -68,10 +114,10 @@ export async function resolveAvatarMap(
     });
 
     for (const c of customers) {
-      map.set(
-        c.mailboxAddress.toLowerCase(),
-        `/api/settings/avatar/${c.id}?v=${new Date(c.updatedAt).getTime()}`
-      );
+      map.set(c.mailboxAddress.toLowerCase(), {
+        avatarUrl: `/api/settings/avatar/${c.id}?v=${new Date(c.updatedAt).getTime()}`,
+        fallbackAvatarUrl: null,
+      });
     }
   }
 
@@ -83,8 +129,42 @@ export async function resolveAvatarMap(
     });
     if (current?.avatarUrl) {
       const url = `/api/settings/avatar/${current.id}?v=${new Date(current.updatedAt).getTime()}`;
-      map.set(current.mailboxAddress.toLowerCase(), url);
-      map.set('__CURRENT_USER__', url);
+      map.set(current.mailboxAddress.toLowerCase(), {
+        avatarUrl: url,
+        fallbackAvatarUrl: null,
+      });
+      map.set('__CURRENT_USER__', {
+        avatarUrl: url,
+        fallbackAvatarUrl: null,
+      });
+    }
+  }
+
+  // 4. External / Public & Corporate Domain Avatars (Gravatar + Company Domain Favicon)
+  for (const email of cleanEmails) {
+    if (map.has(email)) continue;
+
+    const parts = email.split('@');
+    const domain = parts[1]?.toLowerCase();
+    if (!domain) continue;
+
+    const hash = crypto.createHash('sha256').update(email.toLowerCase().trim()).digest('hex');
+    const gravatarUrl = `https://www.gravatar.com/avatar/${hash}?s=128&d=404`;
+
+    if (isPublicEmailDomain(domain)) {
+      // Public email (@gmail.com, @yahoo.com, etc.): Gravatar, fallback to initials
+      map.set(email, {
+        avatarUrl: gravatarUrl,
+        fallbackAvatarUrl: null,
+      });
+    } else if (domain !== 'clienteasylegal.co.id') {
+      // Corporate / Company domain (@tokopedia.com, @bca.co.id, @github.com, etc.):
+      // Try Gravatar first, fallback to company domain favicon
+      const domainFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+      map.set(email, {
+        avatarUrl: gravatarUrl,
+        fallbackAvatarUrl: domainFaviconUrl,
+      });
     }
   }
 
@@ -229,13 +309,18 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
       const enrichedMessages = messages.map((m) => {
         const targetAddress = folder === 'Sent' ? (m.recipients?.split(',')[0] || m.sender) : m.sender;
         const clean = extractEmailAddress(targetAddress);
-        let senderAvatarUrl = clean ? (avatarMap.get(clean) || null) : null;
+        const avatarInfo = clean ? avatarMap.get(clean) : null;
+        let senderAvatarUrl = avatarInfo ? avatarInfo.avatarUrl : null;
+        let fallbackAvatarUrl = avatarInfo ? avatarInfo.fallbackAvatarUrl : null;
         if (!senderAvatarUrl && folder === 'Sent') {
-          senderAvatarUrl = avatarMap.get('__CURRENT_USER__') || null;
+          const currentInfo = avatarMap.get('__CURRENT_USER__');
+          senderAvatarUrl = currentInfo ? currentInfo.avatarUrl : null;
+          fallbackAvatarUrl = currentInfo ? currentInfo.fallbackAvatarUrl : null;
         }
         return {
           ...m,
           senderAvatarUrl,
+          fallbackAvatarUrl,
         };
       });
 
@@ -371,15 +456,20 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
       const senderAddress = message.sender;
       const avatarMap = await resolveAvatarMap(prisma, [senderAddress], mailboxId);
       const clean = extractEmailAddress(senderAddress);
-      let senderAvatarUrl = clean ? (avatarMap.get(clean) || null) : null;
+      const avatarInfo = clean ? avatarMap.get(clean) : null;
+      let senderAvatarUrl = avatarInfo ? avatarInfo.avatarUrl : null;
+      let fallbackAvatarUrl = avatarInfo ? avatarInfo.fallbackAvatarUrl : null;
       if (!senderAvatarUrl && message.folder === 'Sent') {
-        senderAvatarUrl = avatarMap.get('__CURRENT_USER__') || null;
+        const currentInfo = avatarMap.get('__CURRENT_USER__');
+        senderAvatarUrl = currentInfo ? currentInfo.avatarUrl : null;
+        fallbackAvatarUrl = currentInfo ? currentInfo.fallbackAvatarUrl : null;
       }
 
       res.json({
         ...message,
         isRead: true,
         senderAvatarUrl,
+        fallbackAvatarUrl,
         bodyHtml: message.bodyHtml ? sanitizeHtml(message.bodyHtml) : null,
       });
     } catch (error) {
