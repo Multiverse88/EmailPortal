@@ -8,14 +8,14 @@ Dokumen ini memuat informasi kredensial, peran, hak akses (*Role-Based Access Co
 
 Kredensial berikut telah aktif di sistem dan siap digunakan:
 
-| Atribut | 👑 Akun Super Admin | 🛡️ Akun Officer (Staf Legal) |
-|---|---|---|
-| **Role Sistem** | `superadmin` | `officer` |
-| **Nama Pengguna** | Admin Utama EasyLegal | Officer Staf Legal |
-| **Email Login** | `admin@clienteasylegal.co.id` | `officer@clienteasylegal.co.id` |
-| **Password Awal** | `Admin123!` | `Officer123!` |
-| **URL Login** | [https://clienteasylegal.co.id/login](https://clienteasylegal.co.id/login) | [https://clienteasylegal.co.id/login](https://clienteasylegal.co.id/login) |
-| **Tab Login** | Tab **Administrator** | Tab **Administrator** |
+| Atribut           | 👑 Akun Super Admin                                                        | 🛡️ Akun Officer (Staf Legal)                                              |
+| ----------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Role Sistem**   | `superadmin`                                                               | `officer`                                                                  |
+| **Nama Pengguna** | Admin Utama EasyLegal                                                      | Officer Staf Legal                                                         |
+| **Email Login**   | `admin@clienteasylegal.co.id`                                              | `officer@clienteasylegal.co.id`                                            |
+| **Password Awal** | `Admin123!`                                                                | `Officer123!`                                                              |
+| **URL Login**     | [https://clienteasylegal.co.id/login](https://clienteasylegal.co.id/login) | [https://clienteasylegal.co.id/login](https://clienteasylegal.co.id/login) |
+| **Tab Login**     | Tab **Administrator**                                                      | Tab **Administrator**                                                      |
 
 > [!NOTE]
 > Kedua akun di atas login melalui tab **Administrator** pada halaman login yang sama. Sistem akan secara otomatis mendeteksi peran (*role*) dan menampilkan dashboard sesuai hak akses masing-masing.

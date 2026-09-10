@@ -21,6 +21,7 @@ import {
   UserCheck,
   UserX,
   RefreshCw,
+  Trash2,
   ExternalLink,
   FolderArchive,
   Play,
@@ -191,6 +192,34 @@ function Admin_() {
     fetcher,
     { refreshInterval: 5000, revalidateOnFocus: true }
   );
+
+  const [cleaning, setCleaning] = useState(false);
+
+  const handleCleanDummy = async () => {
+    if (
+      !window.confirm(
+        'Hapus seluruh akun customer demo awal (Budi, Trial, dll.) beserta semua email & dokumen dummy?'
+      )
+    ) {
+      return;
+    }
+    setCleaning(true);
+    try {
+      const res = await api.post('/mailboxes/clean-dummy');
+      setToast(res.data.message || 'Data dummy berhasil dibersihkan!');
+      await mutate();
+      if (isSuperAdmin) {
+        mutateStorage();
+        mutateRadar();
+      }
+      setTimeout(() => setToast(''), 4000);
+    } catch (err) {
+      setToast(errMsg(err, 'Gagal membersihkan data dummy'));
+      setTimeout(() => setToast(''), 4000);
+    } finally {
+      setCleaning(false);
+    }
+  };
 
   const handleSyncSynology = async () => {
     setSyncingSynology(true);
@@ -655,6 +684,23 @@ function Admin_() {
 
                 {/* Action CTAs */}
                 <div className="flex items-center gap-2 shrink-0">
+                  {isSuperAdmin && mailboxes.length > 0 && (
+                    <button
+                      type="button"
+                      data-testid="clean-dummy-btn"
+                      onClick={handleCleanDummy}
+                      disabled={cleaning}
+                      className="flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-700 px-3.5 py-2.5 rounded-xl text-xs font-semibold active:scale-[0.98] transition-all border border-red-200/80 disabled:opacity-50"
+                      title="Hapus semua akun demo awal & data dummy"
+                    >
+                      {cleaning ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                      )}
+                      <span>{cleaning ? 'Membersihkan...' : 'Bersihkan Data Dummy'}</span>
+                    </button>
+                  )}
 
                   <button
                     data-testid="new-mailbox"

@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { audit } from '../lib/audit';
-import { seedDemoData } from '../lib/demo-data';
+import { purgeDummyData } from '../lib/clean-data';
 
 export default (prisma: PrismaClient) => {
   const router = Router();
@@ -12,7 +12,7 @@ export default (prisma: PrismaClient) => {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(100, parseInt(req.query.limit as string) || 20);
       const status = (req.query.status as string) || 'all';
-      const where = status === 'all' ? {} : { status };
+      const where = status === 'all' ? { status: { not: 'deleted' } } : { status };
 
       const [mailboxes, total, quotaUsed] = await Promise.all([
         prisma.customer.findMany({
@@ -59,7 +59,7 @@ export default (prisma: PrismaClient) => {
     }
   });
 
-  // FR-5: deactivate / reactivate / soft-delete, all audited.
+  // FR-5: deactivate / reactivate / delete, all audited.
   const setStatus = (status: string, action: string, message: string) =>
     async (req: Request, res: Response) => {
       try {
@@ -80,28 +80,42 @@ export default (prisma: PrismaClient) => {
 
   router.post('/:id/deactivate', setStatus('inactive', 'mailbox.deactivate', 'Mailbox dinonaktifkan'));
   router.post('/:id/reactivate', setStatus('active', 'mailbox.reactivate', 'Mailbox diaktifkan'));
-  router.delete('/:id', setStatus('deleted', 'mailbox.delete', 'Mailbox dihapus'));
-
-  router.post('/seed-demo', async (req: Request, res: Response) => {
+  
+  router.delete('/:id', async (req: Request, res: Response) => {
     try {
-      const result = await seedDemoData(prisma);
-      const newAdmin = await prisma.adminUser.findUnique({ where: { email: result.adminEmail } });
-      if (newAdmin) {
-        await prisma.auditLog.create({
-          data: {
-            actorId: newAdmin.id,
-            action: 'system.seed_demo',
-            targetType: 'system',
-            details: JSON.stringify({ triggeredBy: req.user?.email, ...result }),
-            ipAddress: req.ip,
-            userAgent: (req.headers['user-agent'] as string) || null,
-          },
-        });
-      }
-      res.json({ message: 'Data demo berhasil dimuat ulang!', result });
+      const { id } = req.params;
+      const existing = await prisma.customer.findUnique({ where: { id } });
+      if (!existing) return res.status(404).json({ error: 'Customer tidak ditemukan' });
+
+      // Clean associated relational data before customer deletion
+      await prisma.loginSession.deleteMany({ where: { customerId: id } });
+      await prisma.ticketMessage.deleteMany({ where: { ticket: { customerId: id } } });
+      await prisma.supportTicket.deleteMany({ where: { customerId: id } });
+      await prisma.documentVersion.deleteMany({ where: { document: { customerId: id } } });
+      await prisma.legalDocument.deleteMany({ where: { customerId: id } });
+      await prisma.attachment.deleteMany({ where: { message: { mailboxId: id } } });
+      await prisma.messageCache.deleteMany({ where: { mailboxId: id } });
+      await prisma.customer.delete({ where: { id } });
+
+      await audit(prisma, req, 'mailbox.delete', 'customer', id, {
+        email: existing.mailboxAddress,
+        name: existing.name,
+      });
+
+      res.json({ message: 'Mailbox berhasil dihapus', customerId: id, status: 'deleted' });
     } catch (error) {
-      console.error('Seed demo error:', error);
-      res.status(500).json({ error: 'Gagal memuat data demo' });
+      console.error('Delete mailbox error:', error);
+      res.status(500).json({ error: 'Gagal menghapus mailbox' });
+    }
+  });
+
+  router.post('/clean-dummy', async (req: Request, res: Response) => {
+    try {
+      const result = await purgeDummyData(prisma);
+      res.json({ message: 'Semua data dan akun dummy berhasil dibersihkan!', result });
+    } catch (error) {
+      console.error('Clean dummy error:', error);
+      res.status(500).json({ error: 'Gagal membersihkan data dummy' });
     }
   });
 
