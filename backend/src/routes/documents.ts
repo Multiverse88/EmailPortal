@@ -23,7 +23,7 @@ const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
 });
 
-const DEFAULT_FOLDERS = ['Client Agreements', 'Tax Filings', 'NDA Templates'];
+const DEFAULT_FOLDERS = ['Client Agreements', 'Tax Filings', 'NDA Templates', 'Lampiran Email'];
 const STORAGE_LIMIT = DEFAULT_STORAGE_QUOTA; // 5 GB in bytes
 
 const COLD_STORAGE_THRESHOLD_MS = 90 * 24 * 60 * 60 * 1000;
@@ -247,7 +247,10 @@ export default (prisma: PrismaClient) => {
       }
 
       const isColdStorage = isDocumentColdStorage(document.createdAt);
-      const filePath = path.resolve(STORAGE_DIR, path.basename(document.path));
+      let filePath = path.resolve(STORAGE_DIR, document.path);
+      if (!fs.existsSync(filePath)) {
+        filePath = path.resolve(STORAGE_DIR, path.basename(document.path));
+      }
       const accountBucketKey = `accounts/${customerId}/documents/${path.basename(document.path)}`;
       const legacyBucketKey = `documents/${customerId}/${path.basename(document.path)}`;
 
@@ -354,7 +357,10 @@ export default (prisma: PrismaClient) => {
       }
 
       try {
-        const filePath = path.resolve(STORAGE_DIR, path.basename(document.path));
+        let filePath = path.resolve(STORAGE_DIR, document.path);
+        if (!fs.existsSync(filePath)) {
+          filePath = path.resolve(STORAGE_DIR, path.basename(document.path));
+        }
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }

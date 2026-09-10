@@ -581,8 +581,11 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
         return res.send(data);
       }
 
-      // path is stored as a basename; re-resolve and confirm it stays in STORAGE_DIR.
-      const file = path.resolve(STORAGE_DIR, path.basename(attachment.path));
+      // path is stored as a relative path or basename; re-resolve and confirm it stays in STORAGE_DIR.
+      let file = path.resolve(STORAGE_DIR, attachment.path);
+      if (!fs.existsSync(file)) {
+        file = path.resolve(STORAGE_DIR, path.basename(attachment.path));
+      }
       if (!file.startsWith(STORAGE_DIR + path.sep) || !fs.existsSync(file)) {
         return res.status(404).json({ error: 'File tidak ada di storage' });
       }
@@ -636,7 +639,10 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
         return res.send(data);
       }
 
-      const file = path.resolve(STORAGE_DIR, path.basename(attachment.path));
+      let file = path.resolve(STORAGE_DIR, attachment.path);
+      if (!fs.existsSync(file)) {
+        file = path.resolve(STORAGE_DIR, path.basename(attachment.path));
+      }
       if (!file.startsWith(STORAGE_DIR + path.sep) || !fs.existsSync(file)) {
         return res.status(404).json({ error: 'File tidak ada di storage' });
       }

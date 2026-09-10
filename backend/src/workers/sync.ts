@@ -7,6 +7,8 @@ import crypto from 'node:crypto';
 import { decrypt } from '../lib/crypto';
 import { toSnippet } from '../lib/sanitize';
 import { inferAttachmentMimeType } from '../lib/attachments';
+import { getAccountFolderName } from '../lib/synology-sync';
+import { storage } from '../lib/storage';
 import { isMailApiConfigured, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody } from '../lib/hostinger';
 
 const STORAGE_DIR = path.resolve(process.env.STORAGE_DIR || './storage');
@@ -298,7 +300,7 @@ export class SyncWorker {
           });
 
           msg.once('end', () => {
-            pending.push(this.store(customer.id, msgUid, Buffer.concat(chunks)));
+            pending.push(this.store(customer, msgUid, Buffer.concat(chunks)));
           });
         });
 
@@ -310,7 +312,14 @@ export class SyncWorker {
     }
   }
 
-  private async store(mailboxId: string, uid: string, raw: Buffer) {
+  private async store(customerOrId: Customer | string, uid: string, raw: Buffer) {
+    const customer = typeof customerOrId === 'string'
+      ? await this.prisma.customer.findUnique({ where: { id: customerOrId } })
+      : customerOrId;
+
+    const mailboxId = customer ? customer.id : (typeof customerOrId === 'string' ? customerOrId : '');
+    if (!mailboxId) return;
+
     const parsed = await simpleParser(raw);
     const text = parsed.text || '';
     const data = {
@@ -331,6 +340,10 @@ export class SyncWorker {
     });
 
     if (parsed.attachments && Array.isArray(parsed.attachments) && parsed.attachments.length > 0) {
+      const accountFolder = getAccountFolderName(customer);
+      const accountAttachmentsDir = path.resolve(STORAGE_DIR, 'accounts', accountFolder, 'attachments');
+      fs.mkdirSync(accountAttachmentsDir, { recursive: true });
+
       const existing = await this.prisma.attachment.findMany({
         where: { messageId: message.id },
         select: { filename: true, size: true },
@@ -350,22 +363,71 @@ export class SyncWorker {
         const ext = path.extname(filename) || '';
         const safeExt = ext.slice(0, 10).replace(/[^a-zA-Z0-9._-]/g, '');
         const diskFilename = `att_${Date.now()}_${crypto.randomBytes(8).toString('hex')}${safeExt}`;
-        const filePath = path.resolve(STORAGE_DIR, diskFilename);
+        const filePath = path.resolve(accountAttachmentsDir, diskFilename);
+        const relPath = `accounts/${accountFolder}/attachments/${diskFilename}`;
 
         const buffer = Buffer.isBuffer(att.content) ? att.content : Buffer.from(att.content);
         await fs.promises.writeFile(filePath, buffer);
 
+        // Put to storage adapter (S3 / Local Bucket)
         const mimeType = att.contentType || inferAttachmentMimeType(filename);
+        try {
+          await storage.putObject(relPath, buffer, mimeType);
+        } catch {}
 
+        // Mirror to Synology Drive for cold storage
+        void storage.mirrorToSynology(relPath, buffer);
+
+        // 1. Create Attachment record linked to message
         await this.prisma.attachment.create({
           data: {
             messageId: message.id,
             filename,
             mimeType,
             size,
-            path: diskFilename,
+            path: relPath,
           },
         });
+
+        // 2. Auto-save to LegalDocument under the customer's account in 'Lampiran Email' folder
+        if (customer) {
+          try {
+            const existingDoc = await this.prisma.legalDocument.findFirst({
+              where: {
+                customerId: customer.id,
+                path: relPath,
+              },
+            });
+
+            if (!existingDoc) {
+              await this.prisma.legalDocument.create({
+                data: {
+                  customerId: customer.id,
+                  title: filename,
+                  category: 'Lampiran Email',
+                  filename,
+                  mimeType,
+                  size,
+                  path: relPath,
+                  status: 'Reviewed',
+                  ownerName: parsed.from?.text ? `Email: ${parsed.from.text}` : 'Email Masuk',
+                  versions: {
+                    create: [
+                      {
+                        versionNumber: 'v1.0',
+                        authorName: parsed.from?.text || 'Email Masuk',
+                        approved: true,
+                        notes: `Otomatis tersimpan dari email: ${parsed.subject || '(tanpa subjek)'}`,
+                      },
+                    ],
+                  },
+                },
+              });
+            }
+          } catch (docErr) {
+            console.warn('[Sync] Auto-save to LegalDocument error:', docErr);
+          }
+        }
 
         existingKeys.add(key);
       }

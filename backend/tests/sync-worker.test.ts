@@ -116,5 +116,14 @@ describe('SyncWorker Auth Error Handling & Backoff', () => {
     const md = savedMsg?.attachments.find((a) => a.filename === 'catatan.md');
     expect(md).toBeDefined();
     expect(md?.mimeType).toBe('text/markdown');
+    expect(pdf?.path).toContain('accounts/');
+
+    // Assert auto-saved to LegalDocument under the customer's account in 'Lampiran Email' folder
+    const legalDocs = await prisma.legalDocument.findMany({
+      where: { customerId: testCustomer.id, category: 'Lampiran Email' },
+    });
+    expect(legalDocs.length).toBe(2);
+    expect(legalDocs.some((d) => d.filename === 'perjanjian.pdf')).toBe(true);
+    expect(legalDocs.some((d) => d.filename === 'catatan.md')).toBe(true);
   });
 });
