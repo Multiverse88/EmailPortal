@@ -16,6 +16,7 @@ export class SyncWorker {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
   private failedAuthMailboxes = new Map<string, number>();
+  private lastSyncPerMailbox = new Map<string, number>();
 
   constructor(private prisma: PrismaClient) {}
 
@@ -47,6 +48,16 @@ export class SyncWorker {
     if (!customer || customer.status !== 'active') {
       return { synced: 0 };
     }
+
+    // Cooldown check: max 1 IMAP connection per 10s per mailbox
+    const lastSync = this.lastSyncPerMailbox.get(mailboxId);
+    if (lastSync && Date.now() - lastSync < 10000) {
+      const count = await this.prisma.messageCache.count({
+        where: { mailboxId: customer.id },
+      });
+      return { synced: count };
+    }
+    this.lastSyncPerMailbox.set(mailboxId, Date.now());
 
     this.failedAuthMailboxes.delete(customer.mailboxAddress);
 

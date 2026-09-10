@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -159,13 +159,10 @@ function Inbox_() {
   );
   const opened = useSWR<Message>(openUid ? `/email/${openUid}` : null, fetcher, {
     revalidateOnFocus: false,
-    onSuccess: () => {
-      folders.mutate();
-      list.mutate();
-    },
   });
 
   const [syncing, setSyncing] = useState(false);
+  const initialSyncRef = useRef(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -173,18 +170,26 @@ function Inbox_() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const refresh = useCallback(async () => {
+  // One-time background sync on initial page load
+  useEffect(() => {
+    if (initialSyncRef.current) return;
+    initialSyncRef.current = true;
+    api.post('/email/sync').catch(() => {}).finally(() => {
+      list.mutate();
+      folders.mutate();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refresh = async () => {
+    if (syncing) return;
     setSyncing(true);
     try {
       await api.post('/email/sync');
     } catch {}
     await Promise.all([list.mutate(), folders.mutate()]);
     setSyncing(false);
-  }, [list, folders]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  };
 
   const act = async (fn: () => Promise<unknown>, message: string) => {
     try {
