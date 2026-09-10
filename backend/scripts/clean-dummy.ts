@@ -27,6 +27,7 @@ async function main() {
   console.log(`  - Dokumen dummy    : ${result.deletedDocsCount}`);
   console.log(`  - File fisik dummy : ${result.deletedFilesCount}`);
   console.log(`  - Super Admin aktif: ${result.superAdminEmail}`);
+  console.log(`  - Officer aktif    : ${result.officerEmail}`);
 
   // 2. Clean Synology cold storage dummy accounts if folder exists
   try {
@@ -58,9 +59,12 @@ async function main() {
   console.log('\n========================================================');
   console.log('🎉 SEMUA DATA & AKUN DUMMY BERHASIL DIHAPUS!');
   console.log('Sistem kini dalam kondisi BERSIH (Production Ready).');
-  console.log('Login Super Admin:');
-  console.log(`  Email    : ${result.superAdminEmail}`);
-  console.log(`  Password : ${process.env.INITIAL_ADMIN_PASSWORD || 'Admin123!'}`);
+  console.log('1. Akun Super Admin:');
+  console.log(`   Email    : ${result.superAdminEmail}`);
+  console.log(`   Password : ${process.env.INITIAL_ADMIN_PASSWORD || 'Admin123!'}`);
+  console.log('2. Akun Officer (Staf Legal):');
+  console.log(`   Email    : ${result.officerEmail}`);
+  console.log(`   Password : ${process.env.INITIAL_OFFICER_PASSWORD || 'Officer123!'}`);
   console.log('========================================================\n');
 }
 

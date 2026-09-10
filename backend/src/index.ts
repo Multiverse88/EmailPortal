@@ -5,16 +5,15 @@ import { SyncWorker } from './workers/sync';
 const PORT = process.env.PORT || 4000;
 const worker = new SyncWorker(prisma);
 
-async function ensureSuperAdmin() {
+async function ensureAdministrativeAccounts() {
   try {
     const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
     const adminEmail = `admin@${domain}`;
+    const officerEmail = `officer@${domain}`;
+
     const superAdmin = await prisma.adminUser.findFirst({
       where: {
-        OR: [
-          { role: 'superadmin' },
-          { email: adminEmail },
-        ],
+        OR: [{ role: 'superadmin' }, { email: adminEmail }],
       },
     });
 
@@ -33,8 +32,30 @@ async function ensureSuperAdmin() {
       });
       console.log(`✓ [EasyLegal] Akun Super Admin siap (${adminEmail})!`);
     }
+
+    const officer = await prisma.adminUser.findFirst({
+      where: {
+        OR: [{ role: 'officer' }, { email: officerEmail }],
+      },
+    });
+
+    if (!officer) {
+      console.log(`🌱 [EasyLegal] Menginisialisasi akun Officer: ${officerEmail}...`);
+      const defaultOfficerPassword = process.env.INITIAL_OFFICER_PASSWORD || 'Officer123!';
+      const officerPasswordHash = await bcrypt.hash(defaultOfficerPassword, 10);
+      await prisma.adminUser.create({
+        data: {
+          name: 'Officer Staf Legal',
+          email: officerEmail,
+          passwordHash: officerPasswordHash,
+          role: 'officer',
+          isActive: true,
+        },
+      });
+      console.log(`✓ [EasyLegal] Akun Officer siap (${officerEmail})!`);
+    }
   } catch (err) {
-    console.error('✗ [EasyLegal] Error menginisialisasi Super Admin:', err);
+    console.error('✗ [EasyLegal] Error menginisialisasi akun administratif:', err);
   }
 }
 
@@ -43,7 +64,7 @@ async function startServer() {
     await prisma.$connect();
     console.log('✓ Database connected');
 
-    await ensureSuperAdmin();
+    await ensureAdministrativeAccounts();
 
     app.listen(PORT, () => {
       console.log(`✓ Server running on http://localhost:${PORT}`);

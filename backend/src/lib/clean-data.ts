@@ -15,36 +15,44 @@ export async function purgeDummyData(prisma: PrismaClient, storageDir?: string) 
   const deletedCustomers = await prisma.customer.deleteMany();
   const deletedAuditLogs = await prisma.auditLog.deleteMany();
 
-  // 2. Remove demo officer/staff, preserve superadmin
-  const deletedAdmins = await prisma.adminUser.deleteMany({
-    where: { role: { not: 'superadmin' } },
-  });
-
-  // 3. Ensure primary Super Admin exists
+  // 2. Ensure official Super Admin & Officer accounts exist, remove obsolete staff
   const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
   const adminEmail = `admin@${domain}`;
-  let superAdmin = await prisma.adminUser.findFirst({
+  const officerEmail = `officer@${domain}`;
+
+  await prisma.adminUser.deleteMany({
     where: {
-      OR: [
-        { role: 'superadmin' },
-        { email: adminEmail },
-      ],
+      email: { notIn: [adminEmail, officerEmail] },
     },
   });
 
-  if (!superAdmin) {
-    const defaultPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Admin123!';
-    const passwordHash = await bcrypt.hash(defaultPassword, 10);
-    superAdmin = await prisma.adminUser.create({
-      data: {
-        name: 'Admin Utama EasyLegal',
-        email: adminEmail,
-        passwordHash,
-        role: 'superadmin',
-        isActive: true,
-      },
-    });
-  }
+  const defaultAdminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Admin123!';
+  const adminPasswordHash = await bcrypt.hash(defaultAdminPassword, 10);
+  const superAdmin = await prisma.adminUser.upsert({
+    where: { email: adminEmail },
+    update: { isActive: true, role: 'superadmin' },
+    create: {
+      name: 'Admin Utama EasyLegal',
+      email: adminEmail,
+      passwordHash: adminPasswordHash,
+      role: 'superadmin',
+      isActive: true,
+    },
+  });
+
+  const defaultOfficerPassword = process.env.INITIAL_OFFICER_PASSWORD || 'Officer123!';
+  const officerPasswordHash = await bcrypt.hash(defaultOfficerPassword, 10);
+  const officer = await prisma.adminUser.upsert({
+    where: { email: officerEmail },
+    update: { isActive: true, role: 'officer' },
+    create: {
+      name: 'Officer Staf Legal',
+      email: officerEmail,
+      passwordHash: officerPasswordHash,
+      role: 'officer',
+      isActive: true,
+    },
+  });
 
   // 4. Delete physical dummy files from storage directory
   const resolvedStorageDir = storageDir || path.resolve(process.env.STORAGE_DIR || './storage');
@@ -76,5 +84,6 @@ export async function purgeDummyData(prisma: PrismaClient, storageDir?: string) 
     deletedDocsCount: deletedDocs.count,
     deletedFilesCount,
     superAdminEmail: superAdmin.email,
+    officerEmail: officer.email,
   };
 }

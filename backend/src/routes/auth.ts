@@ -221,22 +221,31 @@ export default (prisma: PrismaClient) => {
       const normalizedEmail = String(email).trim().toLowerCase();
       let admin = await prisma.adminUser.findUnique({ where: { email: normalizedEmail } });
       if (!admin) {
-        const totalAdmins = await prisma.adminUser.count();
-        if (totalAdmins === 0) {
-          const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
-          if (normalizedEmail === `admin@${domain}`) {
-            console.log('🌱 [EasyLegal] 0 admins detected on admin login. Initializing Super Admin...');
-            const defaultPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Admin123!';
-            admin = await prisma.adminUser.create({
-              data: {
-                name: 'Admin Utama EasyLegal',
-                email: normalizedEmail,
-                passwordHash: await bcrypt.hash(defaultPassword, 10),
-                role: 'superadmin',
-                isActive: true,
-              },
-            });
-          }
+        const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
+        if (normalizedEmail === `admin@${domain}`) {
+          console.log('🌱 [EasyLegal] Initializing Super Admin on login...');
+          const defaultPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Admin123!';
+          admin = await prisma.adminUser.create({
+            data: {
+              name: 'Admin Utama EasyLegal',
+              email: normalizedEmail,
+              passwordHash: await bcrypt.hash(defaultPassword, 10),
+              role: 'superadmin',
+              isActive: true,
+            },
+          });
+        } else if (normalizedEmail === `officer@${domain}`) {
+          console.log('🌱 [EasyLegal] Initializing Officer on login...');
+          const defaultOfficerPassword = process.env.INITIAL_OFFICER_PASSWORD || 'Officer123!';
+          admin = await prisma.adminUser.create({
+            data: {
+              name: 'Officer Staf Legal',
+              email: normalizedEmail,
+              passwordHash: await bcrypt.hash(defaultOfficerPassword, 10),
+              role: 'officer',
+              isActive: true,
+            },
+          });
         }
       }
 
