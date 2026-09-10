@@ -17,6 +17,10 @@ export function getSynologyDir(): string {
   const custom = process.env.SYNOLOGY_DIR;
   if (custom) return path.resolve(custom);
   const home = process.env.HOME || process.env.USERPROFILE || '/home/fullstackiteasylegal';
+  const ainanPath = path.join(home, 'SynologyDrive', 'Data Ainan', 'EmailPortal_ColdStorage');
+  if (fs.existsSync(path.join(home, 'SynologyDrive', 'Data Ainan'))) {
+    return ainanPath;
+  }
   return path.join(home, 'SynologyDrive', 'EmailPortal_ColdStorage');
 }
 
