@@ -296,6 +296,7 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
           select: {
             id: true, uid: true, folder: true, subject: true, sender: true,
             recipients: true, snippet: true, isRead: true, isStarred: true, receivedAt: true,
+            attachments: { select: { id: true, filename: true, mimeType: true, size: true } },
           },
         }),
         prisma.messageCache.count({ where }),

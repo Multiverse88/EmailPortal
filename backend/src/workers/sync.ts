@@ -1,10 +1,16 @@
 import { PrismaClient, Customer } from '@prisma/client';
 import Imap from 'imap';
 import { simpleParser } from 'mailparser';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import { decrypt } from '../lib/crypto';
 import { toSnippet } from '../lib/sanitize';
 import { inferAttachmentMimeType } from '../lib/attachments';
 import { isMailApiConfigured, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody } from '../lib/hostinger';
+
+const STORAGE_DIR = path.resolve(process.env.STORAGE_DIR || './storage');
+fs.mkdirSync(STORAGE_DIR, { recursive: true });
 
 const IMAP_HOST = process.env.HOSTINGER_IMAP_HOST || 'imap.hostinger.com';
 const IMAP_PORT = parseInt(process.env.HOSTINGER_IMAP_PORT || '993');
@@ -185,7 +191,7 @@ export class SyncWorker {
         // non-fatal; sync continues with available info
       }
 
-      await this.prisma.messageCache.upsert({
+      const message = await this.prisma.messageCache.upsert({
         where: { mailboxId_uid: { mailboxId: customer.id, uid: String(meta.uid) } },
         create: {
           mailboxId: customer.id,
@@ -200,14 +206,6 @@ export class SyncWorker {
           isRead: wasSeen,
           isStarred: flags.includes('\\Flagged'),
           receivedAt: meta.date ? new Date(meta.date) : new Date(),
-          attachments: attachmentMeta ? {
-            create: JSON.parse(attachmentMeta).map((a: any) => ({
-              filename: a.filename,
-              mimeType: inferAttachmentMimeType(a.filename),
-              size: a.size,
-              path: `api-attach:${a.id}`,
-            })),
-          } : undefined,
         },
         update: {
           subject: meta.subject,
@@ -218,6 +216,32 @@ export class SyncWorker {
           bodyHtml,
         },
       });
+
+      if (attachmentMeta) {
+        try {
+          const parsedAtts = JSON.parse(attachmentMeta);
+          const existing = await this.prisma.attachment.findMany({
+            where: { messageId: message.id },
+            select: { path: true },
+          });
+          const existingPaths = new Set(existing.map((e) => e.path));
+
+          for (const a of parsedAtts) {
+            const remotePath = `api-attach:${a.id}`;
+            if (existingPaths.has(remotePath)) continue;
+            await this.prisma.attachment.create({
+              data: {
+                messageId: message.id,
+                filename: a.filename,
+                mimeType: inferAttachmentMimeType(a.filename),
+                size: a.size,
+                path: remotePath,
+              },
+            });
+            existingPaths.add(remotePath);
+          }
+        } catch {}
+      }
     }
   }
 
@@ -300,10 +324,51 @@ export class SyncWorker {
       receivedAt: parsed.date || new Date(),
     };
 
-    await this.prisma.messageCache.upsert({
+    const message = await this.prisma.messageCache.upsert({
       where: { mailboxId_uid: { mailboxId, uid } },
       create: { mailboxId, uid, ...data },
       update: data,
     });
+
+    if (parsed.attachments && Array.isArray(parsed.attachments) && parsed.attachments.length > 0) {
+      const existing = await this.prisma.attachment.findMany({
+        where: { messageId: message.id },
+        select: { filename: true, size: true },
+      });
+      const existingKeys = new Set(existing.map((a) => `${a.filename}_${a.size}`));
+
+      for (const att of parsed.attachments) {
+        if (!att.content || (!Buffer.isBuffer(att.content) && typeof att.content !== 'string')) {
+          continue;
+        }
+
+        const filename = att.filename || 'attachment';
+        const size = att.size || (Buffer.isBuffer(att.content) ? att.content.length : Buffer.byteLength(att.content));
+        const key = `${filename}_${size}`;
+        if (existingKeys.has(key)) continue;
+
+        const ext = path.extname(filename) || '';
+        const safeExt = ext.slice(0, 10).replace(/[^a-zA-Z0-9._-]/g, '');
+        const diskFilename = `att_${Date.now()}_${crypto.randomBytes(8).toString('hex')}${safeExt}`;
+        const filePath = path.resolve(STORAGE_DIR, diskFilename);
+
+        const buffer = Buffer.isBuffer(att.content) ? att.content : Buffer.from(att.content);
+        await fs.promises.writeFile(filePath, buffer);
+
+        const mimeType = att.contentType || inferAttachmentMimeType(filename);
+
+        await this.prisma.attachment.create({
+          data: {
+            messageId: message.id,
+            filename,
+            mimeType,
+            size,
+            path: diskFilename,
+          },
+        });
+
+        existingKeys.add(key);
+      }
+    }
   }
 }

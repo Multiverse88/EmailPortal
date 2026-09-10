@@ -74,4 +74,47 @@ describe('SyncWorker Auth Error Handling & Backoff', () => {
     warnSpy.mockRestore();
     errorSpy.mockRestore();
   });
+
+  it('should parse and save raw email attachments to disk and database', async () => {
+    const rawEmail = Buffer.from(
+      'From: sender@gmail.com\r\n' +
+      'To: syncworker@clienteasylegal.co.id\r\n' +
+      'Subject: Email with Documents\r\n' +
+      'Content-Type: multipart/mixed; boundary="boundary123"\r\n\r\n' +
+      '--boundary123\r\n' +
+      'Content-Type: text/plain; charset=utf-8\r\n\r\n' +
+      'Berikut file lampiran yang diminta.\r\n' +
+      '--boundary123\r\n' +
+      'Content-Type: application/pdf; name="perjanjian.pdf"\r\n' +
+      'Content-Disposition: attachment; filename="perjanjian.pdf"\r\n' +
+      'Content-Transfer-Encoding: base64\r\n\r\n' +
+      'JVBERi0xLjQKJcTl8uXr\r\n' +
+      '--boundary123\r\n' +
+      'Content-Type: text/markdown; name="catatan.md"\r\n' +
+      'Content-Disposition: attachment; filename="catatan.md"\r\n' +
+      'Content-Transfer-Encoding: base64\r\n\r\n' +
+      Buffer.from('# Catatan Legal\nIsi catatan').toString('base64') + '\r\n' +
+      '--boundary123--'
+    );
+
+    const testUid = `att-test-${Date.now()}`;
+    await (worker as any).store(testCustomer.id, testUid, rawEmail);
+
+    const savedMsg = await prisma.messageCache.findFirst({
+      where: { mailboxId: testCustomer.id, uid: testUid },
+      include: { attachments: true },
+    });
+
+    expect(savedMsg).toBeDefined();
+    expect(savedMsg?.subject).toBe('Email with Documents');
+    expect(savedMsg?.attachments.length).toBe(2);
+
+    const pdf = savedMsg?.attachments.find((a) => a.filename === 'perjanjian.pdf');
+    expect(pdf).toBeDefined();
+    expect(pdf?.mimeType).toBe('application/pdf');
+
+    const md = savedMsg?.attachments.find((a) => a.filename === 'catatan.md');
+    expect(md).toBeDefined();
+    expect(md?.mimeType).toBe('text/markdown');
+  });
 });
