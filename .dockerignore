@@ -1,0 +1,14 @@
+node_modules
+.git
+.github
+.next
+dist
+*.log
+.env
+.env.local
+.env.*.local
+storage/
+SynologyDrive/
+coverage/
+playwright-report/
+test-results/

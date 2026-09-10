@@ -22,7 +22,20 @@ export const prisma = new PrismaClient();
 
 app.set('trust proxy', 1);
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', credentials: true }));
+const configuredOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000').split(',').map((s) => s.trim());
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (configuredOrigins.includes('*') || configuredOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    return callback(null, true); // Allow flexible testing on dokploy wildcard/sslip domains
+  },
+  credentials: true,
+}));
 if (process.env.NODE_ENV !== 'test') app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

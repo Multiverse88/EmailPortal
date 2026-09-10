@@ -93,7 +93,7 @@ export function DocumentPreviewModal({
   const handleDownload = () => {
     if (!doc) return;
     const token = typeof window !== 'undefined' ? (localStorage.getItem('customer_token') || localStorage.getItem('token') || '') : '';
-    const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/documents/${doc.id}/download?token=${encodeURIComponent(token || '')}`;
+    const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || '/api'}/documents/${doc.id}/download?token=${encodeURIComponent(token || '')}`;
     window.open(downloadUrl, '_blank');
   };
 
@@ -150,7 +150,7 @@ export function DocumentPreviewModal({
 
   const token = typeof window !== 'undefined' ? (localStorage.getItem('customer_token') || localStorage.getItem('token') || '') : '';
   const downloadUrl = doc
-    ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/documents/${doc.id}/download?token=${encodeURIComponent(token || '')}`
+    ? `${process.env.NEXT_PUBLIC_API_URL || '/api'}/documents/${doc.id}/download?token=${encodeURIComponent(token || '')}`
     : '';
 
   return (

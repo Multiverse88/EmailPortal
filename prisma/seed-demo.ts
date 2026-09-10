@@ -8,7 +8,9 @@ import { PrismaClient } from '@prisma/client';
 import { seedDemoData } from '../backend/src/lib/demo-data';
 
 const prisma = new PrismaClient();
-const storageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../backend/storage');
+const storageDir = process.env.STORAGE_DIR
+  ? path.resolve(process.env.STORAGE_DIR)
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../backend/storage');
 
 async function main() {
   console.log('🌱 Menyiapkan database dengan Data Demo Lengkap untuk evaluasi UI & Live testing...');
