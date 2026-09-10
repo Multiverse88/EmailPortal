@@ -32,6 +32,7 @@ model Customer {
   documents LegalDocument[]
   tickets   SupportTicket[]
   sessions  LoginSession[]
+  documentMetadata DocumentMetadata[]
 
   @@index([mailboxAddress])
   @@index([status])
@@ -146,9 +147,37 @@ model LegalDocument {
 
   customer    Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
   versions    DocumentVersion[]
+  metadata    DocumentMetadata?
 
   @@index([customerId])
   @@index([category])
+}
+
+model DocumentMetadata {
+  id                String   @id @default(uuid())
+  documentId        String?  @unique
+  customerId        String?
+  docType           String   // "Akta Pendirian", "SK Kemenkumham", "NIB", "NPWP Badan", "Perjanjian Kerjasama", "Dokumen Legal"
+  companyName       String?
+  documentNumber    String?
+  notaryName        String?
+  effectiveDate     String?
+  capitalAmount     String?
+  businessSectors   String?  // KBLI / Bidang Usaha
+  registeredAddress String?  // Alamat domisili
+  keyPeople         String?  // Susunan Direksi / Komisaris / Pemegang Saham
+  summary           String?  // Ringkasan klausul / pokok isi
+  rawExtractedText  String?  // Disimpan aman dalam local SQLite persistent memory (zero-leakage)
+  confidenceScore   Float    @default(0.95)
+  verifiedBy        String?  // Nama Officer atau Admin yang memverifikasi
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  document LegalDocument? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  customer Customer?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([docType])
 }
 
 model DocumentVersion {

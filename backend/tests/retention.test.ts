@@ -90,7 +90,10 @@ describe('GET /api/settings retention payload integration', () => {
       avatarUrl: null,
     });
 
-    const res = await request(app).get('/api/settings');
+    const token = signToken('cust-123', 'budi@clienteasylegal.co.id', 'customer');
+    const res = await request(app)
+      .get('/api/settings')
+      .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('retention');

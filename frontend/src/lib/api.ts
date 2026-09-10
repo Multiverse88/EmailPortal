@@ -18,6 +18,7 @@ api.interceptors.request.use((config) => {
   const legacyToken = localStorage.getItem('token');
 
   const isAdminEndpoint =
+    url.includes('/admin') ||
     url.includes('/mailboxes') ||
     url.includes('/storage') ||
     url.includes('/audit') ||
@@ -26,6 +27,7 @@ api.interceptors.request.use((config) => {
     url.includes('/security/admin');
 
   const isCustomerEndpoint =
+    !url.includes('/admin') &&
     !url.includes('/security/admin') && (
       url.includes('/email') ||
       url.includes('/documents') ||

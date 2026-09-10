@@ -35,11 +35,14 @@ import {
   FileText,
   LifeBuoy,
   Zap,
+  Sparkles,
 } from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
 import { useAdminAuth, useAuthStore } from '@/store/auth';
 import { AuthGuard } from '@/components/auth-guard';
 import { SuiteHeader } from '@/components/suite-header';
+import { DocumentMetadataExtractor } from '@/components/admin/document-metadata-extractor';
+import { SupportTicketsDesk } from '@/components/admin/support-tickets-desk';
 
 interface Mailbox {
   id: string;
@@ -141,7 +144,13 @@ function Admin_() {
   const isSuperAdmin = normalizedRole === 'superadmin' || normalizedRole === 'admin';
   const isOfficer = normalizedRole === 'officer';
 
-  const [activeTab, setActiveTab] = useState<'mailboxes' | 'storage' | 'radar' | 'officer'>('mailboxes');
+  const [activeTab, setActiveTab] = useState<'mailboxes' | 'storage' | 'radar' | 'officer' | 'tickets' | 'extraction'>('mailboxes');
+
+  const { data: ticketOverview } = useSWR<{ total: number; stats: { open: number; resolved: number; urgent: number } }>(
+    isSuperAdmin ? '/admin/support/tickets' : null,
+    fetcher,
+    { refreshInterval: 15000 }
+  );
 
   const [showForm, setShowForm] = useState(false);
   const [created, setCreated] = useState<{ mailboxAddress: string; temporaryPassword: string } | null>(null);
@@ -524,6 +533,28 @@ function Admin_() {
               <>
                 <button
                   type="button"
+                  onClick={() => setActiveTab('tickets')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                    activeTab === 'tickets'
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+                >
+                  <LifeBuoy className="w-4 h-4 text-blue-600" />
+                  <span>Pusat Tiket Support Klien</span>
+                  {ticketOverview?.stats && ticketOverview.stats.open > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold">
+                      {ticketOverview.stats.open} Buka
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-bold">
+                      {ticketOverview?.total ?? 0}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setActiveTab('storage')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
                     activeTab === 'storage'
@@ -561,23 +592,54 @@ function Admin_() {
                     </span>
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('extraction')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                    activeTab === 'extraction'
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span>Ekstraksi Dokumen Legal (AI)</span>
+                </button>
               </>
             )}
 
-            {/* Officer Workflow Tab */}
+            {/* Officer Tabs */}
             {isOfficer && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('officer')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
-                  activeTab === 'officer'
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                <LifeBuoy className="w-4 h-4 text-primary" />
-                <span>Pintasan Operasional Staf</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('extraction')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                    activeTab === 'extraction'
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span>Ekstraksi Dokumen Legal (AI)</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold">
+                    Zero Leakage
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('officer')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                    activeTab === 'officer'
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+                >
+                  <Zap className="w-4 h-4 text-amber-600" />
+                  <span>Pintasan Operasional Staf</span>
+                </button>
+              </>
             )}
           </div>
 
@@ -1419,24 +1481,24 @@ function Admin_() {
             <div className="space-y-6">
               <div className="app-panel p-6 bg-gradient-to-br from-white via-white to-primary/5 border-primary/20">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <LifeBuoy className="w-5 h-5 text-primary" />
+                  <Zap className="w-5 h-5 text-amber-600" />
                   <span>Ruang Kerja Staf Legal & Operasional Mailbox</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Akses langsung ke seluruh instrumen pendukung customer legal tanpa harus berpindah aplikasi.
+                  Fokus pada pembuatan &amp; provisioning akun email resmi klien, pengiriman kredensial aktivasi, serta ekstraksi metadata berkas legal AI (100% On-Premise zero-leakage).
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
                   <div
-                    onClick={() => router.push('/support')}
+                    onClick={() => setActiveTab('extraction')}
                     className="p-4 bg-white rounded-2xl border border-slate-200/80 hover:border-primary cursor-pointer transition-all hover:shadow-xs group"
                   >
                     <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <LifeBuoy className="w-4 h-4" />
+                      <Sparkles className="w-4 h-4" />
                     </div>
-                    <h4 className="text-xs font-bold text-slate-900 mt-3">Tiket Bantuan Klien</h4>
+                    <h4 className="text-xs font-bold text-slate-900 mt-3">Ekstraksi Dokumen Legal (AI)</h4>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Bantu tangani permohonan pemulihan berkas arsip & konsultasi legal klien.
+                      Parsing otomatis PDF Akta, SK AHU Kemenkumham, NIB OSS, dan simpan ke Persistent Memory.
                     </p>
                   </div>
 
@@ -1564,6 +1626,33 @@ Tim Legal EasyLegal`}
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 5: SUPER ADMIN SUPPORT TICKET DESK (EXCLUSIVE TO SUPER ADMIN)         */}
+          {/* ========================================================================= */}
+          {activeTab === 'tickets' && isSuperAdmin && (
+            <SupportTicketsDesk
+              onNotify={(msg) => {
+                setToast(msg);
+                setTimeout(() => setToast(''), 3500);
+              }}
+            />
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 6: AI DOCUMENT METADATA EXTRACTION & PERSISTENT MEMORY                */}
+          {/* ========================================================================= */}
+          {activeTab === 'extraction' && (
+            <DocumentMetadataExtractor
+              mailboxes={mailboxes}
+              isOfficer={isOfficer}
+              isSuperAdmin={isSuperAdmin}
+              onNotify={(msg) => {
+                setToast(msg);
+                setTimeout(() => setToast(''), 3500);
+              }}
+            />
           )}
 
         </div>
