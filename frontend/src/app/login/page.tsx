@@ -27,7 +27,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await api.post(`/auth/login/${tab}`, { email, password });
+      const normalizedEmail = email.trim().toLowerCase();
+      const res = await api.post(`/auth/login/${tab}`, { email: normalizedEmail, password });
       if (res.data.requires2FA && res.data.challengeToken) {
         setRequires2FA(true);
         setChallengeToken(res.data.challengeToken);

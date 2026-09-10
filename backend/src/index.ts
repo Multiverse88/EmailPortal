@@ -1,13 +1,31 @@
 import app, { prisma } from './app';
 import { SyncWorker } from './workers/sync';
+import { seedDemoData } from './lib/demo-data';
 
 const PORT = process.env.PORT || 4000;
 const worker = new SyncWorker(prisma);
+
+async function ensureSeedData() {
+  try {
+    const adminCount = await prisma.adminUser.count();
+    if (adminCount === 0 || process.env.FORCE_SEED_DEMO === 'true') {
+      console.log('🌱 [EasyLegal] No admin accounts detected (or FORCE_SEED_DEMO active). Initializing demo accounts and data...');
+      const res = await seedDemoData(prisma);
+      console.log(`✓ [EasyLegal] Database initialized successfully! Admin: admin@${res.domain} (password: Admin123!)`);
+    } else {
+      console.log(`✓ [EasyLegal] Database verified (${adminCount} admin accounts present).`);
+    }
+  } catch (seedErr) {
+    console.error('✗ [EasyLegal] Seeding error during startup:', seedErr);
+  }
+}
 
 async function startServer() {
   try {
     await prisma.$connect();
     console.log('✓ Database connected');
+
+    await ensureSeedData();
 
     app.listen(PORT, () => {
       console.log(`✓ Server running on http://localhost:${PORT}`);

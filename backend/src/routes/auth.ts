@@ -14,6 +14,7 @@ import { verifyTotp } from '../lib/totp';
 import { checkAndSendNewDeviceAlert } from '../lib/security-alerts';
 import { sendOnboardingNotice } from '../lib/mail';
 import { audit } from '../lib/audit';
+import { seedDemoData } from '../lib/demo-data';
 import { authenticateAdmin, authenticateCustomer, authenticateOfficerOrAdmin, UserRole } from '../middleware/auth';
 import {
   isMailApiConfigured,
@@ -79,7 +80,17 @@ export default (prisma: PrismaClient) => {
       const { email, password } = req.body ?? {};
       if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
 
-      const customer = await prisma.customer.findUnique({ where: { mailboxAddress: email } });
+      const normalizedEmail = String(email).trim().toLowerCase();
+      let customer = await prisma.customer.findUnique({ where: { mailboxAddress: normalizedEmail } });
+      if (!customer) {
+        const totalCustomers = await prisma.customer.count();
+        if (totalCustomers === 0) {
+          console.log('🌱 [EasyLegal] 0 customers detected on login. Performing emergency auto-seed...');
+          await seedDemoData(prisma);
+          customer = await prisma.customer.findUnique({ where: { mailboxAddress: normalizedEmail } });
+        }
+      }
+
       if (!customer || customer.status !== 'active' || !verifyPassword(password, customer.passwordEnc)) {
         return res.status(401).json({ error: 'Email atau password salah' });
       }
@@ -216,7 +227,17 @@ export default (prisma: PrismaClient) => {
       const { email, password } = req.body ?? {};
       if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
 
-      const admin = await prisma.adminUser.findUnique({ where: { email } });
+      const normalizedEmail = String(email).trim().toLowerCase();
+      let admin = await prisma.adminUser.findUnique({ where: { email: normalizedEmail } });
+      if (!admin) {
+        const totalAdmins = await prisma.adminUser.count();
+        if (totalAdmins === 0) {
+          console.log('🌱 [EasyLegal] 0 admins detected on admin login. Performing emergency auto-seed...');
+          await seedDemoData(prisma);
+          admin = await prisma.adminUser.findUnique({ where: { email: normalizedEmail } });
+        }
+      }
+
       if (!admin || !admin.isActive || !(await bcrypt.compare(password, admin.passwordHash))) {
         return res.status(401).json({ error: 'Email atau password salah' });
       }

@@ -11,12 +11,5 @@ mkdir -p /app/storage
 echo "📦 [EasyLegal] Synchronizing SQLite Database Schema..."
 npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss
 
-# Auto seed if database is brand new or explicitly forced
-if [ "$AUTO_SEED_DEMO" = "true" ] || [ ! -f "/app/data/.seeded" ]; then
-  echo "🌱 [EasyLegal] Seeding demo accounts and mock email data..."
-  npx tsx prisma/seed-demo.ts || true
-  touch /app/data/.seeded
-fi
-
 echo "✨ [EasyLegal] Ready! Starting backend on port ${PORT:-4000}..."
 exec "$@"
