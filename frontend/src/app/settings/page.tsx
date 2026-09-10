@@ -251,6 +251,26 @@ function SettingsContent() {
     }
   };
 
+  const formatStorageSize = (bytes: number): string => {
+    if (!bytes || bytes <= 0) return '0 MB';
+    const k = 1024;
+    if (bytes < k * k) {
+      return `${(bytes / k).toFixed(1)} KB`;
+    }
+    if (bytes < k * k * k) {
+      return `${(bytes / (k * k)).toFixed(1)} MB`;
+    }
+    return `${(bytes / (k * k * k)).toFixed(1)} GB`;
+  };
+
+  const formatStoragePercent = (percent: number, bytesUsed = 0): string => {
+    if (!bytesUsed || bytesUsed <= 0) return '0%';
+    if (percent < 0.01) return '< 0.01%';
+    if (percent < 0.1) return `${percent.toFixed(2)}%`;
+    if (percent % 1 !== 0) return `${percent.toFixed(1)}%`;
+    return `${percent}%`;
+  };
+
   // Fetch settings & sessions
   const fetchSettings = async () => {
     try {
@@ -746,7 +766,7 @@ function SettingsContent() {
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-slate-500 font-medium">Kapasitas Cloud</span>
                     <span className="font-semibold text-slate-700">
-                      {(storageStats.storageUsed / (1024 * 1024 * 1024)).toFixed(2)} GB / {(storageStats.storageLimit / (1024 * 1024 * 1024)).toFixed(1)} GB
+                      {formatStorageSize(storageStats.storageUsed)} / {formatStorageSize(storageStats.storageLimit)}
                     </span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
@@ -754,11 +774,13 @@ function SettingsContent() {
                       className={`h-1.5 rounded-full transition-all ${
                         storageStats.isFull ? 'bg-red-600' : storageStats.usagePercent > 80 ? 'bg-amber-500' : 'bg-primary'
                       }`}
-                      style={{ width: `${Math.min(100, Math.max(2, storageStats.usagePercent))}%` }}
+                      style={{
+                        width: `${storageStats.storageUsed > 0 ? Math.min(100, Math.max(2, storageStats.usagePercent)) : 0}%`,
+                      }}
                     />
                   </div>
                   <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                    <span>{storageStats.usagePercent}% digunakan</span>
+                    <span>{formatStoragePercent(storageStats.usagePercent, storageStats.storageUsed)} digunakan</span>
                     <span className="text-primary font-medium">Maks 5 GB</span>
                   </div>
                 </div>
@@ -1129,8 +1151,8 @@ function SettingsContent() {
                         </span>
                       </div>
                       <span className="text-xs font-mono font-bold text-slate-700">
-                        {(storageStats.storageUsed / (1024 * 1024 * 1024)).toFixed(2)} GB / {(storageStats.storageLimit / (1024 * 1024 * 1024)).toFixed(1)} GB
-                        {' '}({storageStats.usagePercent}%)
+                        {formatStorageSize(storageStats.storageUsed)} / {formatStorageSize(storageStats.storageLimit)}
+                        {' '}({formatStoragePercent(storageStats.usagePercent, storageStats.storageUsed)})
                       </span>
                     </div>
 
@@ -1143,7 +1165,9 @@ function SettingsContent() {
                               ? 'bg-amber-500'
                               : 'bg-primary'
                         }`}
-                        style={{ width: `${Math.min(100, Math.max(2, storageStats.usagePercent))}%` }}
+                        style={{
+                          width: `${storageStats.storageUsed > 0 ? Math.min(100, Math.max(2, storageStats.usagePercent)) : 0}%`,
+                        }}
                       />
                     </div>
 

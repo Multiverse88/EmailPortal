@@ -189,10 +189,19 @@ function DocumentsContent() {
   };
 
   const isFull = storageUsed >= storageLimit;
-  const storagePercent = Math.min(
-    100,
-    Math.round((storageUsed / (storageLimit || 5368709120)) * 100)
-  );
+  const rawStoragePercent = (storageLimit || 5368709120) > 0
+    ? (storageUsed / (storageLimit || 5368709120)) * 100
+    : 0;
+  const storagePercent = Math.min(100, rawStoragePercent);
+
+  const formatPercent = (used: number, limit: number): string => {
+    if (!used || used <= 0) return '0%';
+    const p = (used / (limit || 5368709120)) * 100;
+    if (p < 0.01) return '< 0.01%';
+    if (p < 0.1) return `${p.toFixed(2)}%`;
+    if (p % 1 !== 0) return `${p.toFixed(1)}%`;
+    return `${p}%`;
+  };
 
   return (
     <div className="app-shell h-[100dvh]">
@@ -406,12 +415,14 @@ function DocumentsContent() {
                 className={`h-full rounded-full transition-all duration-500 ${
                   isFull ? 'bg-red-600' : storagePercent > 80 ? 'bg-amber-500' : 'bg-primary'
                 }`}
-                style={{ width: `${Math.min(100, Math.max(2, storagePercent))}%` }}
+                style={{
+                  width: `${storageUsed > 0 ? Math.min(100, Math.max(2, storagePercent)) : 0}%`,
+                }}
               />
             </div>
             <div className="flex items-center justify-between mt-1.5 text-[10px]">
-              <span className="text-slate-400">
-                {storagePercent}% terpakai
+              <span className="text-slate-400 font-medium">
+                {formatPercent(storageUsed, storageLimit)} terpakai
               </span>
               <button
                 type="button"

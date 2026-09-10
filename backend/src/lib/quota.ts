@@ -35,7 +35,18 @@ export async function getCustomerStorageStats(
   const storageUsed = docSize + attachSize;
   const storageLimit = customer?.storageQuota || DEFAULT_STORAGE_QUOTA;
   const isFull = storageUsed >= storageLimit;
-  const usagePercent = Math.min(100, Math.round((storageUsed / storageLimit) * 100));
+
+  const rawPercent = storageLimit > 0 ? (storageUsed / storageLimit) * 100 : 0;
+  let usagePercent = 0;
+  if (storageUsed > 0) {
+    if (rawPercent < 0.1) {
+      usagePercent = Number(rawPercent.toFixed(2));
+    } else if (rawPercent < 10) {
+      usagePercent = Number(rawPercent.toFixed(1));
+    } else {
+      usagePercent = Math.min(100, Number(rawPercent.toFixed(1)));
+    }
+  }
 
   return {
     storageUsed,
