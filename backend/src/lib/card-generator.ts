@@ -1,4 +1,34 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { MASCOT_POSES } from './mascot-assets';
+
+/**
+ * Resolves local bundled font files for pristine in-memory rendering across platforms
+ */
+export function getBundledFontFiles(): string[] {
+  const possibleDirs = [
+    path.resolve(__dirname, '../../fonts'),
+    path.resolve(__dirname, '../fonts'),
+    path.resolve(process.cwd(), 'backend/fonts'),
+    path.resolve(process.cwd(), 'fonts'),
+    '/app/backend/fonts',
+    '/app/fonts',
+  ];
+
+  for (const dir of possibleDirs) {
+    const regular = path.join(dir, 'Inter-Regular.ttf');
+    if (fs.existsSync(regular)) {
+      return [
+        path.join(dir, 'Inter-Regular.ttf'),
+        path.join(dir, 'Inter-Medium.ttf'),
+        path.join(dir, 'Inter-SemiBold.ttf'),
+        path.join(dir, 'Inter-Bold.ttf'),
+      ].filter((f) => fs.existsSync(f));
+    }
+  }
+
+  return [];
+}
 
 /**
  * Escapes characters for XML/SVG compliance to prevent parser breakage
@@ -284,7 +314,7 @@ function renderMascotStage(poseKey: string, bubbleText: string, toneColor: strin
     <!-- Bubble Tail pointing to mascot -->
     <polygon points="${tailX - 7},${bubbleBottom} ${tailX + 7},${bubbleBottom} ${tailX},${bubbleBottom + 7}" fill="#ffffff" stroke="${bubbleStroke}" stroke-width="1.5" />
     <line x1="${tailX - 6}" y1="${bubbleBottom}" x2="${tailX + 6}" y2="${bubbleBottom}" stroke="#ffffff" stroke-width="2" />
-    <text x="${bubbleX + 16}" y="${bubbleY + 22}" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#111827">
+    <text x="${bubbleX + 16}" y="${bubbleY + 22}" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#111827">
       ${bubbleTspans}
     </text>
 
@@ -297,7 +327,7 @@ function renderMascotStage(poseKey: string, bubbleText: string, toneColor: strin
  * Common Header markup matching easylegal-kartu-notifikasi.html
  */
 function renderCardHeader(title: string, subtitle: string, st: { pill: string; tone: string; deep: string }): string {
-  const pillWidth = Math.max(200, 52 + st.pill.length * 8.2);
+  const pillWidth = Math.max(220, 60 + st.pill.length * 8.6);
   const pillX = 856 - pillWidth;
 
   return `
@@ -313,15 +343,15 @@ function renderCardHeader(title: string, subtitle: string, st: { pill: string; t
     </g>
 
     <!-- Brand Title & Subtitle -->
-    <text x="56" y="18" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="600" fill="#111827" letter-spacing="1.6">${escapeXml(title)}</text>
-    <text x="56" y="36" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="500" fill="#7c8596" letter-spacing="1.0">${escapeXml(subtitle.toUpperCase())}</text>
+    <text x="56" y="18" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="600" fill="#111827" letter-spacing="1.6">${escapeXml(title)}</text>
+    <text x="56" y="36" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="500" fill="#7c8596" letter-spacing="1.0">${escapeXml(subtitle.toUpperCase())}</text>
   </g>
 
   <!-- Status Pill Badge -->
   <g>
     <rect x="${pillX}" y="36" width="${pillWidth}" height="40" rx="20" fill="url(#pillGrad)" />
     <circle cx="${pillX + 20}" cy="56" r="4.5" fill="#ffffff" />
-    <text x="${pillX + 34}" y="61" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="600" fill="#ffffff" letter-spacing="0.6">${escapeXml(st.pill)}</text>
+    <text x="${pillX + 34}" y="61" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#ffffff" letter-spacing="0.5">${escapeXml(st.pill)}</text>
   </g>`;
 }
 
@@ -343,16 +373,15 @@ function renderCardFooter(left1Text: string, left2Text: string, rightText: strin
       ${avatarB64 ? `<clipPath id="footAvatarClip"><circle cx="13" cy="13" r="13" /></clipPath><image href="data:image/png;base64,${avatarB64}" x="0" y="0" width="26" height="26" clip-path="url(#footAvatarClip)" />` : ''}
     </g>
 
-    <!-- AI Ready / Status text -->
+    <!-- Status text and Subtitle flowing naturally without collision -->
     <circle cx="86" cy="495" r="4" fill="#22c55e" />
-    <text x="96" y="499" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="600" fill="#16a34a">${escapeXml(left1Text)}</text>
-
-    <!-- Subtitle / Security Enclave -->
-    <text x="238" y="499" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#7c8596">•</text>
-    <text x="252" y="499" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="400" fill="#7c8596">${escapeXml(left2Text)}</text>
+    <text x="98" y="499" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5">
+      <tspan font-weight="600" fill="#16a34a">${escapeXml(left1Text)}</tspan>
+      ${left2Text ? `<tspan fill="#94a3b8">  •  </tspan><tspan font-weight="400" fill="#7c8596">${escapeXml(left2Text)}</tspan>` : ''}
+    </text>
 
     <!-- Right Call To Action -->
-    <text x="836" y="499" font-family="'JBMono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#d7232c" letter-spacing="1.4" text-anchor="end">${escapeXml(rightText)}</text>
+    <text x="836" y="499" font-family="'Inter', monospace" font-size="11" font-weight="700" fill="#d7232c" letter-spacing="1.4" text-anchor="end">${escapeXml(rightText)}</text>
     <g transform="translate(844, 486) scale(0.85)" stroke="#d7232c" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
       ${ICONS.zap}
     </g>
@@ -451,12 +480,12 @@ export function generateTicketCardSvg(data: TicketCardInput): string {
 
   <!-- BODY: ID & META TIME -->
   <g transform="translate(44, 104)">
-    <text x="0" y="32" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="34" font-weight="700" fill="#111827" letter-spacing="0.3">#${escapeXml(data.ticketNumber)}</text>
+    <text x="0" y="32" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="34" font-weight="700" fill="#111827" letter-spacing="0.3">#${escapeXml(data.ticketNumber)}</text>
     
     <g transform="translate(192, 16) scale(0.75)" stroke="#7c8596" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
       ${ICONS.clock}
     </g>
-    <text x="214" y="30" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#4b5565">${escapeXml(data.createdAtStr)}</text>
+    <text x="214" y="30" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#4b5565">${escapeXml(data.createdAtStr)}</text>
   </g>
 
   <!-- BODY: INFO PANEL -->
@@ -465,19 +494,19 @@ export function generateTicketCardSvg(data: TicketCardInput): string {
 
     <!-- Left Column: Client info -->
     <g transform="translate(24, 20)">
-      <text x="0" y="10" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="#7c8596" letter-spacing="1.3">PEMOHON / KLIEN</text>
+      <text x="0" y="10" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="#7c8596" letter-spacing="1.3">PEMOHON / KLIEN</text>
       
       <g transform="translate(0, 20) scale(0.85)" stroke="#d7232c" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         ${ICONS.user}
       </g>
-      <text x="26" y="36" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18.5" font-weight="600" fill="#111827">${escapeXml(data.customerName)}</text>
+      <text x="26" y="36" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18.5" font-weight="600" fill="#111827">${escapeXml(data.customerName)}</text>
 
       <g transform="translate(0, 50) scale(0.75)" stroke="#1f6fe0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         ${ICONS.mail}
       </g>
-      <text x="26" y="64" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#1f6fe0">${escapeXml(data.mailboxAddress)}</text>
+      <text x="26" y="64" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#1f6fe0">${escapeXml(data.mailboxAddress)}</text>
 
-      <text x="26" y="86" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="400" fill="#7c8596">Personal: ${escapeXml(data.personalEmail || '-')}</text>
+      <text x="26" y="86" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="400" fill="#7c8596">Personal: ${escapeXml(data.personalEmail || '-')}</text>
     </g>
 
     <!-- Dashed separator -->
@@ -485,20 +514,20 @@ export function generateTicketCardSvg(data: TicketCardInput): string {
 
     <!-- Right Column: Category & Subject -->
     <g transform="translate(370, 20)">
-      <text x="0" y="10" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="#7c8596" letter-spacing="1.3">KATEGORI</text>
+      <text x="0" y="10" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="#7c8596" letter-spacing="1.3">KATEGORI</text>
       
       <rect x="0" y="20" width="${chipWidth}" height="28" rx="9" fill="#ffffff" stroke="#d5dbe4" stroke-width="1" />
       <g transform="translate(10, 26) scale(0.7)" stroke="#6366f1" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         ${ICONS.tag}
       </g>
-      <text x="32" y="39" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="500" fill="#334155">${escapeXml(categoryTrunc)}</text>
+      <text x="32" y="39" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="500" fill="#334155">${escapeXml(categoryTrunc)}</text>
 
-      <text x="0" y="70" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="#7c8596" letter-spacing="1.3">SUBJEK TIKET</text>
+      <text x="0" y="70" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" fill="#7c8596" letter-spacing="1.3">SUBJEK TIKET</text>
       
       <g transform="translate(0, 78) scale(0.85)" stroke="#d7232c" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         ${ICONS.file}
       </g>
-      <text x="24" y="94" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16.5" font-weight="600" fill="#111827">${escapeXml(subjectTrunc)}</text>
+      <text x="24" y="94" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16.5" font-weight="600" fill="#111827">${escapeXml(subjectTrunc)}</text>
     </g>
   </g>
 
@@ -511,9 +540,9 @@ export function generateTicketCardSvg(data: TicketCardInput): string {
     <g transform="translate(24, 16) scale(0.75)" stroke="${st.tone}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
       ${ICONS.msg}
     </g>
-    <text x="48" y="29" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="600" fill="#c4cad4" letter-spacing="0.5">${escapeXml(st.msgLabel.toUpperCase())}</text>
+    <text x="48" y="29" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="600" fill="#c4cad4" letter-spacing="0.5">${escapeXml(st.msgLabel.toUpperCase())}</text>
 
-    <text x="24" y="56" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14.5" font-weight="400" fill="#f3f4f6">
+    <text x="24" y="56" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14.5" font-weight="400" fill="#f3f4f6">
       ${messageTspans}
     </text>
   </g>
@@ -589,24 +618,24 @@ export function generateServerStatusCardSvg(data?: ServerCardInput): string {
     const msStr = status === 'down' || status === 'maint' ? '—' : `${s.ms.toLocaleString('id-ID')} ms`;
     const upStr = (status === 'down' ? s.up - 0.41 : status === 'slow' ? s.up - 0.06 : s.up).toFixed(2).replace('.', ',');
 
-    const rowY = 32 + idx * 36;
+    const rowY = 48 + idx * 36;
     const ticks = generateHistoryTicks(s.key, status);
 
     const barsMarkup = ticks.map((t, bIdx) => {
       const barX = 350 + bIdx * 6.8;
       const color = tickColorMap[t] || '#34c46a';
-      return `<rect x="${barX.toFixed(1)}" y="${rowY - 10}" width="4" height="14" rx="1.5" fill="${color}" />`;
+      return `<rect x="${barX.toFixed(1)}" y="${rowY - 8}" width="4" height="14" rx="1.5" fill="${color}" />`;
     }).join('');
 
     return `
     <g>
-      <line x1="20" y1="${rowY - 17}" x2="606" y2="${rowY - 17}" stroke="#e8ebf0" stroke-width="1" />
-      <circle cx="28" cy="${rowY - 3}" r="4.5" fill="${info.dotCol}" />
-      <text x="42" y="${rowY + 2}" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#111827">${escapeXml(s.name)}</text>
-      <text x="210" y="${rowY + 2}" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="600" fill="${info.statCol}">${escapeXml(info.stat)}</text>
-      <text x="328" y="${rowY + 2}" font-family="'JBMono', monospace" font-size="12" font-weight="${status === 'slow' ? '700' : '400'}" fill="${status === 'slow' ? '#b45309' : '#4b5565'}" text-anchor="end">${escapeXml(msStr)}</text>
+      <line x1="20" y1="${rowY - 14}" x2="606" y2="${rowY - 14}" stroke="#e8ebf0" stroke-width="1" />
+      <circle cx="28" cy="${rowY - 1}" r="4.5" fill="${info.dotCol}" />
+      <text x="42" y="${rowY + 4}" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#111827">${escapeXml(s.name)}</text>
+      <text x="210" y="${rowY + 4}" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="600" fill="${info.statCol}">${escapeXml(info.stat)}</text>
+      <text x="328" y="${rowY + 4}" font-family="'Inter', monospace" font-size="12" font-weight="${status === 'slow' ? '700' : '400'}" fill="${status === 'slow' ? '#b45309' : '#4b5565'}" text-anchor="end">${escapeXml(msStr)}</text>
       ${barsMarkup}
-      <text x="604" y="${rowY + 2}" font-family="'JBMono', monospace" font-size="12" font-weight="500" fill="#4b5565" text-anchor="end">${upStr}%</text>
+      <text x="604" y="${rowY + 4}" font-family="'Inter', monospace" font-size="12" font-weight="500" fill="#4b5565" text-anchor="end">${upStr}%</text>
     </g>`;
   }).join('');
 
@@ -649,15 +678,15 @@ export function generateServerStatusCardSvg(data?: ServerCardInput): string {
 
   <!-- BODY: UPTIME SUMMARY -->
   <g transform="translate(44, 104)">
-    <text x="0" y="36" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="38" font-weight="700" fill="#111827">${escapeXml(uptimeStr)}%</text>
-    <text x="160" y="32" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="400" fill="#7c8596">uptime 30 hari</text>
+    <text x="0" y="36" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="38" font-weight="700" fill="#111827">${escapeXml(uptimeStr)}%</text>
+    <text x="160" y="32" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="400" fill="#7c8596">uptime 30 hari</text>
 
     <g transform="translate(400, 8)">
       <g transform="translate(0, 2) scale(0.75)" stroke="#7c8596" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         ${ICONS.clock}
       </g>
-      <text x="22" y="16" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#4b5565">${escapeXml(serverTimeStr)}</text>
-      <text x="226" y="36" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="500" fill="#7c8596" text-anchor="end">
+      <text x="22" y="16" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#4b5565">${escapeXml(serverTimeStr)}</text>
+      <text x="226" y="36" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="500" fill="#7c8596" text-anchor="end">
         <tspan font-weight="700" fill="#111827">${okCount}/${services.length}</tspan> layanan normal
       </text>
     </g>
@@ -668,11 +697,11 @@ export function generateServerStatusCardSvg(data?: ServerCardInput): string {
     <rect width="626" height="274" rx="14" fill="#f7f8fa" stroke="#e3e7ee" stroke-width="1" />
 
     <!-- Table Header -->
-    <text x="20" y="24" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="500" fill="#7c8596" letter-spacing="1.2">LAYANAN</text>
-    <text x="210" y="24" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="500" fill="#7c8596" letter-spacing="1.2">STATUS</text>
-    <text x="328" y="24" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="500" fill="#7c8596" letter-spacing="1.2" text-anchor="end">LATENSI</text>
-    <text x="350" y="24" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="500" fill="#7c8596" letter-spacing="1.2">30 HARI TERAKHIR</text>
-    <text x="604" y="24" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="500" fill="#7c8596" letter-spacing="1.2" text-anchor="end">UPTIME</text>
+    <text x="20" y="20" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#7c8596" letter-spacing="1.2">LAYANAN</text>
+    <text x="210" y="20" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#7c8596" letter-spacing="1.2">STATUS</text>
+    <text x="328" y="20" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#7c8596" letter-spacing="1.2" text-anchor="end">LATENSI</text>
+    <text x="350" y="20" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#7c8596" letter-spacing="1.2">30 HARI TERAKHIR</text>
+    <text x="604" y="20" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#7c8596" letter-spacing="1.2" text-anchor="end">UPTIME</text>
 
     <!-- Table Rows -->
     ${rowsMarkup}
@@ -805,16 +834,16 @@ export function generateSecurityAlertCardSvg(data: SecurityAlertInput): string {
     <rect width="626" height="326" rx="14" fill="#ffffff" stroke="#fee2e2" stroke-width="1.5" />
 
     <g transform="translate(28, 26)">
-      <text x="0" y="10" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#dc2626" letter-spacing="1.2">AKUN TERDAMPAK</text>
-      <text x="0" y="38" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700" fill="#111827">${escapeXml(data.accountName)}</text>
-      <text x="0" y="64" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14.5" font-weight="500" fill="#2563eb">${escapeXml(data.mailboxAddress)}</text>
+      <text x="0" y="10" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#dc2626" letter-spacing="1.2">AKUN TERDAMPAK</text>
+      <text x="0" y="38" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700" fill="#111827">${escapeXml(data.accountName)}</text>
+      <text x="0" y="64" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14.5" font-weight="500" fill="#2563eb">${escapeXml(data.mailboxAddress)}</text>
 
       <line x1="0" y1="90" x2="570" y2="90" stroke="#fecaca" stroke-width="1" stroke-dasharray="4,4" />
 
-      <text x="0" y="120" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#dc2626" letter-spacing="1.2">STATUS LOGIN SERENTAK</text>
-      <text x="0" y="150" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="800" fill="#dc2626">${data.uniqueIps.length} Alamat IP Berbeda (${data.sessionCount} Sesi Aktif)</text>
+      <text x="0" y="120" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#dc2626" letter-spacing="1.2">STATUS LOGIN SERENTAK</text>
+      <text x="0" y="150" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="800" fill="#dc2626">${data.uniqueIps.length} Alamat IP Berbeda (${data.sessionCount} Sesi Aktif)</text>
 
-      <text x="0" y="190" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#7c8596" letter-spacing="1.2">DAFTAR IP TERDETEKSI</text>
+      <text x="0" y="190" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#7c8596" letter-spacing="1.2">DAFTAR IP TERDETEKSI</text>
       <rect x="0" y="202" width="570" height="42" rx="8" fill="#fff1f2" stroke="#fecaca" stroke-width="1" />
       <text x="16" y="228" font-family="'JBMono', monospace" font-size="13" font-weight="600" fill="#991b1b">${escapeXml(ipList)}</text>
     </g>
@@ -834,10 +863,15 @@ export async function renderSvgToPng(svg: string, width = 900): Promise<Buffer |
     // Dynamically load Resvg to prevent startup crash if native binary is unavailable
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { Resvg } = require('@resvg/resvg-js');
+    const bundledFonts = getBundledFontFiles();
+
     const resvg = new Resvg(svg, {
       fitTo: { mode: 'width', value: width },
       font: {
         loadSystemFonts: true,
+        fontFiles: bundledFonts.length > 0 ? bundledFonts : undefined,
+        defaultFontFamily: 'Inter',
+        sansSerifFamily: 'Inter',
       },
     });
     const pngData = resvg.render();
@@ -957,11 +991,11 @@ export function generateAiAssistantCardSvg(data: AiAssistantCardInput): string {
       return `
       <g>
         <circle cx="6" cy="${rowY - 4}" r="3" fill="${toneColor}" />
-        <text x="18" y="${rowY}" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#1f2937">${escapeXml(cleanText)}</text>
+        <text x="18" y="${rowY}" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#1f2937">${escapeXml(cleanText)}</text>
       </g>`;
     }
 
-    return `<text x="2" y="${rowY}" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#1f2937">${escapeXml(line)}</text>`;
+    return `<text x="2" y="${rowY}" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#1f2937">${escapeXml(line)}</text>`;
   }).join('');
 
   return `<svg width="900" height="520" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg">
@@ -1003,14 +1037,14 @@ export function generateAiAssistantCardSvg(data: AiAssistantCardInput): string {
 
   <!-- BODY: QUERY & SENDER -->
   <g transform="translate(44, 102)">
-    <text x="0" y="10" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#7c8596" letter-spacing="1.2">TOPIK / PERTANYAAN ADMIN</text>
-    <text x="0" y="36" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="700" fill="#111827">"${escapeXml(truncatedQuery)}"</text>
+    <text x="0" y="10" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#7c8596" letter-spacing="1.2">TOPIK / PERTANYAAN ADMIN</text>
+    <text x="0" y="36" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="700" fill="#111827">"${escapeXml(truncatedQuery)}"</text>
 
     <g transform="translate(380, 18)">
       <g transform="translate(0, 2) scale(0.7)" stroke="#7c8596" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         ${ICONS.user}
       </g>
-      <text x="18" y="14" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#4b5565">${escapeXml(senderName)} • ${escapeXml(timestampStr)}</text>
+      <text x="18" y="14" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#4b5565">${escapeXml(senderName)} • ${escapeXml(timestampStr)}</text>
     </g>
   </g>
 
@@ -1023,7 +1057,7 @@ export function generateAiAssistantCardSvg(data: AiAssistantCardInput): string {
       <g transform="translate(0, -1) scale(0.8)" stroke="${toneColor}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         ${ICONS.zap}
       </g>
-      <text x="22" y="13" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="700" fill="${toneColor}" letter-spacing="1.1">RINGKASAN JAWABAN &amp; ANALISIS AI</text>
+      <text x="22" y="13" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="700" fill="${toneColor}" letter-spacing="1.1">RINGKASAN JAWABAN &amp; ANALISIS AI</text>
       <line x1="0" y1="26" x2="578" y2="26" stroke="#e3e7ee" stroke-width="1" />
 
       <!-- Text Lines / Bullet Points -->

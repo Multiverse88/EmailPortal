@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache openssl libc6-compat
+RUN apk add --no-cache openssl libc6-compat fontconfig ttf-dejavu
 
 # Copy package configurations
 COPY package.json package-lock.json* ./
@@ -17,9 +17,10 @@ RUN npm install && npm install --prefix backend
 RUN npx prisma generate --schema=./prisma/schema.prisma && \
     rm -rf backend/node_modules/@prisma
 
-# Copy backend source
+# Copy backend source & bundled fonts
 COPY backend/tsconfig.json ./backend/
 COPY backend/src ./backend/src
+COPY backend/fonts ./backend/fonts
 
 # Compile backend TypeScript
 RUN cd backend && npm run build
@@ -29,7 +30,7 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-RUN apk add --no-cache openssl libc6-compat wget
+RUN apk add --no-cache openssl libc6-compat wget fontconfig ttf-dejavu
 
 ENV NODE_ENV=production
 ENV PORT=4000
@@ -49,9 +50,10 @@ RUN npm install --omit=dev && \
     npx prisma generate --schema=./prisma/schema.prisma && \
     rm -rf backend/node_modules/@prisma
 
-# Copy compiled dist and src (needed for tsx seed script)
+# Copy compiled dist, src, and bundled fonts
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY backend/src ./backend/src
+COPY backend/fonts ./backend/fonts
 
 # Copy entrypoint script
 COPY backend/docker-entrypoint.sh /app/docker-entrypoint.sh
