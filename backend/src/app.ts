@@ -20,7 +20,7 @@ import adminDocumentsRoutes from './routes/admin-documents';
 import adminSupportRoutes from './routes/admin-support';
 import adminTelegramRoutes from './routes/admin-telegram';
 import { SyncWorker } from './workers/sync';
-import { handleTelegramMessageUpdate } from './workers/telegram-bot';
+import { handleTelegramMessageUpdate, handleTelegramCallbackQuery } from './workers/telegram-bot';
 
 const app = express();
 export const prisma = new PrismaClient();
@@ -81,7 +81,12 @@ app.post('/api/telegram/webhook', async (req, res) => {
   try {
     if (req.body?.message) {
       handleTelegramMessageUpdate(prisma, req.body.message).catch((err: any) => {
-        console.error('[Telegram Webhook] Error:', err);
+        console.error('[Telegram Webhook Message] Error:', err);
+      });
+    }
+    if (req.body?.callback_query) {
+      handleTelegramCallbackQuery(prisma, req.body.callback_query).catch((err: any) => {
+        console.error('[Telegram Webhook Callback] Error:', err);
       });
     }
     res.json({ ok: true });

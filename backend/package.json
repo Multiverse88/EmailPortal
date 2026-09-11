@@ -15,6 +15,7 @@
     "db:clean-dummy": "tsx scripts/clean-dummy.ts"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/pdf-parse": "^1.1.5",
     "aws-sdk": "^2.1530.0",
     "bcryptjs": "^2.4.3",
@@ -62,5 +63,9 @@
     "ts-jest": "^29.1.1",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3"
+  },
+  "optionalDependencies": {
+    "@resvg/resvg-js-linux-x64-musl": "2.6.2",
+    "@resvg/resvg-js-linux-x64-gnu": "2.6.2"
   }
 }

@@ -19,6 +19,7 @@ out/
 .turbo/
 .vercel/
 *.tsbuildinfo
+Pasted image*.png
 
 # ==========================================
 # Environment Variables, Credentials & Secrets

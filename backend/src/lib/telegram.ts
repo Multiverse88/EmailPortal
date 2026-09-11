@@ -2,6 +2,11 @@ import { PrismaClient } from '@prisma/client';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { getCustomerStorageStats } from './quota';
+import {
+  generateTicketCardPng,
+  generateDailyDigestCardPng,
+  generateSecurityAlertCardPng,
+} from './card-generator';
 
 export interface TelegramConfig {
   botToken?: string;
@@ -30,18 +35,45 @@ export function escapeHtml(str?: string | null): string {
 }
 
 /**
+ * Sends a callback query answer to acknowledge button clicks in Telegram
+ */
+export async function answerTelegramCallbackQuery(
+  callbackQueryId: string,
+  text?: string,
+  showAlert = false
+): Promise<boolean> {
+  const { botToken } = getTelegramConfig();
+  if (!botToken || !callbackQueryId) return false;
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/answerCallbackQuery`;
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        text,
+        show_alert: showAlert,
+      }),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Core function to send a message via Telegram Bot API
  */
 export async function sendTelegramMessage(
   text: string,
   parseMode: 'HTML' | 'Markdown' = 'HTML',
-  customChatId?: string | number
+  customChatId?: string | number,
+  replyMarkup?: any
 ): Promise<{ success: boolean; messageId?: number; error?: string }> {
   const { botToken, chatId: defaultChatId, enabled } = getTelegramConfig();
   const targetChatId = customChatId ? String(customChatId) : defaultChatId;
 
   if (!enabled || !botToken || !targetChatId) {
-    // Graceful log when Telegram credentials not yet configured
     if (process.env.NODE_ENV !== 'test') {
       console.log('[Telegram Bot] Notification skipped (TELEGRAM_BOT_TOKEN or target chat ID not configured).');
     }
@@ -50,18 +82,23 @@ export async function sendTelegramMessage(
 
   try {
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-    // Telegram character limit is 4096. Keep a safety margin of 4000.
     const safeText = text.length > 4000 ? `${text.slice(0, 3950)}\n\n<i>...(pesan dipotong karena batas panjang teks Telegram)</i>` : text;
+
+    const payload: any = {
+      chat_id: targetChatId,
+      text: safeText,
+      parse_mode: parseMode,
+      disable_web_page_preview: false,
+    };
+
+    if (replyMarkup) {
+      payload.reply_markup = replyMarkup;
+    }
 
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: targetChatId,
-        text: safeText,
-        parse_mode: parseMode,
-        disable_web_page_preview: false,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const result: any = await response.json();
@@ -74,6 +111,63 @@ export async function sendTelegramMessage(
   } catch (error: any) {
     console.error('[Telegram Bot] Network error:', error?.message || error);
     return { success: false, error: error?.message || 'Network error' };
+  }
+}
+
+/**
+ * Sends a high-resolution Photo card to Telegram with optional caption and interactive buttons
+ */
+export async function sendTelegramPhoto(
+  photoBuffer: Buffer,
+  caption?: string,
+  replyMarkup?: any,
+  customChatId?: string | number
+): Promise<{ success: boolean; messageId?: number; error?: string }> {
+  const { botToken, chatId: defaultChatId, enabled } = getTelegramConfig();
+  const targetChatId = customChatId ? String(customChatId) : defaultChatId;
+
+  if (!enabled || !botToken || !targetChatId) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('[Telegram Bot] Photo notification skipped (TELEGRAM_BOT_TOKEN or target chat ID not configured).');
+    }
+    return { success: false, error: 'Telegram credentials not configured' };
+  }
+
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+    const formData = new FormData();
+
+    formData.append('chat_id', targetChatId);
+
+    const blob = new Blob([photoBuffer], { type: 'image/png' });
+    formData.append('photo', blob, 'card.png');
+
+    if (caption) {
+      // Telegram photo caption limit is 1024 chars
+      const safeCaption = caption.length > 1020 ? `${caption.slice(0, 1000)}...` : caption;
+      formData.append('caption', safeCaption);
+      formData.append('parse_mode', 'HTML');
+    }
+
+    if (replyMarkup) {
+      formData.append('reply_markup', typeof replyMarkup === 'string' ? replyMarkup : JSON.stringify(replyMarkup));
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const result: any = await response.json();
+    if (!response.ok || !result.ok) {
+      console.warn('[Telegram Bot] Photo API error:', result?.description || response.statusText);
+      return { success: false, error: result?.description || 'Failed to send photo' };
+    }
+
+    return { success: true, messageId: result.result?.message_id };
+  } catch (error: any) {
+    console.error('[Telegram Bot] Photo network error:', error?.message || error);
+    return { success: false, error: error?.message || 'Photo network error' };
   }
 }
 
@@ -126,6 +220,53 @@ export async function notifyNewSupportTicket(
   const dateStr = format(new Date(ticket.createdAt), 'EEEE, dd MMMM yyyy - HH:mm', { locale: localeId });
   const snippet = initialMessage ? escapeHtml(initialMessage.slice(0, 350)) : '<i>(Tidak ada rincian pesan awal)</i>';
 
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        { text: '🌐 Buka di Admin Desk', url: 'https://clienteasylegal.co.id/admin' }
+      ],
+      [
+        { text: '🤖 Draf Solusi AI', callback_data: `ai_draft:${ticket.ticketNumber}` },
+        { text: '✅ Selesaikan', callback_data: `resolve:${ticket.ticketNumber}` }
+      ]
+    ]
+  };
+
+  // 1. Attempt Rich Graphic Card (Option 2)
+  try {
+    const cardBuffer = await generateTicketCardPng({
+      ticketNumber: ticket.ticketNumber,
+      subject: ticket.subject,
+      category: ticket.category || 'Umum',
+      priority: ticket.priority,
+      createdAtStr: `${dateStr} WIB`,
+      customerName: customer?.name || 'Klien EasyLegal',
+      mailboxAddress: customer?.mailboxAddress || '-',
+      personalEmail: customer?.personalEmail,
+      initialMessage,
+    });
+
+    if (cardBuffer) {
+      const caption = [
+        `🎫 <b>[TIKET SUPPORT BARU] EasyLegal Customer Portal</b>`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `📌 <b>Nomor:</b> <code>#${escapeHtml(ticket.ticketNumber)}</code> • ${priorityBadge}`,
+        `👤 <b>Klien:</b> <b>${escapeHtml(customer?.name || 'Klien')}</b>`,
+        `📧 <b>Mailbox:</b> <code>${escapeHtml(customer?.mailboxAddress || '-')}</code>`,
+        `📝 <b>Subjek:</b> <b>${escapeHtml(ticket.subject)}</b>`,
+        `⏰ <b>Waktu:</b> ${dateStr} WIB`,
+      ].join('\n');
+
+      const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup);
+      if (photoRes.success) {
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn('[Telegram Bot] Failed to send ticket photo card, falling back to rich text:', err);
+  }
+
+  // Fallback to text message
   const message = [
     `🎫 <b>[TIKET SUPPORT BARU] EasyLegal Customer Portal</b>`,
     `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
@@ -145,7 +286,7 @@ export async function notifyNewSupportTicket(
     `https://clienteasylegal.co.id/admin`,
   ].filter(Boolean).join('\n');
 
-  const res = await sendTelegramMessage(message);
+  const res = await sendTelegramMessage(message, 'HTML', undefined, replyMarkup);
   return res.success;
 }
 
@@ -205,6 +346,18 @@ export async function sendDailyDigest(
   const usedMB = (usedBytes / (1024 * 1024)).toFixed(1);
   const totalMultiIp = Array.isArray(multiIpAlerts) ? multiIpAlerts.length : 0;
 
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        { text: '🌐 Buka Super Admin Console', url: 'https://clienteasylegal.co.id/admin' }
+      ],
+      [
+        { text: '🔄 Perbarui Laporan', callback_data: 'digest_refresh' },
+        { text: '🎫 Cek Tiket Terbuka', callback_data: 'view_tickets' }
+      ]
+    ]
+  };
+
   const reportText = [
     `🌅 <b>[LAPORAN HARIAN] KONDISI & KEAMANAN WEBSITE EASYLEGAL</b>`,
     `📅 <i>${dateStr} WIB</i>`,
@@ -237,7 +390,48 @@ export async function sendDailyDigest(
     `https://clienteasylegal.co.id/admin`,
   ].join('\n');
 
-  const res = await sendTelegramMessage(reportText, 'HTML', customChatId);
+  // Attempt Rich Graphic Card (Option 2)
+  try {
+    const digestBuffer = await generateDailyDigestCardPng({
+      dateStr,
+      totalCustomers,
+      activeCustomers,
+      inactiveCustomers,
+      totalEmails,
+      unreadEmails,
+      usedMB,
+      totalDocuments,
+      activeSessions,
+      totalMultiIp,
+      auditLogsLast24h,
+      openTickets,
+      urgentTickets,
+      resolvedTickets,
+    });
+
+    if (digestBuffer) {
+      const caption = [
+        `🌅 <b>[LAPORAN HARIAN] KONDISI & KEAMANAN WEBSITE</b>`,
+        `📅 <i>${dateStr} WIB</i>`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `🌐 <b>Cluster &amp; Webmail:</b> 🟢 Online (${totalCustomers} Akun, ${totalEmails} Email)`,
+        `🛡️ <b>Radar Keamanan:</b> ${activeSessions} Sesi • ${totalMultiIp > 0 ? `🚨 ${totalMultiIp} Multi-IP!` : '🟢 0 Alert Aman'}`,
+        `💾 <b>Storage:</b> ${usedMB} MB S3 • Synology NAS Terhubung`,
+        `🎫 <b>Tiket:</b> ${openTickets} Open (${urgentTickets} Urgent) • ${resolvedTickets} Selesai`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `🤖 <i>Dihasilkan otomatis oleh EasyLegal AI Monitor.</i>`,
+      ].join('\n');
+
+      const photoRes = await sendTelegramPhoto(digestBuffer, caption, replyMarkup, customChatId);
+      if (photoRes.success) {
+        return { success: true, reportText };
+      }
+    }
+  } catch (err) {
+    console.warn('[Telegram Bot] Failed to send digest photo card, falling back to text:', err);
+  }
+
+  const res = await sendTelegramMessage(reportText, 'HTML', customChatId, replyMarkup);
   return { success: res.success, reportText };
 }
 
@@ -250,6 +444,14 @@ export async function notifySecurityAnomaly(event: {
   uniqueIps: string[];
   sessionCount: number;
 }): Promise<boolean> {
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        { text: '🚨 Buka Security Radar', url: 'https://clienteasylegal.co.id/admin' }
+      ]
+    ]
+  };
+
   const message = [
     `🚨 <b>[SECURITY RADAR ALERT] Anomali Login Multi-IP Terdeteksi!</b>`,
     `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
@@ -267,6 +469,33 @@ export async function notifySecurityAnomaly(event: {
     `https://clienteasylegal.co.id/admin`,
   ].join('\n');
 
-  const res = await sendTelegramMessage(message);
+  try {
+    const cardBuffer = await generateSecurityAlertCardPng({
+      accountName: event.accountName,
+      mailboxAddress: event.mailboxAddress,
+      uniqueIps: event.uniqueIps,
+      sessionCount: event.sessionCount,
+    });
+
+    if (cardBuffer) {
+      const caption = [
+        `🚨 <b>[SECURITY RADAR ALERT] Multi-IP Terdeteksi!</b>`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `👤 <b>Akun:</b> ${escapeHtml(event.accountName)}`,
+        `📧 <b>Mailbox:</b> <code>${escapeHtml(event.mailboxAddress)}</code>`,
+        `⚠️ <b>Terhubung dari ${event.uniqueIps.length} Alamat IP:</b> <code>${event.uniqueIps.join(', ')}</code>`,
+        `📱 <b>Sesi Aktif:</b> ${event.sessionCount} Perangkat`,
+      ].join('\n');
+
+      const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup);
+      if (photoRes.success) {
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn('[Telegram Bot] Failed to send security alert photo card:', err);
+  }
+
+  const res = await sendTelegramMessage(message, 'HTML', undefined, replyMarkup);
   return res.success;
 }
