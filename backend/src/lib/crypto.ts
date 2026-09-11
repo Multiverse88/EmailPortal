@@ -1,8 +1,21 @@
 import { createCipheriv, createDecipheriv, randomBytes, createHash, timingSafeEqual, randomInt } from 'node:crypto';
 
 // PRD requires reversible storage: IMAP/SMTP need the plaintext mailbox password.
-const key = () =>
-  createHash('sha256').update(process.env.ENCRYPTION_KEY || 'dev-encryption-key').digest();
+const candidateKeys = (): Buffer[] => {
+  const keys: string[] = [];
+  if (process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.trim().length > 0) {
+    keys.push(process.env.ENCRYPTION_KEY.trim());
+  }
+  // Dokploy compose secret key fallback
+  keys.push('easy-legal-portal-secret-key-2026');
+  // Local development fallback
+  keys.push('dev-encryption-key');
+
+  const unique = Array.from(new Set(keys));
+  return unique.map((k) => createHash('sha256').update(k).digest());
+};
+
+const key = () => candidateKeys()[0];
 
 export function encrypt(plain: string): string {
   const iv = randomBytes(12);
@@ -12,22 +25,73 @@ export function encrypt(plain: string): string {
 }
 
 export function decrypt(payload: string): string {
-  const [iv, tag, data] = payload.split('.').map((p) => Buffer.from(p, 'base64'));
-  const d = createDecipheriv('aes-256-gcm', key(), iv);
-  d.setAuthTag(tag);
-  return Buffer.concat([d.update(data), d.final()]).toString('utf8');
+  if (!payload || typeof payload !== 'string') {
+    throw new Error('Payload must be a non-empty string');
+  }
+
+  const parts = payload.split('.');
+  if (parts.length !== 3) {
+    throw new Error('Invalid encrypted payload format');
+  }
+
+  const [iv, tag, data] = parts.map((p) => Buffer.from(p, 'base64'));
+  const keys = candidateKeys();
+  let lastError: Error | null = null;
+
+  for (const k of keys) {
+    try {
+      const d = createDecipheriv('aes-256-gcm', k, iv);
+      d.setAuthTag(tag);
+      return Buffer.concat([d.update(data), d.final()]).toString('utf8');
+    } catch (e) {
+      lastError = e as Error;
+    }
+  }
+
+  throw lastError || new Error('Decryption failed with all candidate keys');
 }
 
 export function verifyPassword(input: string, stored: string): boolean {
+  if (!input || !stored) return false;
+
   let plain: string;
   try {
     plain = decrypt(stored);
   } catch {
+    // If decryption fails, check if stored password was stored in plaintext
+    if (stored === input || stored === input.trim()) {
+      return true;
+    }
     return false;
   }
-  const a = Buffer.from(input);
-  const b = Buffer.from(plain);
-  return a.length === b.length && timingSafeEqual(a, b);
+
+  const check = (candidate: string, target: string) => {
+    const a = Buffer.from(candidate);
+    const b = Buffer.from(target);
+    return a.length === b.length && timingSafeEqual(a, b);
+  };
+
+  // 1. Direct match
+  if (check(input, plain)) return true;
+
+  // 2. Trimmed match (handling copied trailing/leading whitespace or newlines from email)
+  if (check(input.trim(), plain) || check(input.trim(), plain.trim()) || check(input, plain.trim())) {
+    return true;
+  }
+
+  // 3. HTML entities unescaped (in case user copied &amp; instead of & or similar)
+  const unescaped = input
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+  if (check(unescaped, plain) || check(unescaped.trim(), plain)) {
+    return true;
+  }
+
+  return false;
 }
 
 // FR-10: Hostinger complexity rules (min 8 chars, uppercase, lowercase, numbers, symbols).
@@ -44,7 +108,8 @@ export function generatePassword(): string {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const lower = 'abcdefghijkmnopqrstuvwxyz';
   const numbers = '23456789';
-  const symbols = '!@#$%^&*()_+~=';
+  // Use HTML-safe symbols (!@#$%*_+~=) to prevent email entity encoding corruption
+  const symbols = '!@#$%*_+~=';
   const all = upper + lower + numbers + symbols;
 
   const pwd = [

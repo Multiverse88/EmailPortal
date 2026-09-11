@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Mail, Lock, ShieldCheck, ArrowRight, CheckCircle2, KeyRound, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, Lock, ShieldCheck, ArrowRight, CheckCircle2, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 
@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [tab, setTab] = useState<'customer' | 'admin'>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
   const [challengeToken, setChallengeToken] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -28,7 +29,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const res = await api.post(`/auth/login/${tab}`, { email: normalizedEmail, password });
+      const cleanPassword = password.trim();
+      const res = await api.post(`/auth/login/${tab}`, { email: normalizedEmail, password: cleanPassword });
       if (res.data.requires2FA && res.data.challengeToken) {
         setRequires2FA(true);
         setChallengeToken(res.data.challengeToken);
@@ -295,9 +297,16 @@ export default function LoginPage() {
               {/* Login Form */}
               <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
                 <div>
-                  <label htmlFor="email" className="mb-2 block text-xs font-semibold text-slate-700">
-                    Alamat Email
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label htmlFor="email" className="block text-xs font-semibold text-slate-700">
+                      {tab === 'customer' ? 'Alamat Email' : 'Email Administrator'}
+                    </label>
+                    {tab === 'customer' && (
+                      <span className="text-[11px] text-slate-500">
+                        Email Portal / Pribadi
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                       <Mail className="w-4 h-4" />
@@ -305,14 +314,22 @@ export default function LoginPage() {
                     <input
                       id="email"
                       data-testid="email"
-                      type="email"
+                      type="text"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck="false"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder={tab === 'customer' ? 'nama@clienteasylegal.co.id' : 'admin@clienteasylegal.co.id'}
+                      placeholder={tab === 'customer' ? 'nama@clienteasylegal.co.id atau email pribadi' : 'admin@clienteasylegal.co.id'}
                       className="w-full rounded-xl border border-border-subtle bg-white py-3 pl-10 pr-3.5 text-sm text-slate-950 shadow-xs transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                     />
                   </div>
+                  {tab === 'customer' && (
+                    <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
+                      💡 Anda dapat masuk menggunakan alamat email resmi (misal <code>ptanda@clienteasylegal.co.id</code>) maupun email pribadi yang didaftarkan.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -326,13 +343,25 @@ export default function LoginPage() {
                     <input
                       id="password"
                       data-testid="password"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck="false"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full rounded-xl border border-border-subtle bg-white py-3 pl-10 pr-3.5 text-sm text-slate-950 shadow-xs transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                      placeholder="Masukkan kata sandi akun"
+                      className="w-full rounded-xl border border-border-subtle bg-white py-3 pl-10 pr-11 text-sm text-slate-950 shadow-xs transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 font-mono"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                      title={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 

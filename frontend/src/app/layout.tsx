@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
 import './globals.css';
 import { ElCompanion } from '@/components/companion/el-companion';
+import { GlobalDropHandler } from '@/components/global-drop-handler';
 
 const manrope = Manrope({
   subsets: ['latin'],
@@ -21,7 +22,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body className={`${manrope.variable} bg-background text-on-background antialiased font-sans`}>
+      <body className={`${manrope.variable} ${manrope.className} bg-background text-on-background antialiased font-sans`}>
+        <GlobalDropHandler />
         {children}
         <ElCompanion />
       </body>

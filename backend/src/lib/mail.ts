@@ -88,8 +88,8 @@ export async function sendOnboardingNotice(
   const nameDisplay = customerName || 'Klien EasyLegal';
 
   const textBody = tempPassword
-    ? `Halo ${nameDisplay},\n\nAkun email korporasi resmi Anda di EasyLegal Portal telah aktif.\n\nAlamat Email Portal: ${mailboxAddress}\nPassword Sementara: ${tempPassword}\n\nSilakan masuk di: ${portalUrl}/login\nDemi keamanan akun, harap segera perbarui kata sandi Anda di menu Pengaturan Keamanan setelah berhasil masuk.\n\nSalam,\nTim EasyLegal`
-    : `Halo ${nameDisplay},\n\nAkun email korporasi resmi Anda di EasyLegal Portal telah aktif.\n\nAlamat Email Portal: ${mailboxAddress}\n\nSilakan masuk di: ${portalUrl}/login\nPassword sementara dikirimkan oleh admin melalui jalur komunikasi resmi terpisah.\n\nSalam,\nTim EasyLegal`;
+    ? `Halo ${nameDisplay},\n\nAkun email korporasi resmi Anda di EasyLegal Portal telah aktif.\n\nBerikut kredensial login Anda:\n- Alamat Email Portal: ${mailboxAddress}\n- Email Pribadi Terdaftar: ${personalEmail}\n- Password Sementara: ${tempPassword}\n\nCatatan: Anda dapat masuk menggunakan alamat email portal (${mailboxAddress}) maupun email pribadi Anda (${personalEmail}).\n\nSilakan masuk di: ${portalUrl}/login\nDemi keamanan akun, harap segera perbarui kata sandi Anda di menu Pengaturan Keamanan setelah berhasil masuk.\n\nSalam,\nTim EasyLegal`
+    : `Halo ${nameDisplay},\n\nAkun email korporasi resmi Anda di EasyLegal Portal telah aktif.\n\nAlamat Email Portal: ${mailboxAddress}\nEmail Pribadi Terdaftar: ${personalEmail}\n\nSilakan masuk di: ${portalUrl}/login\nPassword sementara dikirimkan oleh admin melalui jalur komunikasi resmi terpisah.\n\nSalam,\nTim EasyLegal`;
 
   const htmlBody = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px; color: #1e293b;">
@@ -109,20 +109,27 @@ export async function sendOnboardingNotice(
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin-bottom: 22px;">
         <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
           <tr>
-            <td style="padding: 6px 0; color: #64748b; width: 140px;">Alamat Email:</td>
-            <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">${mailboxAddress}</td>
+            <td style="padding: 8px 0; color: #64748b; width: 150px;">Email Portal Resmi:</td>
+            <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">${mailboxAddress}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Email Pribadi:</td>
+            <td style="padding: 8px 0; color: #334155;">${personalEmail} <span style="color: #059669; font-size: 11px; font-weight: 600;">(Bisa digunakan untuk login)</span></td>
           </tr>
           ${
             tempPassword
               ? `<tr>
-            <td style="padding: 6px 0; color: #64748b;">Password Sementara:</td>
-            <td style="padding: 6px 0; font-weight: 700; font-family: monospace; font-size: 14px; color: #0284c7;">${tempPassword}</td>
+            <td style="padding: 8px 0; color: #64748b; vertical-align: top;">Password Sementara:</td>
+            <td style="padding: 8px 0;">
+              <code style="display: inline-block; padding: 4px 10px; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; color: #0284c7; user-select: all; -webkit-user-select: all;">${tempPassword}</code>
+              <p style="margin: 4px 0 0 0; font-size: 11px; color: #64748b;">*Klik dua kali pada kotak password di atas untuk menyalin tanpa spasi.</p>
+            </td>
           </tr>`
               : ''
           }
           <tr>
-            <td style="padding: 6px 0; color: #64748b;">Kapasitas Penyimpanan:</td>
-            <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">5.0 GB Cloud Drive & Email Storage</td>
+            <td style="padding: 8px 0; color: #64748b;">Kapasitas Penyimpanan:</td>
+            <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">5.0 GB Cloud Drive & Email Storage</td>
           </tr>
         </table>
       </div>
@@ -135,7 +142,7 @@ export async function sendOnboardingNotice(
         tempPassword
           ? `<div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 20px 0; border-radius: 0 4px 4px 0;">
         <p style="margin: 0; color: #1e40af; font-size: 12px; line-height: 1.5;">
-          <strong>Tips Keamanan:</strong> Demi menjaga kerahasiaan korespondensi hukum dan dokumen perusahaan Anda, segera perbarui kata sandi Anda di menu <strong>Pengaturan &gt; Keamanan</strong> setelah berhasil masuk.
+          <strong>Tips Keamanan:</strong> Anda dapat login menggunakan <strong>${mailboxAddress}</strong> atau <strong>${personalEmail}</strong>. Demi menjaga kerahasiaan korespondensi hukum dan dokumen perusahaan Anda, segera perbarui kata sandi Anda di menu <strong>Pengaturan &gt; Keamanan</strong> setelah berhasil masuk.
         </p>
       </div>`
           : ''

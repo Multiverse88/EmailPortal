@@ -79,10 +79,33 @@ export default (prisma: PrismaClient) => {
       const { email, password } = req.body ?? {};
       if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
 
-      const normalizedEmail = String(email).trim().toLowerCase();
-      const customer = await prisma.customer.findUnique({ where: { mailboxAddress: normalizedEmail } });
+      const normalizedInput = String(email).trim().toLowerCase();
+      const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
+      const mailboxQuery = normalizedInput.includes('@') ? normalizedInput : `${normalizedInput}@${domain}`;
 
-      if (!customer || customer.status !== 'active' || !verifyPassword(password, customer.passwordEnc)) {
+      // Customer can log in via mailboxAddress (full or localPart) OR their registered personalEmail
+      const customer = await prisma.customer.findFirst({
+        where: {
+          OR: [
+            { mailboxAddress: mailboxQuery },
+            { personalEmail: normalizedInput },
+          ],
+        },
+      });
+
+      if (!customer) {
+        return res.status(401).json({ error: 'Email atau password salah' });
+      }
+
+      if (customer.status === 'suspended') {
+        return res.status(403).json({ error: 'Akun Anda sedang ditangguhkan. Silakan hubungi administrator.' });
+      }
+
+      if (customer.status === 'inactive' || customer.status === 'deleted') {
+        return res.status(403).json({ error: 'Akun Anda sedang tidak aktif. Silakan hubungi administrator.' });
+      }
+
+      if (!verifyPassword(password, customer.passwordEnc)) {
         return res.status(401).json({ error: 'Email atau password salah' });
       }
 
@@ -218,7 +241,9 @@ export default (prisma: PrismaClient) => {
       const { email, password } = req.body ?? {};
       if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
 
-      const normalizedEmail = String(email).trim().toLowerCase();
+      const inputEmail = String(email).trim().toLowerCase();
+      const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
+      const normalizedEmail = inputEmail.includes('@') ? inputEmail : `${inputEmail}@${domain}`;
       let admin = await prisma.adminUser.findUnique({ where: { email: normalizedEmail } });
       if (!admin) {
         const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
