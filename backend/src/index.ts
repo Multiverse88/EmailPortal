@@ -67,8 +67,9 @@ async function startServer() {
 
     await ensureAdministrativeAccounts();
 
-    app.listen(PORT, () => {
-      console.log(`✓ Server running on http://localhost:${PORT}`);
+    const serverPort = Number(PORT) || 4000;
+    app.listen(serverPort, '0.0.0.0', () => {
+      console.log(`✓ Server running on http://0.0.0.0:${serverPort}`);
       console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
     });
 

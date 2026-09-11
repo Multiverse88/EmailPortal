@@ -34,6 +34,7 @@ ENV NODE_ENV=production
 ENV PORT=4000
 ENV DATABASE_URL="file:/app/data/prod.db"
 ENV STORAGE_DIR="/app/storage"
+ENV PRISMA_CLI_BINARY_TARGETS="linux-musl-openssl-3.0.x"
 
 # Copy package files & prisma schema
 COPY package.json package-lock.json* ./
@@ -43,7 +44,7 @@ COPY prisma ./prisma
 # Install production dependencies & CLI tools, then generate Prisma client directly in runner
 RUN npm install --omit=dev && \
     npm install --prefix backend --omit=dev && \
-    npm install -g prisma tsx && \
+    npm install -g prisma@5.22.0 tsx && \
     npx prisma generate --schema=./prisma/schema.prisma
 
 # Copy compiled dist and src (needed for tsx seed script)

@@ -1,7 +1,8 @@
 // ponytail: sqlite for dev (no docker/postgres in this env). Swap provider to
 // postgresql + re-add String[]/Json for recipients & audit details when deploying.
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
