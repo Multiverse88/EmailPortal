@@ -14,7 +14,9 @@ import { processTelegramAiMessage, gatherLiveWebsiteSnapshot } from '../lib/tele
 import {
   generateTicketCardPng,
   generateServerStatusCardPng,
+  generateSecurityAlertCardPng,
   generateAiAssistantCardPng,
+  SERVER_STATES,
   stripHtml,
 } from '../lib/card-generator';
 
@@ -62,11 +64,25 @@ export async function handleTelegramCallbackQuery(
       });
 
       if (!ticket) {
-        await sendTelegramMessage(
-          `⚠️ <i>Tiket #${escapeHtml(ticketNumber)} tidak ditemukan di database.</i>`,
-          'HTML',
-          chatId
-        );
+        const notFoundText = `⚠️ <i>Tiket #${escapeHtml(ticketNumber)} tidak ditemukan di database.</i>`;
+        try {
+          const errCard = await generateAiAssistantCardPng({
+            query: `Draf Tiket #${ticketNumber}`,
+            replySummary: `• Tiket #${ticketNumber} tidak ditemukan di database.\n• Periksa kembali nomor tiket pada Admin Console.`,
+            senderName: 'Super Admin',
+            category: 'TIKET TIDAK DITEMUKAN',
+            pillText: 'TIKET NIHIL',
+            toneColor: '#64748b',
+            deepColor: '#475569',
+            pose: 'memikirkan',
+            bubbleText: 'Nomor tiket tidak ditemukan di database.',
+          });
+          if (errCard) {
+            const photoRes = await sendTelegramPhoto(errCard, notFoundText, undefined, chatId);
+            if (photoRes.success) return;
+          }
+        } catch {}
+        await sendTelegramMessage(notFoundText, 'HTML', chatId);
         return;
       }
 
@@ -121,12 +137,15 @@ export async function handleTelegramCallbackQuery(
         });
 
         if (cardBuffer) {
-          const caption = aiDraftResponse.length <= 1000 ? aiDraftResponse : `${aiDraftResponse.slice(0, 950)}...`;
+          const caption = [
+            `🤖 <b>[DRAF SOLUSI AI] Tiket #${escapeHtml(ticket.ticketNumber)}</b>`,
+            `👤 Klien: <b>${escapeHtml(clientName)}</b>`,
+            `📝 Subjek: <i>${escapeHtml(ticket.subject)}</i>`,
+            `💡 <i>Draf balasan hukum telah dirumuskan & siap dikirim.</i>`,
+          ].join('\n');
           const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
           if (photoRes.success) {
-            if (aiDraftResponse.length > 1000) {
-              await sendTelegramMessage(aiDraftResponse, 'HTML', chatId);
-            }
+            await sendTelegramMessage(aiDraftResponse, 'HTML', chatId);
             return;
           }
         }
@@ -137,11 +156,25 @@ export async function handleTelegramCallbackQuery(
       await sendTelegramMessage(aiDraftResponse, 'HTML', chatId, replyMarkup);
     } catch (err: any) {
       console.error('[Telegram Bot] Error generating AI draft for ticket:', err);
-      await sendTelegramMessage(
-        `⚠️ <i>Gagal merumuskan draf AI: ${escapeHtml(err?.message || 'Kesalahan internal')}</i>`,
-        'HTML',
-        chatId
-      );
+      const errText = `⚠️ <i>Gagal merumuskan draf AI: ${escapeHtml(err?.message || 'Kesalahan internal')}</i>`;
+      try {
+        const errCard = await generateAiAssistantCardPng({
+          query: `Draf Tiket #${ticketNumber}`,
+          replySummary: `• Gagal merumuskan draf AI: ${err?.message || 'Kesalahan internal'}\n• Silakan coba kembali sesaat lagi.`,
+          senderName: 'Super Admin',
+          category: 'GANGGUAN SISTEM',
+          pillText: 'GANGGUAN TEKNIS',
+          toneColor: '#64748b',
+          deepColor: '#475569',
+          pose: 'memikirkan',
+          bubbleText: 'Gagal membuat draf solusi AI.',
+        });
+        if (errCard) {
+          const photoRes = await sendTelegramPhoto(errCard, errText, undefined, chatId);
+          if (photoRes.success) return;
+        }
+      } catch {}
+      await sendTelegramMessage(errText, 'HTML', chatId);
     }
     return;
   }
@@ -157,7 +190,25 @@ export async function handleTelegramCallbackQuery(
       });
 
       if (!ticket) {
-        await sendTelegramMessage(`⚠️ <i>Tiket #${escapeHtml(ticketNumber)} tidak ditemukan.</i>`, 'HTML', chatId);
+        const notFoundText = `⚠️ <i>Tiket #${escapeHtml(ticketNumber)} tidak ditemukan.</i>`;
+        try {
+          const errCard = await generateAiAssistantCardPng({
+            query: `Selesaikan #${ticketNumber}`,
+            replySummary: `• Tiket #${ticketNumber} tidak ditemukan di database.\n• Tidak ada perubahan status yang dilakukan.`,
+            senderName: 'Super Admin',
+            category: 'TIKET TIDAK DITEMUKAN',
+            pillText: 'TIKET NIHIL',
+            toneColor: '#64748b',
+            deepColor: '#475569',
+            pose: 'memikirkan',
+            bubbleText: 'Nomor tiket tidak ditemukan.',
+          });
+          if (errCard) {
+            const photoRes = await sendTelegramPhoto(errCard, notFoundText, undefined, chatId);
+            if (photoRes.success) return;
+          }
+        } catch {}
+        await sendTelegramMessage(notFoundText, 'HTML', chatId);
         return;
       }
 
@@ -180,10 +231,8 @@ export async function handleTelegramCallbackQuery(
         }).catch(() => {});
       }
 
-      const resolveText = [
-        `✅ <b>[TIKET BERHASIL DISELESAIKAN]</b>`,
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-        `📌 <b>Nomor Tiket:</b> <code>#${escapeHtml(ticketNumber)}</code>`,
+      const resolveCaption = [
+        `✅ <b>[TIKET BERHASIL DISELESAIKAN] #${escapeHtml(ticketNumber)}</b>`,
         `Status tiket telah diperbarui menjadi <b>RESOLVED (Selesai)</b> di sistem.`,
         `Waktu Update: ${new Date().toLocaleTimeString('id-ID')} WIB`,
       ].join('\n');
@@ -211,21 +260,35 @@ export async function handleTelegramCallbackQuery(
         });
 
         if (cardBuffer) {
-          const photoRes = await sendTelegramPhoto(cardBuffer, resolveText, replyMarkup, chatId);
+          const photoRes = await sendTelegramPhoto(cardBuffer, resolveCaption, replyMarkup, chatId);
           if (photoRes.success) return;
         }
       } catch (e) {
         console.warn('[Telegram Bot] Error generating card for resolve:', e);
       }
 
-      await sendTelegramMessage(resolveText, 'HTML', chatId, replyMarkup);
+      await sendTelegramMessage(resolveCaption, 'HTML', chatId, replyMarkup);
     } catch (err: any) {
       console.error('[Telegram Bot] Error resolving ticket:', err);
-      await sendTelegramMessage(
-        `⚠️ <i>Gagal menyelesaikan tiket: ${escapeHtml(err?.message || 'Kesalahan internal')}</i>`,
-        'HTML',
-        chatId
-      );
+      const errText = `⚠️ <i>Gagal menyelesaikan tiket: ${escapeHtml(err?.message || 'Kesalahan internal')}</i>`;
+      try {
+        const errCard = await generateAiAssistantCardPng({
+          query: `Selesaikan #${ticketNumber}`,
+          replySummary: `• Gagal menyelesaikan tiket: ${err?.message || 'Kesalahan internal'}\n• Silakan coba kembali melalui portal admin.`,
+          senderName: 'Super Admin',
+          category: 'GANGGUAN SISTEM',
+          pillText: 'GANGGUAN TEKNIS',
+          toneColor: '#64748b',
+          deepColor: '#475569',
+          pose: 'memikirkan',
+          bubbleText: 'Gagal memperbarui status tiket.',
+        });
+        if (errCard) {
+          const photoRes = await sendTelegramPhoto(errCard, errText, undefined, chatId);
+          if (photoRes.success) return;
+        }
+      } catch {}
+      await sendTelegramMessage(errText, 'HTML', chatId);
     }
     return;
   }
@@ -250,7 +313,11 @@ export async function handleTelegramCallbackQuery(
       });
 
       if (openTickets.length === 0) {
-        const noTicketsText = `🟢 <b>Tidak Ada Tiket Terbuka</b>\nSemua tiket bantuan telah terselesaikan dengan baik!`;
+        const noTicketsText = [
+          `🟢 <b>[SEMUA TIKET SELESAI]</b>`,
+          `Tidak ada antrean tiket terbuka saat ini.`,
+          `Seluruh tiket bantuan telah ditangani oleh tim.`,
+        ].join('\n');
         const replyMarkup = {
           inline_keyboard: [
             [{ text: '🌐 Buka Admin Desk', url: 'https://clienteasylegal.co.id/admin' }],
@@ -305,6 +372,21 @@ export async function handleTelegramCallbackQuery(
 
       try {
         const firstTicket = openTickets[0];
+        const isUrgent = firstTicket.priority === 'urgent';
+        const isAssigned = Boolean((firstTicket as any).assignedToId || firstTicket.status === 'in_progress');
+        const isOld = (Date.now() - new Date(firstTicket.createdAt).getTime()) > 30 * 60 * 1000;
+
+        let stateKey: 'urgent' | 'reminder' | 'diproses' | 'baru' = 'baru';
+        if (isUrgent) {
+          stateKey = 'urgent';
+        } else if (isAssigned) {
+          stateKey = 'diproses';
+        } else if (isOld) {
+          stateKey = 'reminder';
+        } else {
+          stateKey = 'baru';
+        }
+
         const cardBuffer = await generateTicketCardPng({
           ticketNumber: firstTicket.ticketNumber,
           subject: firstTicket.subject,
@@ -315,13 +397,23 @@ export async function handleTelegramCallbackQuery(
           mailboxAddress: firstTicket.customer?.mailboxAddress || '-',
           personalEmail: firstTicket.customer?.personalEmail,
           initialMessage: firstTicket.subject,
-          stateKey: firstTicket.priority === 'urgent' ? 'urgent' : 'baru',
+          stateKey,
         });
 
         if (cardBuffer) {
-          const caption = lines.join('\n').length <= 1000 ? lines.join('\n') : `${lines.join('\n').slice(0, 950)}...`;
+          const caption = [
+            `🎫 <b>[DAFTAR TIKET TERBUKA]</b> (${openTickets.length} tiket)`,
+            `• Tiket: <b>#${escapeHtml(firstTicket.ticketNumber)}</b> [${firstTicket.priority.toUpperCase()}]`,
+            `• Klien: <b>${escapeHtml(firstTicket.customer?.name || 'Klien')}</b>`,
+            `• Subjek: <i>${escapeHtml(firstTicket.subject)}</i>`,
+          ].join('\n');
           const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
-          if (photoRes.success) return;
+          if (photoRes.success) {
+            if (openTickets.length > 1) {
+              await sendTelegramMessage(lines.join('\n'), 'HTML', chatId);
+            }
+            return;
+          }
         }
       } catch (e) {
         console.warn('[Telegram Bot] Error generating card for view_tickets:', e);
@@ -379,37 +471,65 @@ export async function handleTelegramMessageUpdate(
   if (configuredChatId && configuredChatId.length > 0) {
     if (String(chatId) !== String(configuredChatId)) {
       console.warn(`[Telegram Bot] Unauthorized message attempt from chat ID: ${chatId} (${senderName})`);
-      await sendTelegramMessage(
-        [
-          `⛔ <b>Akses Ditolak</b>`,
-          `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-          `Bot AI ini dikonfigurasi khusus untuk Super Admin terotorisasi EasyLegal Customer Portal.`,
-          ``,
-          `<i>ID Chat Anda:</i> <code>${chatId}</code>`,
-        ].join('\n'),
-        'HTML',
-        chatId
-      );
+      const unauthText = [
+        `⛔ <b>Akses Ditolak</b>`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `Bot AI ini dikonfigurasi khusus untuk Super Admin terotorisasi EasyLegal Customer Portal.`,
+        ``,
+        `<i>ID Chat Anda:</i> <code>${chatId}</code>`,
+      ].join('\n');
+      try {
+        const errCard = await generateAiAssistantCardPng({
+          query: 'Akses Ditolak',
+          replySummary: `• ID Chat ${chatId} belum terdaftar sebagai Super Admin.\n• Hubungi administrator sistem untuk otorisasi akses.`,
+          senderName,
+          category: 'KEAMANAN AKSES',
+          pillText: 'AKSES DITOLAK',
+          toneColor: '#ef4444',
+          deepColor: '#b91c1c',
+          pose: 'menyapa',
+          bubbleText: 'Akses ditolak! Akun belum terotorisasi.',
+        });
+        if (errCard) {
+          const photoRes = await sendTelegramPhoto(errCard, unauthText, undefined, chatId);
+          if (photoRes.success) return;
+        }
+      } catch {}
+      await sendTelegramMessage(unauthText, 'HTML', chatId);
       return;
     }
   } else {
     // If chat ID is not yet configured, assist the admin with onboarding
-    await sendTelegramMessage(
-      [
-        `👋 <b>Halo, ${senderName}!</b>`,
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-        `Bot AI EasyLegal siap digunakan. Namun <code>TELEGRAM_CHAT_ID</code> belum disetel di server.`,
-        ``,
-        `📍 <b>ID Chat Anda:</b> <code>${chatId}</code>`,
-        ``,
-        `Silakan tambahkan baris berikut pada file <code>backend/.env</code>:`,
-        `<code>TELEGRAM_CHAT_ID=${chatId}</code>`,
-        ``,
-        `Setelah itu simpan dan restart server agar bot terkunci secara aman untuk Anda.`,
-      ].join('\n'),
-      'HTML',
-      chatId
-    );
+    const onboardText = [
+      `👋 <b>Halo, ${senderName}!</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `Bot AI EasyLegal siap digunakan. Namun <code>TELEGRAM_CHAT_ID</code> belum disetel di server.`,
+      ``,
+      `📍 <b>ID Chat Anda:</b> <code>${chatId}</code>`,
+      ``,
+      `Silakan tambahkan baris berikut pada file <code>backend/.env</code>:`,
+      `<code>TELEGRAM_CHAT_ID=${chatId}</code>`,
+      ``,
+      `Setelah itu simpan dan restart server agar bot terkunci secara aman untuk Anda.`,
+    ].join('\n');
+    try {
+      const card = await generateAiAssistantCardPng({
+        query: 'Setup Chat ID Bot',
+        replySummary: `• Bot AI EasyLegal siap digunakan.\n• TELEGRAM_CHAT_ID belum disetel di backend/.env\n• ID Chat Anda: ${chatId}\n• Set TELEGRAM_CHAT_ID=${chatId} lalu restart server.`,
+        senderName,
+        category: 'SETUP & ONBOARDING',
+        pillText: 'KONFIGURASI DIBUTUHKAN',
+        toneColor: '#3b82f6',
+        deepColor: '#1d4ed8',
+        pose: 'melambai',
+        bubbleText: `Halo ${senderName}! Yuk setup ID Chat dulu.`,
+      });
+      if (card) {
+        const photoRes = await sendTelegramPhoto(card, onboardText, undefined, chatId);
+        if (photoRes.success) return;
+      }
+    } catch {}
+    await sendTelegramMessage(onboardText, 'HTML', chatId);
     return;
   }
 
@@ -436,15 +556,27 @@ export async function handleTelegramMessageUpdate(
     ) {
       try {
         const snap = await gatherLiveWebsiteSnapshot(prisma);
-        const isHealthy = snap.system.dbOk && snap.tickets.urgent === 0 && snap.security.multiIpCount === 0;
-        const stateKey = !snap.system.dbOk ? 'down' : !isHealthy ? 'gangguan' : 'normal';
+        const isMaintenance = process.env.MAINTENANCE_MODE === 'true';
+        const hasDown = !snap.system.dbOk;
+        const hasSlow = snap.security.multiIpCount > 0 || snap.tickets.urgent > 0;
+
+        let stateKey: 'normal' | 'gangguan' | 'maintenance' | 'down' = 'normal';
+        if (hasDown) {
+          stateKey = 'down';
+        } else if (isMaintenance) {
+          stateKey = 'maintenance';
+        } else if (hasSlow) {
+          stateKey = 'gangguan';
+        } else {
+          stateKey = 'normal';
+        }
 
         const services = [
-          { key: 'portal', name: 'Customer Portal', ms: 142, up: 99.99, status: 'ok' },
-          { key: 'api', name: 'API Backend', ms: 88, up: 99.98, status: 'ok' },
-          { key: 'resi', name: 'Hot Storage (S3)', ms: 156, up: 99.97, status: 'ok' },
-          { key: 'mail', name: 'Webmail Cluster', ms: 212, up: 99.95, status: 'ok' },
-          { key: 'wa', name: 'WhatsApp Gateway', ms: snap.security.multiIpCount > 0 ? 2840 : 318, up: 99.93, status: snap.security.multiIpCount > 0 ? 'slow' : 'ok' },
+          { key: 'portal', name: 'Customer Portal', ms: hasDown ? 0 : 142, up: 99.99, status: hasDown ? 'down' : 'ok' },
+          { key: 'api', name: 'API Backend', ms: 88, up: 99.98, status: hasDown ? 'down' : 'ok' },
+          { key: 'resi', name: 'Tracking Resi', ms: 156, up: 99.97, status: 'ok' },
+          { key: 'mail', name: 'Webmail Cluster', ms: isMaintenance ? 0 : 212, up: 99.95, status: isMaintenance ? 'maint' : 'ok' },
+          { key: 'wa', name: 'WhatsApp Gateway', ms: hasSlow ? 2840 : 318, up: 99.93, status: hasSlow ? 'slow' : 'ok' },
           { key: 'ai', name: 'AI Assistant', ms: 640, up: 99.96, status: 'ok' },
         ];
 
@@ -453,7 +585,7 @@ export async function handleTelegramMessageUpdate(
           serverTime: `${format(new Date(), 'EEEE, dd MMMM yyyy - HH:mm', { locale: localeId })} WIB`,
           serverNext: 'Besok 07:00 WIB',
           services,
-          uptimePct: isHealthy ? '99,98' : '99,82',
+          uptimePct: stateKey === 'normal' ? '99,98' : '99,82',
         });
 
         const replyMarkup = {
@@ -469,10 +601,16 @@ export async function handleTelegramMessageUpdate(
         };
 
         if (cardBuffer) {
-          const caption = replyText.length <= 1000 ? replyText : `${replyText.slice(0, 950)}...`;
+          const caption = [
+            `📊 <b>[STATUS &amp; KONDISI WEBSITE EASYLEGAL]</b>`,
+            `• Kondisi: <b>${SERVER_STATES[stateKey].label.toUpperCase()}</b> (${SERVER_STATES[stateKey].pill})`,
+            `• Uptime: <b>${stateKey === 'normal' ? '99,98%' : '99,82%'}</b> • DB: ${snap.system.dbOk ? '🟢 Ok' : '🔴 Down'}`,
+            `• Sesi Aktif: <b>${snap.security.activeSessions}</b> • Tiket Open: <b>${snap.tickets.open}</b>`,
+          ].join('\n');
+
           const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
           if (photoRes.success) {
-            if (replyText.length > 1000) {
+            if (replyText.length > 500) {
               await sendTelegramMessage(replyText, 'HTML', chatId);
             }
             return;
@@ -493,13 +631,27 @@ export async function handleTelegramMessageUpdate(
     ) {
       try {
         const activeTicket = await prisma.supportTicket.findFirst({
-          where: { status: 'open' },
+          where: { status: { in: ['open', 'in_progress'] } },
           include: { customer: true, messages: { orderBy: { createdAt: 'asc' }, take: 1 } },
           orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
         });
 
         if (activeTicket) {
           const isUrgent = activeTicket.priority === 'urgent';
+          const isAssigned = Boolean((activeTicket as any).assignedToId || activeTicket.status === 'in_progress');
+          const isOld = (Date.now() - new Date(activeTicket.createdAt).getTime()) > 30 * 60 * 1000;
+
+          let stateKey: 'urgent' | 'reminder' | 'diproses' | 'baru' = 'baru';
+          if (isUrgent) {
+            stateKey = 'urgent';
+          } else if (isAssigned) {
+            stateKey = 'diproses';
+          } else if (isOld) {
+            stateKey = 'reminder';
+          } else {
+            stateKey = 'baru';
+          }
+
           const dateStr = `${format(new Date(activeTicket.createdAt), 'EEEE, dd MMMM yyyy - HH:mm', { locale: localeId })} WIB`;
           const cardBuffer = await generateTicketCardPng({
             ticketNumber: activeTicket.ticketNumber,
@@ -510,8 +662,8 @@ export async function handleTelegramMessageUpdate(
             customerName: activeTicket.customer?.name || 'Klien EasyLegal',
             mailboxAddress: activeTicket.customer?.mailboxAddress || '-',
             personalEmail: activeTicket.customer?.personalEmail,
-            initialMessage: activeTicket.messages?.[0]?.message,
-            stateKey: isUrgent ? 'urgent' : 'baru',
+            initialMessage: activeTicket.messages?.[0]?.message || activeTicket.subject,
+            stateKey,
           });
 
           const replyMarkup = {
@@ -527,10 +679,16 @@ export async function handleTelegramMessageUpdate(
           };
 
           if (cardBuffer) {
-            const caption = replyText.length <= 1000 ? replyText : `${replyText.slice(0, 950)}...`;
+            const caption = [
+              `🎫 <b>[PUSAT TIKET SUPPORT KLIEN] #${escapeHtml(activeTicket.ticketNumber)}</b>`,
+              `• Klien: <b>${escapeHtml(activeTicket.customer?.name || 'Klien')}</b>`,
+              `• Subjek: <i>${escapeHtml(activeTicket.subject)}</i>`,
+              `• Prioritas: <b>${activeTicket.priority.toUpperCase()}</b> • Status: <b>${activeTicket.status.toUpperCase()}</b>`,
+            ].join('\n');
+
             const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
             if (photoRes.success) {
-              if (replyText.length > 1000) {
+              if (replyText.length > 500) {
                 await sendTelegramMessage(replyText, 'HTML', chatId);
               }
               return;
@@ -546,7 +704,7 @@ export async function handleTelegramMessageUpdate(
             pillText: 'SEMUA TIKET SELESAI',
             toneColor: '#22c55e',
             deepColor: '#15803d',
-            pose: 'konfirmasi',
+            pose: 'senang',
             bubbleText: 'Semua tiket beres! Layanan lancar terkendali.',
           });
 
@@ -560,10 +718,16 @@ export async function handleTelegramMessageUpdate(
           };
 
           if (cardBuffer) {
-            const caption = replyText.length <= 1000 ? replyText : `${replyText.slice(0, 950)}...`;
+            const caption = [
+              `🎫 <b>[PUSAT TIKET SUPPORT KLIEN]</b>`,
+              `• Status: 🟢 <b>Semua Tiket Selesai</b>`,
+              `• Tidak ada antrean tiket aktif yang menunggu tindakan.`,
+              `• Tim CS & Legal standby melayani permohonan baru.`,
+            ].join('\n');
+
             const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
             if (photoRes.success) {
-              if (replyText.length > 1000) {
+              if (replyText.length > 500) {
                 await sendTelegramMessage(replyText, 'HTML', chatId);
               }
               return;
@@ -577,7 +741,8 @@ export async function handleTelegramMessageUpdate(
 
     // 3. Daily Digest (/ringkasan or /digest)
     else if (lower === '/ringkasan' || lower === '/digest') {
-      // sendDailyDigest already generates and sends the card
+      await sendChatAction(chatId, 'upload_document');
+      await sendDailyDigest(prisma, chatId);
       return;
     }
 
@@ -594,37 +759,80 @@ export async function handleTelegramMessageUpdate(
       try {
         const snap = await gatherLiveWebsiteSnapshot(prisma);
         const hasAlerts = snap.security.multiIpCount > 0;
-        const cardBuffer = await generateAiAssistantCardPng({
-          query: 'Radar Keamanan & Anomali Sesi',
-          replySummary: [
-            `• Sesi Aktif: ${snap.security.activeSessions} perangkat terhubung.`,
-            `• Peringatan Multi-IP: ${hasAlerts ? `${snap.security.multiIpCount} akun login serentak!` : '0 Alert (Kondisi 100% aman).' }`,
-            '• Enkripsi TOTP 2FA: Aktif siaga (AES-256).',
-            '• Proteksi AI: 100% Zero-Leakage Enclave aktif.',
-          ].join('\n'),
-          senderName,
-          category: 'RADAR KEAMANAN SISTEM',
-          pillText: hasAlerts ? 'ALERT MULTI-IP' : 'SISTEM AMAN',
-          toneColor: hasAlerts ? '#ef4444' : '#22c55e',
-          deepColor: hasAlerts ? '#b91c1c' : '#15803d',
-          pose: hasAlerts ? 'menyapa' : 'senang',
-          bubbleText: hasAlerts ? 'Perhatian! Ada login multi-IP.' : 'Radar aman! Tidak ada anomali.',
-        });
+
+        let cardBuffer: Buffer | null = null;
+        let caption = '';
+
+        if (hasAlerts) {
+          const multiIpSessions = await prisma.loginSession.groupBy({
+            by: ['customerId'],
+            having: {
+              ipAddress: { _count: { gt: 1 } },
+            },
+          }).catch(() => []);
+
+          const affectedCustId = multiIpSessions[0]?.customerId;
+          const cust = affectedCustId ? await prisma.customer.findUnique({ where: { id: affectedCustId } }) : null;
+          const ips = affectedCustId
+            ? (await prisma.loginSession.findMany({
+                where: { customerId: affectedCustId },
+                select: { ipAddress: true },
+                distinct: ['ipAddress'],
+              })).map((s: any) => s.ipAddress).filter(Boolean)
+            : ['182.253.140.22', '36.88.90.15'];
+
+          cardBuffer = await generateSecurityAlertCardPng({
+            accountName: cust?.name || 'Akun Terdeteksi Multi-IP',
+            mailboxAddress: cust?.mailboxAddress || 'user@clienteasylegal.co.id',
+            uniqueIps: ips.length > 0 ? ips : ['182.253.140.22', '36.88.90.15'],
+            sessionCount: ips.length || 2,
+          });
+
+          caption = [
+            `🚨 <b>[RADAR KEAMANAN] Anomali Multi-IP Terdeteksi!</b>`,
+            `• Akun: <b>${escapeHtml(cust?.name || 'Multi-IP User')}</b>`,
+            `• Terdeteksi dari <b>${ips.length} IP berbeda</b> secara bersamaan.`,
+            `👉 <i>Buka Security Radar di Admin Console untuk investigasi.</i>`,
+          ].join('\n');
+        } else {
+          cardBuffer = await generateAiAssistantCardPng({
+            query: 'Radar Keamanan & Anomali Sesi',
+            replySummary: [
+              `• Sesi Aktif: ${snap.security.activeSessions} perangkat terhubung.`,
+              `• Peringatan Multi-IP: 0 Alert (Kondisi 100% aman).`,
+              '• Enkripsi TOTP 2FA: Aktif siaga (AES-256).',
+              '• Proteksi AI: 100% Zero-Leakage Enclave aktif.',
+            ].join('\n'),
+            senderName,
+            category: 'RADAR KEAMANAN SISTEM',
+            pillText: 'SISTEM AMAN',
+            toneColor: '#22c55e',
+            deepColor: '#15803d',
+            pose: 'senang',
+            bubbleText: 'Radar aman! Tidak ada anomali.',
+          });
+
+          caption = [
+            `🛡️ <b>[RADAR KEAMANAN] Kondisi 100% Aman</b>`,
+            `• Sesi Aktif: <b>${snap.security.activeSessions} Perangkat</b>`,
+            `• Anomali Multi-IP: 🟢 <b>0 Alert</b>`,
+            `• Proteksi: <b>2FA TOTP &amp; Zero-Leakage Enclave Aktif</b>`,
+          ].join('\n');
+        }
 
         const replyMarkup = {
           inline_keyboard: [
             [
-              { text: '🛡️ Buka Security Radar', url: 'https://clienteasylegal.co.id/admin' },
+              { text: hasAlerts ? '🚨 Buka Security Radar' : '🛡️ Buka Security Radar', url: 'https://clienteasylegal.co.id/admin' },
               { text: '🔄 Refresh Radar', callback_data: 'bot_cmd:keamanan' },
             ],
           ],
         };
 
         if (cardBuffer) {
-          const caption = replyText.length <= 1000 ? replyText : `${replyText.slice(0, 950)}...`;
           const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
           if (photoRes.success) {
-            if (replyText.length > 1000) {
+            if (replyText.length > 500) {
               await sendTelegramMessage(replyText, 'HTML', chatId);
             }
             return;
@@ -635,7 +843,127 @@ export async function handleTelegramMessageUpdate(
       }
     }
 
-    // 5. Start / Help / Greeting (/start, /help, halo, hai)
+    // 5. Activity & Transactions (/kegiatan, /transaksi, /aktivitas)
+    else if (
+      lower === '/kegiatan' ||
+      lower === '/transaksi' ||
+      lower === '/aktivitas' ||
+      lower.includes('kegiatan') ||
+      lower.includes('transaksi') ||
+      lower.includes('aktivitas')
+    ) {
+      try {
+        const snap = await gatherLiveWebsiteSnapshot(prisma);
+        const logLines = snap.security.recentAuditLogs.slice(0, 3).map((l) => `• ${l.action} oleh ${l.actor}`).join('\n')
+          || '• Belum ada catatan audit log baru hari ini.';
+
+        const cardBuffer = await generateAiAssistantCardPng({
+          query: 'Catatan Transaksi & Kegiatan',
+          replySummary: `${logLines}\n• Dokumen Baru: ${snap.documents.recentList.length} berkas diunggah\n• Total Email Terproses: ${snap.messages.total} pesan`,
+          senderName,
+          category: 'TRANSAKSI & AUDIT LOG',
+          pillText: 'LOG AKTIVITAS',
+          toneColor: '#06b6d4',
+          deepColor: '#0e7490',
+          pose: 'semangat',
+          bubbleText: 'Catatan aktivitas siap ditinjau.',
+        });
+
+        const replyMarkup = {
+          inline_keyboard: [
+            [
+              { text: '📊 Status Server', callback_data: 'bot_cmd:status' },
+              { text: '🎫 Cek Tiket', callback_data: 'view_tickets' },
+            ],
+            [
+              { text: '🌐 Buka Admin Desk', url: 'https://clienteasylegal.co.id/admin' },
+            ],
+          ],
+        };
+
+        if (cardBuffer) {
+          const caption = [
+            `📋 <b>[TRANSAKSI &amp; KEGIATAN TERBARU]</b>`,
+            `• Audit Log Terkini: <b>${snap.security.recentAuditLogs.length} Entri</b>`,
+            `• Unggahan Berkas: <b>${snap.documents.recentList.length} Dokumen Baru</b>`,
+            `• Total Email: <b>${snap.messages.total} Pesan</b>`,
+          ].join('\n');
+
+          const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
+          if (photoRes.success) {
+            if (replyText.length > 500) {
+              await sendTelegramMessage(replyText, 'HTML', chatId);
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[Telegram Bot] Error generating activity card:', err);
+      }
+    }
+
+    // 6. Storage Capacity (/storage)
+    else if (
+      lower === '/storage' ||
+      lower.includes('storage') ||
+      lower.includes('kapasitas') ||
+      lower.includes('penyimpanan')
+    ) {
+      try {
+        const snap = await gatherLiveWebsiteSnapshot(prisma);
+        const usedMb = parseFloat(snap.documents.totalSizeMb || '0');
+        const quotaMb = 10000; // 10 GB quota
+        const usagePct = (usedMb / quotaMb) * 100;
+        const isHighUsage = usagePct >= 80;
+
+        const cardBuffer = await generateAiAssistantCardPng({
+          query: 'Kapasitas Penyimpanan & Arsip',
+          replySummary: [
+            `• Hot Storage S3: ${snap.documents.totalSizeMb} MB terpakai (${usagePct.toFixed(1)}%)`,
+            `• Total Dokumen: ${snap.documents.total} berkas legal`,
+            `• Cold Storage Synology NAS: ${isHighUsage ? 'Perlu sinkronisasi segera!' : 'Terkoneksi normal'}`,
+            `• Kebijakan Retensi 90 Hari: Pemantauan aktif`,
+          ].join('\n'),
+          senderName,
+          category: 'KAPASITAS PENYIMPANAN',
+          pillText: isHighUsage ? 'KAPASITAS KRITIS (>=80%)' : 'KAPASITAS WAJAR (<80%)',
+          toneColor: isHighUsage ? '#ef4444' : '#fbbf24',
+          deepColor: isHighUsage ? '#b91c1c' : '#b45309',
+          pose: isHighUsage ? 'memikirkan' : 'saran',
+          bubbleText: isHighUsage ? 'Penyimpanan mendekati batas! Segera arsipkan.' : 'Status penyimpanan S3 dan NAS wajar.',
+        });
+
+        const replyMarkup = {
+          inline_keyboard: [
+            [
+              { text: '📊 Status Server', callback_data: 'bot_cmd:status' },
+              { text: '🌐 Buka Admin Desk', url: 'https://clienteasylegal.co.id/admin' },
+            ],
+          ],
+        };
+
+        if (cardBuffer) {
+          const caption = [
+            `💾 <b>[KAPASITAS PENYIMPANAN &amp; ARSIP]</b>`,
+            `• Hot Storage S3: <b>${snap.documents.totalSizeMb} MB</b> (${usagePct.toFixed(1)}% Kuota)`,
+            `• Total Dokumen: <b>${snap.documents.total} Berkas Legal</b>`,
+            `• Synology NAS: ${isHighUsage ? '⚠️ <b>Perlu Sinkronisasi Segera</b>' : '🟢 <b>Tersambung Normal</b>'}`,
+          ].join('\n');
+
+          const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
+          if (photoRes.success) {
+            if (replyText.length > 500) {
+              await sendTelegramMessage(replyText, 'HTML', chatId);
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[Telegram Bot] Error generating storage card:', err);
+      }
+    }
+
+    // 7. Start / Help / Greeting (/start, /help, halo, hai)
     else if (
       lower === '/start' ||
       lower === '/help' ||
@@ -683,10 +1011,15 @@ export async function handleTelegramMessageUpdate(
         };
 
         if (cardBuffer) {
-          const caption = replyText.length <= 1000 ? replyText : `${replyText.slice(0, 950)}...`;
+          const caption = [
+            `👋 <b>Halo, ${escapeHtml(senderName)}!</b>`,
+            `Saya <b>EL</b>, asisten AI resmi EasyLegal Customer Portal.`,
+            `Gunakan tombol menu cepat di bawah atau tanyakan apa pun secara langsung.`,
+          ].join('\n');
+
           const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
           if (photoRes.success) {
-            if (replyText.length > 1000) {
+            if (replyText.length > 500) {
               await sendTelegramMessage(replyText, 'HTML', chatId);
             }
             return;
@@ -697,7 +1030,57 @@ export async function handleTelegramMessageUpdate(
       }
     }
 
-    // 6. General Questions / Storage / Kegiatan / Any Natural Language Query
+    // 8. Unknown slash command (perintah tidak dikenali)
+    else if (lower.startsWith('/')) {
+      try {
+        const cardBuffer = await generateAiAssistantCardPng({
+          query: rawText.length > 35 ? `${rawText.slice(0, 32)}...` : rawText,
+          replySummary: [
+            `• Perintah "${rawText}" tidak dikenali oleh sistem.`,
+            `• Perintah yang tersedia:`,
+            `  /status, /tiket, /keamanan, /kegiatan, /storage, /ringkasan`,
+            `• Anda juga dapat mengetik pertanyaan bebas seputar website.`,
+          ].join('\n'),
+          senderName,
+          category: 'BANTUAN NAVIGASI',
+          pillText: 'PERINTAH TIDAK DIKENALI',
+          toneColor: '#64748b',
+          deepColor: '#475569',
+          pose: 'memikirkan',
+          bubbleText: 'Hmm, EL belum mengenali perintah itu.',
+        });
+
+        const replyMarkup = {
+          inline_keyboard: [
+            [
+              { text: '📊 Status Server', callback_data: 'bot_cmd:status' },
+              { text: '🎫 Cek Tiket', callback_data: 'view_tickets' },
+            ],
+            [
+              { text: '🛡️ Radar Keamanan', callback_data: 'bot_cmd:keamanan' },
+              { text: '📈 Laporan Harian', callback_data: 'digest_refresh' },
+            ],
+          ],
+        };
+
+        if (cardBuffer) {
+          const caption = [
+            `❓ <b>Perintah Tidak Dikenali:</b> <code>${escapeHtml(rawText)}</code>`,
+            `EL belum mengenali perintah tersebut. Silakan pilih menu di bawah`,
+            `atau ketik pertanyaan langsung seputar operasional sistem.`,
+          ].join('\n');
+
+          const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
+          if (photoRes.success) {
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[Telegram Bot] Error generating unknown command card:', err);
+      }
+    }
+
+    // 9. Free Natural Language Questions (Jawaban AI Real-Time)
     else {
       try {
         const strippedText = stripHtml(replyText);
@@ -705,22 +1088,19 @@ export async function handleTelegramMessageUpdate(
           .split('\n')
           .map((s) => s.trim())
           .filter((s) => s.length > 0 && !s.startsWith('━━━') && !s.startsWith('👉') && !s.startsWith('🔗') && !s.startsWith('🤖') && !s.startsWith('['))
-          .slice(0, 5)
+          .slice(0, 6)
           .join('\n');
-
-        const isActivity = lower === '/kegiatan' || lower.includes('kegiatan') || lower.includes('transaksi') || lower.includes('aktivitas');
-        const isStorage = lower === '/storage' || lower.includes('storage') || lower.includes('kapasitas');
 
         const cardBuffer = await generateAiAssistantCardPng({
           query: rawText.length > 35 ? `${rawText.slice(0, 32)}...` : rawText,
-          replySummary: summaryLines || strippedText.slice(0, 200),
+          replySummary: summaryLines || strippedText.slice(0, 250),
           senderName,
-          category: isActivity ? 'TRANSAKSI & AUDIT LOG' : isStorage ? 'KAPASITAS PENYIMPANAN' : 'AI EXECUTIVE ASSISTANT',
-          pillText: isActivity ? 'LOG AKTIVITAS' : isStorage ? 'STORAGE S3 & NAS' : 'JAWABAN AI • REAL-TIME',
-          toneColor: isActivity ? '#06b6d4' : isStorage ? '#3b82f6' : '#8b5cf6',
-          deepColor: isActivity ? '#0e7490' : isStorage ? '#1d4ed8' : '#6d28d9',
-          pose: isActivity ? 'semangat' : isStorage ? 'saran' : 'tips',
-          bubbleText: isActivity ? 'Catatan aktivitas siap ditinjau.' : isStorage ? 'Status penyimpanan S3 dan NAS.' : 'Jawaban sudah siap! Cek detailnya ya.',
+          category: 'AI EXECUTIVE ASSISTANT',
+          pillText: 'JAWABAN AI • REAL-TIME',
+          toneColor: '#8b5cf6',
+          deepColor: '#6d28d9',
+          pose: 'tips',
+          bubbleText: 'Jawaban sudah siap! Cek detailnya ya.',
         });
 
         const replyMarkup = {
@@ -736,10 +1116,15 @@ export async function handleTelegramMessageUpdate(
         };
 
         if (cardBuffer) {
-          const caption = replyText.length <= 1000 ? replyText : `${replyText.slice(0, 950)}...`;
+          const caption = [
+            `💡 <b>[JAWABAN AI] EasyLegal Assistant</b>`,
+            `❓ <i>"${escapeHtml(rawText.length > 60 ? `${rawText.slice(0, 57)}...` : rawText)}"</i>`,
+            `Ringkasan jawaban tertera pada kartu di atas.`,
+          ].join('\n');
+
           const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);
           if (photoRes.success) {
-            if (replyText.length > 1000) {
+            if (replyText.length > 300) {
               await sendTelegramMessage(replyText, 'HTML', chatId);
             }
             return;

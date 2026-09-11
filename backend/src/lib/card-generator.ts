@@ -537,6 +537,11 @@ export interface ServerCardInput {
   }>;
   uptimePct?: string;
   okCount?: number;
+  pose?: string;
+  toneColor?: string;
+  deepColor?: string;
+  pillText?: string;
+  bubbleText?: string;
 }
 
 /**
@@ -546,7 +551,15 @@ export function generateServerStatusCardSvg(data?: ServerCardInput): string {
   let stateKey = data?.stateKey || 'normal';
   if (!SERVER_STATES[stateKey]) stateKey = 'normal';
 
-  const st = SERVER_STATES[stateKey];
+  const baseSt = SERVER_STATES[stateKey];
+  const st = {
+    ...baseSt,
+    pose: data?.pose || baseSt.pose,
+    tone: data?.toneColor || baseSt.tone,
+    deep: data?.deepColor || baseSt.deep,
+    pill: data?.pillText || baseSt.pill,
+    bubble: data?.bubbleText || baseSt.bubble,
+  };
   const services = data?.services || DEFAULT_SERVICES;
   const okCount = data?.okCount !== undefined
     ? data.okCount
@@ -698,32 +711,34 @@ export function generateDailyDigestCardSvg(data: DailyDigestCardInput): string {
   const customServices = [
     { key: 'portal', name: 'Customer Portal', ms: 142, up: 99.99, status: 'ok' },
     { key: 'api', name: 'API Backend', ms: 88, up: 99.98, status: 'ok' },
-    { key: 'resi', name: 'Hot Storage (S3)', ms: 156, up: 99.97, status: 'ok' },
+    { key: 'resi', name: 'Tracking Resi', ms: 156, up: 99.97, status: 'ok' },
     { key: 'mail', name: 'Webmail Cluster', ms: 212, up: 99.95, status: 'ok' },
     { key: 'wa', name: 'WhatsApp Gateway', ms: data.totalMultiIp > 0 ? 2840 : 318, up: 99.93, status: data.totalMultiIp > 0 ? 'slow' : 'ok' },
     { key: 'ai', name: 'AI Assistant', ms: 640, up: 99.96, status: 'ok' },
   ];
 
   let bubble = 'Semua layanan aman. Tim bisa kerja tenang!';
+  let pill = 'SEMUA SISTEM NORMAL';
   if (data.urgentTickets > 0) {
     bubble = `${data.urgentTickets} tiket urgent membutuhkan penanganan segera!`;
+    pill = `${data.urgentTickets} TIKET URGENT PERLU TINDAKAN`;
   } else if (data.totalMultiIp > 0) {
     bubble = `${data.totalMultiIp} anomali Multi-IP login terdeteksi pada radar keamanan.`;
+    pill = `${data.totalMultiIp} ANOMALI MULTI-IP TERDETEKSI`;
   }
 
-  const svg = generateServerStatusCardSvg({
+  return generateServerStatusCardSvg({
     stateKey,
     serverTime: `${data.dateStr} WIB`,
     serverNext: 'Besok 07:00 WIB',
     services: customServices,
     uptimePct: isHealthy ? '99,98' : '99,85',
+    pose: isHealthy ? 'senang' : 'memikirkan',
+    toneColor: isHealthy ? '#22c55e' : '#ef4444',
+    deepColor: isHealthy ? '#15803d' : '#b91c1c',
+    pillText: isHealthy ? 'SEMUA SISTEM SEHAT' : pill,
+    bubbleText: bubble,
   });
-
-  // Inject custom bubble if generated
-  if (bubble) {
-    return svg.replace('Semua layanan aman. Tim bisa kerja tenang!', escapeXml(bubble));
-  }
-  return svg;
 }
 
 export interface SecurityAlertInput {

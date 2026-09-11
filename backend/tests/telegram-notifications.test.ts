@@ -13,12 +13,20 @@ import {
 } from '../src/lib/telegram';
 import {
   generateTicketCardPng,
+  generateServerStatusCardPng,
   generateDailyDigestCardPng,
   generateSecurityAlertCardPng,
   generateAiAssistantCardPng,
+  TICKET_STATES,
+  SERVER_STATES,
 } from '../src/lib/card-generator';
 import { processTelegramAiMessage, gatherLiveWebsiteSnapshot } from '../src/lib/telegram-ai';
 import { handleTelegramMessageUpdate, handleTelegramCallbackQuery } from '../src/workers/telegram-bot';
+
+const isPng = (buf: any): boolean => {
+  if (!buf || !Buffer.isBuffer(buf) || buf.length < 8) return false;
+  return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+};
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
@@ -397,11 +405,6 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
   });
 
   describe('6. Rich Graphic Cards (Option 2) & Interactive Inline Keyboard Callbacks', () => {
-    const isPng = (buf: Buffer | null) => {
-      if (!buf || buf.length < 8) return false;
-      return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
-    };
-
     it('should generate high-resolution PNG ticket card in-memory without external calls', async () => {
       const pngBuffer = await generateTicketCardPng({
         ticketNumber: 'TK-9952',
@@ -665,6 +668,306 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
       expect(sentPhotoCaption).toContain('STATUS & KONDISI WEBSITE EASYLEGAL');
       expect(sentReplyMarkup).toContain('bot_cmd:status');
       expect(sentReplyMarkup).toContain('view_tickets');
+    });
+  });
+
+  describe('7. Comprehensive 22-State Card & Pose Intent Verification', () => {
+    const originalFetch = global.fetch;
+
+    beforeEach(() => {
+      process.env.TELEGRAM_BOT_TOKEN = '123456:TEST_TOKEN';
+      process.env.TELEGRAM_CHAT_ID = '-1001234567890';
+      process.env.TELEGRAM_NOTIFICATIONS_ENABLED = 'true';
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('State 1: /start or greeting should send AI Assistant card with pose melambai (#3b82f6)', async () => {
+      let sentPhoto: Buffer | null = null;
+      let sentCaption = '';
+      global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+        if (opts.body instanceof FormData) {
+          const file: any = opts.body.get('photo');
+          if (file && typeof file.arrayBuffer === 'function') {
+            sentPhoto = Buffer.from(await file.arrayBuffer());
+          }
+          sentCaption = (opts.body.get('caption') as string) || '';
+        }
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 101 } }) };
+      }) as any;
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 1,
+        chat: { id: -1001234567890, first_name: 'Admin' },
+        from: { id: 12345, first_name: 'Admin' },
+        text: '/start',
+      });
+
+      expect(sentPhoto).not.toBeNull();
+      expect(isPng(sentPhoto)).toBe(true);
+      expect(sentCaption).toContain('Halo, Admin!');
+      expect(sentCaption).toContain('EL');
+    });
+
+    it('State 2-5: /status renders Server Status card matching condition (normal, gangguan, maintenance, down)', async () => {
+      const normalBuf = await generateServerStatusCardPng({ stateKey: 'normal' });
+      expect(isPng(normalBuf)).toBe(true);
+      expect(SERVER_STATES.normal.pose).toBe('senang');
+      expect(SERVER_STATES.normal.tone).toBe('#22c55e');
+
+      const gangguanBuf = await generateServerStatusCardPng({ stateKey: 'gangguan' });
+      expect(isPng(gangguanBuf)).toBe(true);
+      expect(SERVER_STATES.gangguan.pose).toBe('memikirkan');
+      expect(SERVER_STATES.gangguan.tone).toBe('#f59e0b');
+
+      const maintBuf = await generateServerStatusCardPng({ stateKey: 'maintenance' });
+      expect(isPng(maintBuf)).toBe(true);
+      expect(SERVER_STATES.maintenance.pose).toBe('saran');
+      expect(SERVER_STATES.maintenance.tone).toBe('#3b82f6');
+
+      const downBuf = await generateServerStatusCardPng({ stateKey: 'down' });
+      expect(isPng(downBuf)).toBe(true);
+      expect(SERVER_STATES.down.pose).toBe('menyapa');
+      expect(SERVER_STATES.down.tone).toBe('#ef4444');
+    });
+
+    it('State 6-13: Ticket cards render correct poses and generate valid PNGs', async () => {
+      expect(TICKET_STATES.urgent.pose).toBe('menyapa');
+      expect(TICKET_STATES.urgent.tone).toBe('#ef4444');
+
+      expect(TICKET_STATES.baru.pose).toBe('melambai');
+      expect(TICKET_STATES.baru.tone).toBe('#3b82f6');
+
+      expect(TICKET_STATES.reminder.pose).toBe('muncul');
+      expect(TICKET_STATES.reminder.tone).toBe('#f59e0b');
+
+      expect(TICKET_STATES.diproses.pose).toBe('semangat');
+      expect(TICKET_STATES.diproses.tone).toBe('#06b6d4');
+
+      expect(TICKET_STATES.ai.pose).toBe('tips');
+      expect(TICKET_STATES.ai.tone).toBe('#a855f7');
+
+      expect(TICKET_STATES.menunggu.pose).toBe('memikirkan');
+      expect(TICKET_STATES.menunggu.tone).toBe('#fb923c');
+
+      expect(TICKET_STATES.selesai.pose).toBe('konfirmasi');
+      expect(TICKET_STATES.selesai.tone).toBe('#22c55e');
+
+      for (const st of ['urgent', 'baru', 'reminder', 'diproses', 'ai', 'menunggu', 'selesai']) {
+        const buf = await generateTicketCardPng({
+          ticketNumber: 'TK-TEST-1',
+          subject: 'Test Subject',
+          category: 'Umum',
+          priority: st === 'urgent' ? 'urgent' : 'normal',
+          createdAtStr: '11 September 2026',
+          customerName: 'Klien Test',
+          mailboxAddress: 'klien@clienteasylegal.co.id',
+          stateKey: st,
+        });
+        expect(isPng(buf)).toBe(true);
+      }
+    });
+
+    it('State 8: /tiket with no open tickets sends AI Assistant card with pose senang (#22c55e)', async () => {
+      let sentPhoto: Buffer | null = null;
+      let sentCaption = '';
+      global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+        if (opts.body instanceof FormData) {
+          const file: any = opts.body.get('photo');
+          if (file && typeof file.arrayBuffer === 'function') {
+            sentPhoto = Buffer.from(await file.arrayBuffer());
+          }
+          sentCaption = (opts.body.get('caption') as string) || '';
+        }
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 102 } }) };
+      }) as any;
+
+      await prisma.supportTicket.updateMany({
+        where: { status: { in: ['open', 'in_progress'] } },
+        data: { status: 'resolved' },
+      });
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 2,
+        chat: { id: -1001234567890, first_name: 'Admin' },
+        from: { id: 12345, first_name: 'Admin' },
+        text: '/tiket',
+      });
+
+      expect(sentPhoto).not.toBeNull();
+      expect(isPng(sentPhoto)).toBe(true);
+      expect(sentCaption).toContain('PUSAT TIKET SUPPORT KLIEN');
+      expect(sentCaption).toContain('Semua Tiket Selesai');
+    });
+
+    it('State 14: /keamanan when safe sends AI Assistant card with pose senang (#22c55e)', async () => {
+      let sentPhoto: Buffer | null = null;
+      let sentCaption = '';
+      global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+        if (opts.body instanceof FormData) {
+          const file: any = opts.body.get('photo');
+          if (file && typeof file.arrayBuffer === 'function') {
+            sentPhoto = Buffer.from(await file.arrayBuffer());
+          }
+          sentCaption = (opts.body.get('caption') as string) || '';
+        }
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 103 } }) };
+      }) as any;
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 3,
+        chat: { id: -1001234567890, first_name: 'Admin' },
+        from: { id: 12345, first_name: 'Admin' },
+        text: '/keamanan',
+      });
+
+      expect(sentPhoto).not.toBeNull();
+      expect(isPng(sentPhoto)).toBe(true);
+      expect(sentCaption).toContain('RADAR KEAMANAN');
+    });
+
+    it('State 16: /kegiatan sends AI Assistant card with pose semangat (cyan #06b6d4)', async () => {
+      let sentPhoto: Buffer | null = null;
+      let sentCaption = '';
+      global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+        if (opts.body instanceof FormData) {
+          const file: any = opts.body.get('photo');
+          if (file && typeof file.arrayBuffer === 'function') {
+            sentPhoto = Buffer.from(await file.arrayBuffer());
+          }
+          sentCaption = (opts.body.get('caption') as string) || '';
+        }
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 104 } }) };
+      }) as any;
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 4,
+        chat: { id: -1001234567890, first_name: 'Admin' },
+        from: { id: 12345, first_name: 'Admin' },
+        text: '/kegiatan',
+      });
+
+      expect(sentPhoto).not.toBeNull();
+      expect(isPng(sentPhoto)).toBe(true);
+      expect(sentCaption).toContain('TRANSAKSI &amp; KEGIATAN TERBARU');
+    });
+
+    it('State 17: /storage sends AI Assistant card with pose saran (amber #fbbf24)', async () => {
+      let sentPhoto: Buffer | null = null;
+      let sentCaption = '';
+      global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+        if (opts.body instanceof FormData) {
+          const file: any = opts.body.get('photo');
+          if (file && typeof file.arrayBuffer === 'function') {
+            sentPhoto = Buffer.from(await file.arrayBuffer());
+          }
+          sentCaption = (opts.body.get('caption') as string) || '';
+        }
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 105 } }) };
+      }) as any;
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 5,
+        chat: { id: -1001234567890, first_name: 'Admin' },
+        from: { id: 12345, first_name: 'Admin' },
+        text: '/storage',
+      });
+
+      expect(sentPhoto).not.toBeNull();
+      expect(isPng(sentPhoto)).toBe(true);
+      expect(sentCaption).toContain('KAPASITAS PENYIMPANAN &amp; ARSIP');
+    });
+
+    it('State 19-20: /ringkasan or digest card has dynamic pose (senang if healthy, memikirkan if urgent/anomaly)', async () => {
+      const healthyDigest = await generateDailyDigestCardPng({
+        dateStr: '11 September 2026',
+        totalCustomers: 10,
+        activeCustomers: 10,
+        inactiveCustomers: 0,
+        totalEmails: 50,
+        unreadEmails: 0,
+        usedMB: '50.0',
+        totalDocuments: 10,
+        activeSessions: 2,
+        totalMultiIp: 0,
+        auditLogsLast24h: 5,
+        openTickets: 0,
+        urgentTickets: 0,
+        resolvedTickets: 10,
+      });
+      expect(isPng(healthyDigest)).toBe(true);
+
+      const anomalyDigest = await generateDailyDigestCardPng({
+        dateStr: '11 September 2026',
+        totalCustomers: 10,
+        activeCustomers: 10,
+        inactiveCustomers: 0,
+        totalEmails: 50,
+        unreadEmails: 0,
+        usedMB: '50.0',
+        totalDocuments: 10,
+        activeSessions: 2,
+        totalMultiIp: 1,
+        auditLogsLast24h: 5,
+        openTickets: 1,
+        urgentTickets: 1,
+        resolvedTickets: 10,
+      });
+      expect(isPng(anomalyDigest)).toBe(true);
+    });
+
+    it('State 21: Natural language query sends AI Assistant card with pose tips (purple #8b5cf6)', async () => {
+      let sentPhoto: Buffer | null = null;
+      let sentCaption = '';
+      global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+        if (opts.body instanceof FormData) {
+          const file: any = opts.body.get('photo');
+          if (file && typeof file.arrayBuffer === 'function') {
+            sentPhoto = Buffer.from(await file.arrayBuffer());
+          }
+          sentCaption = (opts.body.get('caption') as string) || '';
+        }
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 106 } }) };
+      }) as any;
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 6,
+        chat: { id: -1001234567890, first_name: 'Admin' },
+        from: { id: 12345, first_name: 'Admin' },
+        text: 'Berapa jumlah dokumen yang telah diunggah oleh klien minggu ini?',
+      });
+
+      expect(sentPhoto).not.toBeNull();
+      expect(isPng(sentPhoto)).toBe(true);
+      expect(sentCaption).toContain('JAWABAN AI');
+    });
+
+    it('State 22: Unknown command (/ngawur) sends AI Assistant card with pose memikirkan (gray #64748b)', async () => {
+      let sentPhoto: Buffer | null = null;
+      let sentCaption = '';
+      global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+        if (opts.body instanceof FormData) {
+          const file: any = opts.body.get('photo');
+          if (file && typeof file.arrayBuffer === 'function') {
+            sentPhoto = Buffer.from(await file.arrayBuffer());
+          }
+          sentCaption = (opts.body.get('caption') as string) || '';
+        }
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 107 } }) };
+      }) as any;
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 7,
+        chat: { id: -1001234567890, first_name: 'Admin' },
+        from: { id: 12345, first_name: 'Admin' },
+        text: '/ngawur',
+      });
+
+      expect(sentPhoto).not.toBeNull();
+      expect(isPng(sentPhoto)).toBe(true);
+      expect(sentCaption).toContain('Perintah Tidak Dikenali');
     });
   });
 });
