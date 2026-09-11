@@ -87,6 +87,25 @@ export async function handleTelegramCallbackQuery(
       }
 
       const clientName = ticket.customer?.name || 'Klien';
+      const cat = (ticket.category || '').toLowerCase();
+      const subj = (ticket.subject || '').toLowerCase();
+
+      let draftBody = '';
+      if (cat.includes('mailbox') || cat.includes('email') || subj.includes('email') || subj.includes('imap') || subj.includes('smtp') || subj.includes('mail')) {
+        draftBody = `Tim Teknis Email kami telah meninjau kendala transmisi mailbox Anda pada kluster Hostinger Titan Mail. Jalur sinkronisasi IMAP port 993 dan konfigurasi DNS (SPF, DKIM, DMARC) akun Anda sedang kami verifikasi secara mendalam. Mohon lakukan penyegaran (refresh) kotak masuk dalam 15 menit ke depan.`;
+      } else if (cat.includes('access') || cat.includes('security') || subj.includes('2fa') || subj.includes('login') || subj.includes('password') || subj.includes('kata sandi')) {
+        draftBody = `Tim Keamanan Sistem kami telah menerima permohonan verifikasi akses akun Anda. Data identitas pemohon telah diverifikasi melalui protokol enkripsi aman. Prosedur reset autentikasi 2FA TOTP dan pemutusan sesi login aktif sedang diproses demi perlindungan data akun Anda.`;
+      } else if (cat.includes('storage') || cat.includes('arsip') || subj.includes('storage') || subj.includes('nas') || subj.includes('s3') || subj.includes('kuota')) {
+        draftBody = `Tim Pengelola Data kami telah meninjau status penyimpanan dokumen Anda. Untuk permohonan arsip berkas berumur lebih dari 90 hari, data sedang disinkronisasikan dari Cold Storage Synology NAS kantor ke Legal Drive aktif Anda (SLA 1x24 jam kerja).`;
+      } else if (cat.includes('kendala teknis') || cat.includes('backend') || subj.includes('error') || subj.includes('bug') || subj.includes('server')) {
+        draftBody = `Tim Engineering kami telah memeriksa log sistem terkait kendala teknis yang Anda laporkan. Investigasi trace error pada service backend sedang berlangsung dan perbaikan segera diterapkan agar layanan kembali optimal.`;
+      } else if (cat.includes('billing') || cat.includes('tagihan') || subj.includes('retensi') || subj.includes('perpanjang')) {
+        draftBody = `Tim Layanan Klien kami telah memverifikasi permohonan terkait masa aktif akun dan administrasi retensi Anda. Rincian perpanjangan akses 3 bulan ke depan telah disiapkan dan akan segera diperbarui di sistem portal.`;
+      } else if (cat.includes('document') || cat.includes('legal') || subj.includes('akta') || subj.includes('kontrak') || subj.includes('perjanjian')) {
+        draftBody = `Tim Legal Corporate kami telah meninjau draf berkas hukum yang Anda ajukan. Dokumen pendukung telah diverifikasi melalui Secure In-Memory Enclave kami, dan catatan telaah klausul hukum akan segera kami perbarui untuk Anda.`;
+      } else {
+        draftBody = `Tim Customer Care & Technical Support EasyLegal telah menerima permohonan Anda terkait "${ticket.subject}". Rincian kendala sedang ditangani secara prioritas oleh tim terkait kami untuk penyelesaian tuntas.`;
+      }
 
       const aiDraftResponse = [
         `🤖 <b>[REKOMENDASI DRAF SOLUSI AI]</b>`,
@@ -98,17 +117,15 @@ export async function handleTelegramCallbackQuery(
         ``,
         `<i>Yth. Bapak/Ibu Pimpinan ${escapeHtml(clientName)},</i>`,
         ``,
-        `<i>Terima kasih telah menghubungi Tim Layanan Legal Corporate EasyLegal.</i>`,
+        `<i>Terima kasih telah menghubungi Tim Layanan EasyLegal Customer Portal.</i>`,
         ``,
         `<i>Menanggapi permohonan Anda terkait "<b>${escapeHtml(ticket.subject)}</b>":</i>`,
-        `<i>Tim Legal kami telah meninjau rincian berkas yang diajukan. Berdasarkan ketentuan regulasi hukum korporasi Indonesia dan prosedur administrasi AHU/Kemenkumham yang berlaku, permohonan Anda saat ini sedang dalam penanganan prioritas.</i>`,
+        `<i>${escapeHtml(draftBody)}</i>`,
         ``,
-        `<i>Dokumen pendukung terkait berkas perseroan Anda telah kami verifikasi melalui Secure In-Memory Enclave kami. Langkah tindak lanjut dan konfirmasi penyelesaian akan kami perbarui dalam waktu &lt; 4 jam kerja.</i>`,
-        ``,
-        `<i>Bila ada berkas tambahan yang ingin dilampirkan, silakan unggah langsung melalui menu Legal Drive atau kirimkan via Webmail resmi Anda.</i>`,
+        `<i>Bila ada berkas atau informasi tambahan yang ingin dilampirkan, silakan unggah langsung melalui menu Legal Drive atau balas melalui Webmail resmi Anda.</i>`,
         ``,
         `<i>Hormat kami,</i>`,
-        `<b>Tim Layanan Legal Corporate &amp; Notaris EasyLegal</b>`,
+        `<b>Tim Layanan EasyLegal Customer Portal</b>`,
         `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
         `💡 <i>Draf ini dapat langsung disalin ke Super Admin Support Desk atau dikirimkan via Webmail resmi.</i>`,
       ].join('\n');
@@ -1110,6 +1127,27 @@ export async function handleTelegramMessageUpdate(
     // 9. Free Natural Language Questions (Jawaban AI Real-Time)
     else {
       try {
+        const isOutOfScope =
+          lower.includes('whatsapp') ||
+          lower.includes(' wa ') ||
+          lower.startsWith('wa ') ||
+          lower.endsWith(' wa') ||
+          lower === 'wa' ||
+          lower.includes('resi') ||
+          lower.includes('ekspedisi') ||
+          lower.includes('kurir') ||
+          lower.includes('pengiriman paket') ||
+          lower.includes('ongkir') ||
+          lower.includes('toko online') ||
+          lower.includes('marketplace');
+
+        const isEmailQuery =
+          lower.includes('email') ||
+          lower.includes('pesan') ||
+          lower.includes('inbox') ||
+          lower.includes('webmail') ||
+          lower.includes('titan');
+
         const strippedText = stripHtml(replyText);
         const summaryLines = strippedText
           .split('\n')
@@ -1118,16 +1156,45 @@ export async function handleTelegramMessageUpdate(
           .slice(0, 6)
           .join('\n');
 
+        let cardCategory = 'AI EXECUTIVE ASSISTANT';
+        let cardPill = 'JAWABAN AI • REAL-TIME';
+        let cardTone = '#8b5cf6';
+        let cardDeep = '#6d28d9';
+        let cardPose: any = 'tips';
+        let cardBubble = 'Jawaban sudah siap! Cek detailnya ya.';
+        let captionHeader = '💡 <b>[JAWABAN AI] EasyLegal Assistant</b>';
+        let captionSub = 'Ringkasan jawaban tertera pada kartu di atas.';
+
+        if (isOutOfScope) {
+          cardCategory = 'CAKUPAN SISTEM & FITUR';
+          cardPill = 'DI LUAR CAKUPAN SISTEM';
+          cardTone = '#f59e0b';
+          cardDeep = '#b45309';
+          cardPose = 'memikirkan';
+          cardBubble = 'Fitur itu di luar cakupan platform.';
+          captionHeader = 'ℹ️ <b>[CAKUPAN SISTEM] EasyLegal Email Portal</b>';
+          captionSub = 'Fitur tersebut di luar cakupan portal email & dokumen.';
+        } else if (isEmailQuery) {
+          cardCategory = 'TRAFIK EMAIL & WEBMAIL';
+          cardPill = 'WEBMAIL & IMAP TITAN';
+          cardTone = '#06b6d4';
+          cardDeep = '#0891b2';
+          cardPose = 'semangat';
+          cardBubble = 'Kondisi webmail & pesan terkendali.';
+          captionHeader = '📧 <b>[STATUS EMAIL] Hostinger Titan Webmail</b>';
+          captionSub = 'Ringkasan status email tertera pada kartu di atas.';
+        }
+
         const cardBuffer = await generateAiAssistantCardPng({
           query: rawText.length > 35 ? `${rawText.slice(0, 32)}...` : rawText,
           replySummary: summaryLines || strippedText.slice(0, 250),
           senderName,
-          category: 'AI EXECUTIVE ASSISTANT',
-          pillText: 'JAWABAN AI • REAL-TIME',
-          toneColor: '#8b5cf6',
-          deepColor: '#6d28d9',
-          pose: 'tips',
-          bubbleText: 'Jawaban sudah siap! Cek detailnya ya.',
+          category: cardCategory,
+          pillText: cardPill,
+          toneColor: cardTone,
+          deepColor: cardDeep,
+          pose: cardPose,
+          bubbleText: cardBubble,
         });
 
         const replyMarkup = {
@@ -1144,9 +1211,9 @@ export async function handleTelegramMessageUpdate(
 
         if (cardBuffer) {
           const caption = [
-            `💡 <b>[JAWABAN AI] EasyLegal Assistant</b>`,
+            captionHeader,
             `❓ <i>"${escapeHtml(rawText.length > 60 ? `${rawText.slice(0, 57)}...` : rawText)}"</i>`,
-            `Ringkasan jawaban tertera pada kartu di atas.`,
+            captionSub,
           ].join('\n');
 
           const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup, chatId);

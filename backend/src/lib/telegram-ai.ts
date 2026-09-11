@@ -401,6 +401,26 @@ export async function processTelegramAiMessage(
       const systemPrompt = `Anda adalah "EasyLegal Assistant", AI Chat resmi Super Admin EasyLegal Customer Portal di Telegram.
 Tugas Anda: Menjawab pertanyaan Super Admin tentang segala KONDISI, TRANSAKSI, KEGIATAN, EMAIL, DOKUMEN, TIKET SUPPORT, dan KEAMANAN website EasyLegal.
 
+=== CAKUPAN RESMI PROYEK EASYLEGAL CUSTOMER PORTAL ===
+- Platform: EasyLegal Customer Portal (Email Korporasi & Legal Document Hub).
+- Layanan Inti:
+  1. Customer Portal: Antarmuka klien & admin (Next.js).
+  2. API Backend: Express, TypeScript, Prisma ORM, JWT, 2FA TOTP.
+  3. Webmail & IMAP: Email korporasi resmi berbasis Hostinger Titan Mail (IMAP port 993, SMTP port 465).
+  4. Legal Drive: Dokumen legal klien di Cloud S3 IDCloudHost (Hot Storage 5 GB, 90 hari) & Synology NAS kantor (Cold Storage > 90 hari).
+  5. Pusat Tiket Support: Helpdesk penanganan keluhan klien (SLA 1x24 jam normal, < 4 jam urgent).
+  6. Radar Keamanan: Sesi login aktif, deteksi multi-IP login, audit log, enkripsi AES-256-GCM.
+
+=== BATASAN KONTEKS & LARANGAN FITUR DI LUAR PROYEK (STRICT RULES) ===
+1. JANGAN PERNAH menyebutkan atau mengklaim fitur yang TIDAK ADA dalam proyek ini!
+2. Proyek ini TIDAK MEMILIKI:
+   - ❌ WhatsApp API / WhatsApp Gateway / integrasi WhatsApp bot apapun (seluruh komunikasi email resmi dikelola via Webmail Titan, dan notifikasi Super Admin via bot Telegram ini).
+   - ❌ Pelacakan resi ekspedisi / kurir / pengiriman paket fisik (JNE, J&T, SiCepat, dll). Platform ini hanya mengelola dokumen digital.
+   - ❌ E-commerce / toko online / marketplace.
+3. Jika ditanya tentang WhatsApp, resi pengiriman, kurir, atau hal di luar portal:
+   - TEGASKAN secara sopan dan ramah bahwa EasyLegal Customer Portal adalah platform email korporasi dan dokumen legal digital yang TIDAK memiliki fitur tersebut.
+   - Arahkan ke perintah resmi yang relevan (/status, /tiket, /storage, /keamanan).
+
 === DATA LIVE SNAPSHOT WEBSITE SAAT INI (REAL-TIME DARI DATABASE) ===
 - Kondisi Server: ${snap.system.status}, Uptime: ${(snap.system.uptimeSeconds / 3600).toFixed(1)} Jam, RAM: ${snap.system.memoryMb} MB, Database: ${snap.system.dbOk ? 'OK' : 'Error'}
 - Akun Mailbox: Total ${snap.accounts.total} akun (${snap.accounts.active} aktif, ${snap.accounts.inactive} nonaktif). Dibuat 24 jam terakhir: ${snap.accounts.createdLast24h} akun.
@@ -473,7 +493,64 @@ function generateLocalHeuristicResponse(
 ): string {
   const q = query.toLowerCase();
 
-  // 1. Transaksi & Kegiatan / Aktivitas / Audit Log
+  // 0. Pertanyaan di luar cakupan proyek (Out-of-scope: WhatsApp, Resi, Ekspedisi, E-commerce)
+  if (
+    q.includes('whatsapp') ||
+    q.includes(' wa ') ||
+    q.startsWith('wa ') ||
+    q.endsWith(' wa') ||
+    q === 'wa' ||
+    q.includes('resi') ||
+    q.includes('ekspedisi') ||
+    q.includes('kurir') ||
+    q.includes('pengiriman paket') ||
+    q.includes('ongkir') ||
+    q.includes('toko online') ||
+    q.includes('marketplace')
+  ) {
+    return [
+      `ℹ️ <b>[INFORMASI CAKUPAN PROYEK EASYLEGAL]</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `Platform ini adalah <b>EasyLegal Customer Portal</b> yang berfokus eksklusif pada <b>Email Korporasi (Webmail Titan)</b> dan <b>Legal Document Hub (S3 & Synology NAS)</b>.`,
+      ``,
+      `❌ <b>Fitur di Luar Cakupan Platform:</b>`,
+      `• <b>WhatsApp Gateway / API:</b> Tidak tersedia. Komunikasi resmi email dikelola via Webmail Titan Mail, dan notifikasi admin via bot Telegram ini.`,
+      `• <b>Pelacakan Resi / Ekspedisi:</b> Tidak tersedia. Platform ini mengelola dokumen digital, bukan pengiriman barang fisik.`,
+      ``,
+      `💡 <b>Layanan Inti yang Tersedia:</b>`,
+      `• <code>/status</code> - Kondisi server, database & cluster webmail`,
+      `• <code>/tiket</code> - Pusat tiket bantuan & keluhan klien`,
+      `• <code>/storage</code> - Kapasitas penyimpanan Cloud S3 & Synology NAS`,
+      `• <code>/keamanan</code> - Radar keamanan sesi & deteksi multi-IP`,
+    ].join('\n');
+  }
+
+  // 1. Email & Pesan / Webmail Titan
+  if (
+    q.includes('email') ||
+    q.includes('pesan') ||
+    q.includes('inbox') ||
+    q.includes('webmail') ||
+    q.includes('titan') ||
+    q.includes('surat')
+  ) {
+    const recentMails = snap.messages.recentList.length > 0
+      ? snap.messages.recentList.map((m) => `• <code>${m.date}</code>: Dari <i>${escapeHtml(m.sender)}</i>\n  Subjek: <b>${escapeHtml(m.subject)}</b> (${m.mailbox})`).join('\n\n')
+      : '<i>Belum ada pesan email terbaru di cache.</i>';
+
+    return [
+      `📧 <b>[STATUS TRAFIK EMAIL & WEBMAIL TITAN]</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `• Total Email di Cache: <b>${snap.messages.total} Pesan</b>`,
+      `• Email Belum Dibaca (Inbox): <b>${snap.messages.unread} Pesan</b>`,
+      `• Koneksi Hostinger Titan: 🟢 <b>Tersinkronisasi (IMAP 993 / SMTP 465)</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `📩 <b>Pesan Terbaru:</b>`,
+      recentMails,
+    ].join('\n');
+  }
+
+  // 2. Transaksi & Kegiatan / Aktivitas / Audit Log
   if (
     q.includes('transaksi') ||
     q.includes('kegiatan') ||

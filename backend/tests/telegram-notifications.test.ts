@@ -969,5 +969,59 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
       expect(isPng(sentPhoto)).toBe(true);
       expect(sentCaption).toContain('Perintah Tidak Dikenali');
     });
+
+    it('Strict Scope: Out-of-scope query (e.g. WhatsApp or resi) sends card with CAKUPAN SISTEM & FITUR and pose memikirkan', async () => {
+      let sentPhoto: Buffer | null = null;
+      let sentCaption = '';
+      global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+        if (opts.body instanceof FormData) {
+          const file: any = opts.body.get('photo');
+          if (file && typeof file.arrayBuffer === 'function') {
+            sentPhoto = Buffer.from(await file.arrayBuffer());
+          }
+          sentCaption = (opts.body.get('caption') as string) || '';
+        }
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 108 } }) };
+      }) as any;
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 8,
+        chat: { id: -1001234567890, first_name: 'Admin' },
+        from: { id: 12345, first_name: 'Admin' },
+        text: 'Apakah bisa integrasi dengan WhatsApp API atau cek resi pengiriman barang?',
+      });
+
+      expect(sentPhoto).not.toBeNull();
+      expect(isPng(sentPhoto)).toBe(true);
+      expect(sentCaption).toContain('CAKUPAN SISTEM');
+      expect(sentCaption).toContain('EasyLegal Email Portal');
+    });
+
+    it('Strict Scope: Email natural language query sends card with TRAFIK EMAIL & WEBMAIL and pose semangat', async () => {
+      let sentPhoto: Buffer | null = null;
+      let sentCaption = '';
+      global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+        if (opts.body instanceof FormData) {
+          const file: any = opts.body.get('photo');
+          if (file && typeof file.arrayBuffer === 'function') {
+            sentPhoto = Buffer.from(await file.arrayBuffer());
+          }
+          sentCaption = (opts.body.get('caption') as string) || '';
+        }
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 109 } }) };
+      }) as any;
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 9,
+        chat: { id: -1001234567890, first_name: 'Admin' },
+        from: { id: 12345, first_name: 'Admin' },
+        text: 'Bagaimana status trafik email dan pesan masuk hari ini?',
+      });
+
+      expect(sentPhoto).not.toBeNull();
+      expect(isPng(sentPhoto)).toBe(true);
+      expect(sentCaption).toContain('STATUS EMAIL');
+      expect(sentCaption).toContain('Hostinger Titan Webmail');
+    });
   });
 });

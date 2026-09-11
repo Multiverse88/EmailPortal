@@ -30,6 +30,38 @@ export const PORTAL_KNOWLEDGE_BASE: KnowledgeItem[] = [
     ],
   },
   {
+    id: "scope-and-unsupported-features",
+    title: "Cakupan Layanan Portal & Batasan Fitur",
+    keywords: [
+      "whatsapp",
+      "wa",
+      "whatsapp gateway",
+      "whatsapp api",
+      "wa bot",
+      "resi",
+      "cek resi",
+      "ekspedisi",
+      "kurir",
+      "pengiriman barang",
+      "paket pengiriman",
+      "ongkir",
+      "toko online",
+      "marketplace",
+      "jual beli",
+      "beli barang",
+    ],
+    summary:
+      "EasyLegal Customer Portal khusus untuk email korporasi resmi dan manajemen berkas hukum, tidak menyediakan WhatsApp API atau pelacakan ekspedisi.",
+    content:
+      "**EasyLegal Customer Portal** secara khusus berfokus sebagai **Platform Email Korporasi Resmi & Legal Document Hub**.\n\nLayanan portal ini **tidak menyediakan maupun mendukung**:\n- ❌ **WhatsApp API / WhatsApp Gateway**: Seluruh komunikasi email resmi korporasi dikelola melalui **Hostinger Titan Mail (Webmail)** di menu Kotak Masuk.\n- ❌ **Pelacakan Resi / Ekspedisi / Kurir**: Portal ini mengelola berkas dokumen digital, bukan pengiriman barang fisik.\n- ❌ **Toko Online / Marketplace**: Portal ini adalah hub privat B2B khusus klien korporasi EasyLegal.\n\nFitur resmi yang tersedia di portal ini:\n1. **Kotak Masuk (/inbox)**: Email korporasi aman berbasis Titan Mail (IMAP/SMTP).\n2. **Legal Drive (/documents)**: Hot Storage S3 & Cold Storage Synology NAS.\n3. **Pusat Bantuan (/support)**: Layanan helpdesk tiket terpadu.\n4. **Pengaturan (/settings)**: Keamanan 2FA TOTP, kelola sesi & kuota storage.",
+    pose: "thinking",
+    quickActions: [
+      { label: "✉️ Kotak Masuk", action: "navigate-inbox", url: "/inbox" },
+      { label: "📁 Legal Drive", action: "navigate-documents", url: "/documents" },
+      { label: "🎫 Pusat Bantuan", action: "open-support-modal" },
+    ],
+  },
+  {
     id: "backend-tech-architecture",
     title: "Arsitektur Backend & Teknologi Sistem",
     keywords: [
