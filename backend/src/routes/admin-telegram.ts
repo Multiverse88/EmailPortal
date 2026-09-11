@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { getTelegramConfig, sendTelegramMessage, sendDailyDigest } from '../lib/telegram';
+import { processTelegramAiMessage } from '../lib/telegram-ai';
 
 export default (prisma: PrismaClient) => {
   const router = Router();
@@ -9,7 +10,7 @@ export default (prisma: PrismaClient) => {
   router.get('/status', async (_req: Request, res: Response) => {
     try {
       const config = getTelegramConfig();
-      const cronSchedule = process.env.TELEGRAM_DAILY_SUMMARY_CRON || '0 8 * * *';
+      const cronSchedule = process.env.TELEGRAM_DAILY_SUMMARY_CRON || '0 7 * * *';
       const timezone = process.env.TZ || 'Asia/Jakarta';
 
       // Mask chat ID for display privacy (e.g. -100****1234 or 123****78)
@@ -100,6 +101,30 @@ export default (prisma: PrismaClient) => {
     } catch (error: any) {
       console.error('Trigger daily digest error:', error);
       res.status(500).json({ error: error.message || 'Gagal membuat laporan harian' });
+    }
+  });
+
+  // POST /api/admin/telegram/ask-ai - test AI chat logic directly from Admin Console
+  router.post('/ask-ai', async (req: Request, res: Response) => {
+    try {
+      const { question } = req.body || {};
+      if (!question || typeof question !== 'string' || !question.trim()) {
+        return res.status(400).json({ error: 'Pertanyaan (question) wajib diisi' });
+      }
+
+      const adminEmail = req.user?.email || 'Super Admin';
+      const answer = await processTelegramAiMessage(prisma, question.trim(), {
+        senderName: adminEmail,
+      });
+
+      res.json({
+        success: true,
+        question: question.trim(),
+        answer,
+      });
+    } catch (error: any) {
+      console.error('Ask Telegram AI error:', error);
+      res.status(500).json({ error: error.message || 'Gagal memproses pertanyaan AI' });
     }
   });
 

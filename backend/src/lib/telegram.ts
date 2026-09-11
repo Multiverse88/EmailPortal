@@ -34,26 +34,31 @@ export function escapeHtml(str?: string | null): string {
  */
 export async function sendTelegramMessage(
   text: string,
-  parseMode: 'HTML' | 'Markdown' = 'HTML'
+  parseMode: 'HTML' | 'Markdown' = 'HTML',
+  customChatId?: string | number
 ): Promise<{ success: boolean; messageId?: number; error?: string }> {
-  const { botToken, chatId, enabled } = getTelegramConfig();
+  const { botToken, chatId: defaultChatId, enabled } = getTelegramConfig();
+  const targetChatId = customChatId ? String(customChatId) : defaultChatId;
 
-  if (!enabled || !botToken || !chatId) {
+  if (!enabled || !botToken || !targetChatId) {
     // Graceful log when Telegram credentials not yet configured
     if (process.env.NODE_ENV !== 'test') {
-      console.log('[Telegram Bot] Notification skipped (TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured).');
+      console.log('[Telegram Bot] Notification skipped (TELEGRAM_BOT_TOKEN or target chat ID not configured).');
     }
     return { success: false, error: 'Telegram credentials not configured' };
   }
 
   try {
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    // Telegram character limit is 4096. Keep a safety margin of 4000.
+    const safeText = text.length > 4000 ? `${text.slice(0, 3950)}\n\n<i>...(pesan dipotong karena batas panjang teks Telegram)</i>` : text;
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: chatId,
-        text,
+        chat_id: targetChatId,
+        text: safeText,
         parse_mode: parseMode,
         disable_web_page_preview: false,
       }),
@@ -69,6 +74,31 @@ export async function sendTelegramMessage(
   } catch (error: any) {
     console.error('[Telegram Bot] Network error:', error?.message || error);
     return { success: false, error: error?.message || 'Network error' };
+  }
+}
+
+/**
+ * Sends a chat action indicator (e.g. typing) to Telegram
+ */
+export async function sendChatAction(
+  chatId: string | number,
+  action: 'typing' | 'upload_document' = 'typing'
+): Promise<boolean> {
+  const { botToken } = getTelegramConfig();
+  if (!botToken) return false;
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/sendChatAction`;
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: String(chatId),
+        action,
+      }),
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -122,9 +152,12 @@ export async function notifyNewSupportTicket(
 /**
  * Generates and sends comprehensive Daily Website Health & Security Digest Report
  */
-export async function sendDailyDigest(prisma: PrismaClient): Promise<{ success: boolean; reportText: string }> {
+export async function sendDailyDigest(
+  prisma: PrismaClient,
+  customChatId?: string | number
+): Promise<{ success: boolean; reportText: string }> {
   const now = new Date();
-  const dateStr = format(now, 'EEEE, dd MMMM yyyy - 08:00', { locale: localeId });
+  const dateStr = format(now, 'EEEE, dd MMMM yyyy - 07:00', { locale: localeId });
 
   // 1. Account & Mailbox metrics
   const [
@@ -204,7 +237,7 @@ export async function sendDailyDigest(prisma: PrismaClient): Promise<{ success: 
     `https://clienteasylegal.co.id/admin`,
   ].join('\n');
 
-  const res = await sendTelegramMessage(reportText);
+  const res = await sendTelegramMessage(reportText, 'HTML', customChatId);
   return { success: res.success, reportText };
 }
 

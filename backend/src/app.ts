@@ -20,6 +20,7 @@ import adminDocumentsRoutes from './routes/admin-documents';
 import adminSupportRoutes from './routes/admin-support';
 import adminTelegramRoutes from './routes/admin-telegram';
 import { SyncWorker } from './workers/sync';
+import { handleTelegramMessageUpdate } from './workers/telegram-bot';
 
 const app = express();
 export const prisma = new PrismaClient();
@@ -74,6 +75,20 @@ app.use('/api/companion', companionRoutes(prisma));
 app.use('/api/admin/documents', authenticateOfficerOrAdmin, adminDocumentsRoutes(prisma));
 app.use('/api/admin/support', authenticateSuperAdmin, adminSupportRoutes(prisma));
 app.use('/api/admin/telegram', authenticateSuperAdmin, adminTelegramRoutes(prisma));
+
+// Public Telegram Webhook endpoint (if Webhook mode is used instead of Polling)
+app.post('/api/telegram/webhook', async (req, res) => {
+  try {
+    if (req.body?.message) {
+      handleTelegramMessageUpdate(prisma, req.body.message).catch((err: any) => {
+        console.error('[Telegram Webhook] Error:', err);
+      });
+    }
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: 'Webhook processing error' });
+  }
+});
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -166,6 +166,29 @@ export function SupportTicketsDesk({ onNotify }: Props) {
     }
   };
 
+  // AI Chat Assistant Test Console in UI
+  const [showAiConsole, setShowAiConsole] = useState(false);
+  const [aiConsoleQuestion, setAiConsoleQuestion] = useState('');
+  const [aiConsoleAnswer, setAiConsoleAnswer] = useState<string | null>(null);
+  const [isAskingAi, setIsAskingAi] = useState(false);
+
+  const handleAskAiConsole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiConsoleQuestion.trim()) return;
+    setIsAskingAi(true);
+    setAiConsoleAnswer(null);
+    try {
+      const res = await api.post('/admin/telegram/ask-ai', { question: aiConsoleQuestion.trim() });
+      if (res.data.success && res.data.answer) {
+        setAiConsoleAnswer(res.data.answer);
+      }
+    } catch (err: any) {
+      onNotify(errMsg(err, 'Gagal memproses pertanyaan ke AI Assistant'));
+    } finally {
+      setIsAskingAi(false);
+    }
+  };
+
   const handleGetAiSuggestion = async () => {
     if (!selectedTicketId) return;
     setIsGeneratingAi(true);
@@ -304,12 +327,12 @@ export function SupportTicketsDesk({ onNotify }: Props) {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm font-semibold tracking-tight text-white">
-                  Pusat Notifikasi &amp; Rangkuman Harian Telegram
+                  Pusat Notifikasi &amp; AI Assistant Telegram
                 </h3>
                 {tgStatus?.configured ? (
                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Bot Aktif Terhubung
+                    Bot &amp; AI Chat Siaga
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/20 text-amber-300 border border-amber-500/40">
@@ -321,11 +344,11 @@ export function SupportTicketsDesk({ onNotify }: Props) {
               <p className="text-xs text-slate-300 mt-1 leading-relaxed">
                 {tgStatus?.configured ? (
                   <>
-                    Target Obrolan: <code className="text-blue-300 bg-white/10 px-1.5 py-0.5 rounded">{tgStatus.maskedChatId}</code> &bull; Jadwal Rangkuman: <span className="font-semibold text-emerald-300">Setiap Hari 08:00 WIB</span> &bull; Alert Tiket: <span className="font-semibold text-blue-300">Real-time</span>
+                    Target Obrolan: <code className="text-blue-300 bg-white/10 px-1.5 py-0.5 rounded">{tgStatus.maskedChatId}</code> &bull; Jadwal Rangkuman: <span className="font-semibold text-emerald-300">Setiap Hari 07:00 WIB</span> &bull; AI Chat: <span className="font-semibold text-indigo-300">Aktif 24/7 (Tanya Kondisi &amp; Transaksi)</span>
                   </>
                 ) : (
                   <>
-                    Atur <code className="text-amber-300 bg-white/10 px-1 py-0.5 rounded">TELEGRAM_BOT_TOKEN</code> &amp; <code className="text-amber-300 bg-white/10 px-1 py-0.5 rounded">TELEGRAM_CHAT_ID</code> di server backend agar notifikasi tiket baru &amp; rangkuman harian dikirim otomatis.
+                    Atur <code className="text-amber-300 bg-white/10 px-1 py-0.5 rounded">TELEGRAM_BOT_TOKEN</code> &amp; <code className="text-amber-300 bg-white/10 px-1 py-0.5 rounded">TELEGRAM_CHAT_ID</code> di server backend. Bot akan mengabari rangkuman harian jam 07:00 WIB, notifikasi tiket real-time, dan bisa diajak chat seputar kondisi/transaksi website.
                   </>
                 )}
               </p>
@@ -333,6 +356,16 @@ export function SupportTicketsDesk({ onNotify }: Props) {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowAiConsole(!showAiConsole)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/80 hover:bg-indigo-600 text-white shadow-sm transition-colors cursor-pointer"
+              title="Simulasi tanya AI seputar kondisi dan transaksi website"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{showAiConsole ? 'Tutup Uji AI' : '💬 Tanya AI Website'}</span>
+            </button>
+
             <button
               type="button"
               onClick={handleTestTelegram}
@@ -352,7 +385,7 @@ export function SupportTicketsDesk({ onNotify }: Props) {
               title="Kirim laporan kondisi website & keamanan sekarang"
             >
               {sendingDigest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              <span>{sendingDigest ? 'Memproses...' : 'Kirim Rangkuman Sekarang'}</span>
+              <span>{sendingDigest ? 'Memproses...' : 'Kirim Rangkuman (07:00 WIB)'}</span>
             </button>
 
             <button
@@ -366,6 +399,88 @@ export function SupportTicketsDesk({ onNotify }: Props) {
           </div>
         </div>
 
+        {/* Interactive AI Chat Test Console */}
+        {showAiConsole && (
+          <div className="mt-4 pt-4 border-t border-slate-700/80 space-y-3 bg-black/20 p-4 rounded-xl border border-white/10">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-indigo-400" />
+                Simulasi Tanya Jawab AI Telegram (Kondisi, Transaksi &amp; Kegiatan Website)
+              </span>
+              <span className="text-[11px] text-slate-400">
+                Sama persis dengan yang dijawab bot bila Anda chat di Telegram
+              </span>
+            </div>
+
+            <form onSubmit={handleAskAiConsole} className="flex gap-2">
+              <input
+                type="text"
+                value={aiConsoleQuestion}
+                onChange={(e) => setAiConsoleQuestion(e.target.value)}
+                placeholder="Contoh: Ada transaksi atau aktivitas apa saja barusan? / Bagaimana kondisi server sekarang?"
+                className="flex-1 px-3 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+              />
+              <button
+                type="submit"
+                disabled={isAskingAi || !aiConsoleQuestion.trim()}
+                className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg flex items-center gap-1.5 cursor-pointer shrink-0"
+              >
+                {isAskingAi ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                <span>Tanyakan</span>
+              </button>
+            </form>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-slate-400">Pertanyaan Cepat:</span>
+              <button
+                type="button"
+                onClick={() => setAiConsoleQuestion('/status')}
+                className="px-2 py-0.5 rounded text-[10px] bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
+              >
+                /status
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiConsoleQuestion('/kegiatan')}
+                className="px-2 py-0.5 rounded text-[10px] bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
+              >
+                /kegiatan
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiConsoleQuestion('/tiket')}
+                className="px-2 py-0.5 rounded text-[10px] bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
+              >
+                /tiket
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiConsoleQuestion('Ada transaksi atau kegiatan apa saja barusan?')}
+                className="px-2 py-0.5 rounded text-[10px] bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
+              >
+                Transaksi Terkini
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiConsoleQuestion('Bagaimana kondisi server dan webmail hari ini?')}
+                className="px-2 py-0.5 rounded text-[10px] bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
+              >
+                Kondisi Server
+              </button>
+            </div>
+
+            {aiConsoleAnswer && (
+              <div className="mt-3 p-3.5 rounded-lg bg-slate-900/90 border border-indigo-500/40 space-y-2">
+                <span className="text-[11px] font-bold text-indigo-300">Jawaban AI Telegram Assistant:</span>
+                <div
+                  className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-sans"
+                  dangerouslySetInnerHTML={{ __html: aiConsoleAnswer }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Collapsible Setup Guide */}
         {showTgGuide && (
           <div className="mt-4 pt-4 border-t border-slate-700/80 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
@@ -378,7 +493,7 @@ export function SupportTicketsDesk({ onNotify }: Props) {
             <div className="p-3 rounded-lg bg-black/20 border border-white/5 space-y-1">
               <div className="font-semibold text-blue-300">2. Dapatkan Chat ID</div>
               <p className="text-slate-300 text-[11px] leading-relaxed">
-                Tambahkan bot ke grup/channel Super Admin EasyLegal, lalu periksa Chat ID (misal: <code>-100xxxxxxx</code>) via bot <b>@userinfobot</b> atau Webhook update.
+                Tambahkan bot ke grup/channel Super Admin EasyLegal, lalu periksa Chat ID (misal: <code>-100xxxxxxx</code>) via bot <b>@userinfobot</b> atau kirim chat ke bot lalu cek ID.
               </p>
             </div>
             <div className="p-3 rounded-lg bg-black/20 border border-white/5 space-y-1">

@@ -8,7 +8,7 @@ let dailyDigestTask: cron.ScheduledTask | null = null;
  * Initializes background cron jobs for daily website health & security digest reports
  */
 export function startScheduler(prisma: PrismaClient) {
-  const cronExpression = process.env.TELEGRAM_DAILY_SUMMARY_CRON || '0 8 * * *'; // Default: 08:00 AM WIB
+  const cronExpression = process.env.TELEGRAM_DAILY_SUMMARY_CRON || '0 7 * * *'; // Default: 07:00 AM WIB
   const timezone = process.env.TZ || 'Asia/Jakarta';
 
   console.log(`⏱️ [Scheduler] Registering Daily Telegram Digest Cron: "${cronExpression}" (${timezone})`);

@@ -239,32 +239,43 @@ model DocumentMetadata {
 
 Untuk memperkuat respon insiden tanpa harus selalu membuka dashboard, EasyLegal mengintegrasikan saluran siaga resmi **Telegram Bot API**:
 
-1. **Rangkuman Harian Kondisi & Keamanan Website (Scheduled 08:00 WIB)**:
-   - Dijalankan otomatis oleh worker `backend/src/workers/scheduler.ts` menggunakan cron expression `0 8 * * *` (Timezone: `Asia/Jakarta`).
+1. **Rangkuman Harian Kondisi & Keamanan Website (Scheduled 07:00 WIB)**:
+   - Dijalankan otomatis oleh worker `backend/src/workers/scheduler.ts` menggunakan cron expression `0 7 * * *` (Timezone: `Asia/Jakarta`).
    - Melaporkan 4 pilar utama:
      - **Kesehatan Webmail & Portal**: Status cluster Titan Mail (IMAP 993 / SMTP 465), total mailbox aktif/nonaktif, cache pesan email.
      - **Radar Keamanan & Anomali**: Sesi aktif, deteksi login multi-IP simultan, 24-jam audit log, status in-memory zero-leakage.
      - **Kapasitas Hot S3 & Cold Storage**: Kuota IDCloudHost terpakai, jumlah berkas legal, konektivitas Synology NAS.
      - **Status Tiket Support Klien**: Jumlah tiket open, tiket prioritas urgent (&lt; 4 Jam SLA), tiket selesai.
-2. **Notifikasi Real-time Tiket Support Baru**:
+2. **AI Chatbot Telegram Interaktif 24/7 (Kondisi, Transaksi & Kegiatan Website)**:
+   - Super Admin dapat mengirimkan pertanyaan langsung di obrolan Telegram mengenai segala kondisi, transaksi, atau aktivitas di website.
+   - Didukung oleh mesin AI (9router API / Smart Heuristic Local Fallback) yang mengambil snapshot live database terkini:
+     - Log audit & transaksi administratif terbaru (`AuditLog`).
+     - Aliran email masuk & keluar (`MessageCache`).
+     - Berkas dokumen yang baru diunggah di Legal Drive (`LegalDocument`).
+     - Status antrean tiket bantuan klien (`SupportTicket`).
+   - Menyediakan perintah jalan pintas: `/start`, `/status`, `/kegiatan`, `/tiket`, `/keamanan`, `/storage`, `/ringkasan`.
+3. **Notifikasi Real-time Tiket Support Baru**:
    - Dipicu seketika (*instant non-blocking event*) saat klien mengirimkan tiket baru di `/api/support/tickets`.
    - Menampilkan nomor tiket (`#TK-XXXX`), prioritas SLA, kategori, nama klien, mailbox resmi, dan ringkasan pesan keluhan.
-3. **Peringatan Seketika Anomali Login Multi-IP**:
+4. **Peringatan Seketika Anomali Login Multi-IP**:
    - Dikirimkan saat sebuah akun terdeteksi masuk dari 2 atau lebih alamat IP berbeda secara bersamaan.
-4. **Keamanan Transmisi**:
+5. **Keamanan Transmisi & Akses**:
    - Seluruh payload dikirim langsung melalui enkripsi TLS 1.3 ke server resmi `api.telegram.org`.
+   - Verifikasi ketat `TELEGRAM_CHAT_ID` untuk menolak akses dari pihak luar yang tidak terotorisasi.
    - Fungsi `escapeHtml()` diterapkan untuk mencegah eksploitasi injeksi teks formatting Telegram.
    - Hak kontrol pengujian dan manual trigger digest dibatasi eksklusif untuk **Super Admin** (`/api/admin/telegram/*`).
 
-### Diagram 4: Alur Notifikasi Tiket & Rangkuman Harian Telegram
+### Diagram 4: Alur Notifikasi Tiket, Rangkuman Harian (07:00 WIB), & AI Chatbot
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Customer as Klien / Browser
     participant API as EasyLegal Backend API
-    participant Scheduler as Scheduler Worker (Cron 08:00 WIB)
+    participant BotWorker as Telegram Bot Worker (Long Polling)
+    participant Scheduler as Scheduler Worker (Cron 07:00 WIB)
     participant DB as Database (Prisma ORM)
+    participant AI as AI Engine (9router / Heuristic)
     participant TG as Telegram Bot API
     actor SuperAdmin as Super Admin (HP / Desktop Telegram)
 
@@ -277,10 +288,22 @@ sequenceDiagram
     end
 
     rect rgb(255, 250, 240)
-    Note over Scheduler,TG: Alur 2: Rangkuman Otomatis Harian (08:00 WIB)
+    Note over Scheduler,TG: Alur 2: Rangkuman Otomatis Harian (07:00 WIB)
     Scheduler->>DB: Agregasi Metrik (Mailbox, Storage S3, Anomali IP, Tiket Open)
     DB-->>Scheduler: Data Statistik Sistem Terkini
     Scheduler->>TG: POST /sendMessage (Laporan Komprehensif 4 Pilar)
     TG-->>SuperAdmin: 🌅 Rangkuman Harian Website & Keamanan
+    end
+
+    rect rgb(245, 245, 255)
+    Note over SuperAdmin,AI: Alur 3: Tanya Jawab AI Chatbot Telegram (Kondisi & Transaksi)
+    SuperAdmin->>TG: "Ada transaksi & kegiatan apa saja hari ini?"
+    TG->>BotWorker: getUpdates (Long Polling Event)
+    BotWorker->>DB: Snapshot Metrik, AuditLog, Tiket, Storage Terkini
+    DB-->>BotWorker: Live Snapshot
+    BotWorker->>AI: Format Konteks Live + Pertanyaan Admin
+    AI-->>BotWorker: Jawaban Analitis Format HTML Telegram
+    BotWorker->>TG: POST /sendMessage (Jawaban Akurat Real-time)
+    TG-->>SuperAdmin: 💬 Balasan AI: Rangkuman Transaksi & Kondisi Terkini
     end
 ```
