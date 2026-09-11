@@ -1029,10 +1029,6 @@ function SettingsContent() {
                                 </span>
                               )}
                             </div>
-                            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2">
-                              <span className="text-[9px] font-bold text-primary tracking-wide">EASYLEGAL CLIENT MAIL</span>
-                              <span className="text-[9px] text-slate-400">• Confirmed Safe Sender</span>
-                            </div>
                           </div>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-2">

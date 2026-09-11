@@ -186,9 +186,9 @@ export async function resolveAvatarMap(
 }
 
 export function buildBrandedEmailHtml(opts: {
-  customer: { id: string; name: string; mailboxAddress: string; avatarUrl: string | null };
+  customer?: { id?: string; name?: string; mailboxAddress?: string; avatarUrl?: string | null };
   bodyText: string;
-  portalUrl: string;
+  portalUrl?: string;
 }): string {
   const rawText = opts.bodyText || '';
   const escapedText = rawText
@@ -204,35 +204,9 @@ export function buildBrandedEmailHtml(opts: {
     .map((p) => `<p style="margin: 0 0 16px 0; line-height: 1.6;">${p.replace(/\n/g, '<br/>')}</p>`)
     .join('');
 
-  const avatarSrc = opts.customer.avatarUrl
-    ? `${opts.portalUrl}/api/settings/avatar/${opts.customer.id}`
-    : `${opts.portalUrl}/companion/el/el-avatar-kepala.png`;
-
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1e293b; max-width: 650px;">
-      <div style="margin-bottom: 24px;">
-        ${paragraphs || `<p style="margin: 0;">${escapedText.replace(/\n/g, '<br/>')}</p>`}
-      </div>
-
-      <!-- EasyLegal Corporate Signature Block -->
-      <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; width: 100%;">
-        <tr>
-          <td style="width: 54px; vertical-align: middle; padding-right: 14px;">
-            <img src="${avatarSrc}" alt="${opts.customer.name}" width="50" height="50" style="width: 50px; height: 50px; border-radius: 10px; object-fit: contain; border: 1px solid #e2e8f0; display: block; background-color: #ffffff;" />
-          </td>
-          <td style="vertical-align: middle;">
-            <div style="font-size: 14px; font-weight: 700; color: #0f172a; line-height: 1.3;">
-              ${opts.customer.name}
-            </div>
-            <div style="font-size: 12px; color: #64748b; margin-top: 2px; line-height: 1.4;">
-              <a href="mailto:${opts.customer.mailboxAddress}" style="color: #0284c7; text-decoration: none;">${opts.customer.mailboxAddress}</a>
-            </div>
-            <div style="margin-top: 6px; display: inline-block; font-size: 11px; font-weight: 600; color: #0369a1; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 2px 8px;">
-              EasyLegal Verified Corporate Client
-            </div>
-          </td>
-        </tr>
-      </table>
+      ${paragraphs || `<p style="margin: 0;">${escapedText.replace(/\n/g, '<br/>')}</p>`}
     </div>
   `.trim();
 }

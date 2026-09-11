@@ -199,34 +199,6 @@ export function ComposeModal({
               </div>
             </div>
           )}
-
-          {/* Corporate Signature & Logo Preview Banner */}
-          <div className="mt-2 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-slate-50/70 p-2.5 rounded-xl border border-slate-200/60">
-            <div className="flex items-center gap-2.5 min-w-0">
-              {user?.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt="Logo"
-                  className="w-7 h-7 rounded-lg object-contain bg-white border border-slate-200 shrink-0 shadow-2xs"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px] shrink-0">
-                  {user?.name ? user.name.slice(0, 2).toUpperCase() : 'EL'}
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="font-semibold text-slate-800 text-[11px] truncate">
-                  {user?.name || 'Klien EasyLegal'}
-                </div>
-                <div className="text-[10px] text-slate-500 truncate">
-                  Tanda tangan resmi & logo perusahaan otomatis disertakan
-                </div>
-              </div>
-            </div>
-            <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full font-medium shrink-0 ml-2">
-              Auto Signature Berlogo
-            </span>
-          </div>
         </div>
 
         {/* Footer */}

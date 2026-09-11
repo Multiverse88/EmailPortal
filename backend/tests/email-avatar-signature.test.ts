@@ -65,7 +65,7 @@ describe('Email Avatar and Branded Signature Integration', () => {
       expect(extractRootDomain('clienteasylegal.co.id')).toBe('clienteasylegal.co.id');
     });
 
-    it('buildBrandedEmailHtml formats body and includes customer avatar URL and signature', () => {
+    it('buildBrandedEmailHtml formats clean body without unwanted corporate badges', () => {
       const html = buildBrandedEmailHtml({
         customer: {
           id: customer.id,
@@ -77,11 +77,9 @@ describe('Email Avatar and Branded Signature Integration', () => {
         portalUrl: 'https://clienteasylegal.co.id',
       });
 
-      expect(html).toContain('https://clienteasylegal.co.id/api/settings/avatar/' + customer.id);
-      expect(html).toContain(customer.name);
-      expect(html).toContain(customer.mailboxAddress);
-      expect(html).toContain('EasyLegal Verified Corporate Client');
       expect(html).toContain('Ini adalah pesan resmi legal.');
+      expect(html).not.toContain('EasyLegal Verified Corporate Client');
+      expect(html).not.toContain('border-top: 1px solid #e2e8f0');
     });
 
     it('resolveAvatarMap resolves customer avatars, system admin logo, and external senders', async () => {
@@ -177,7 +175,7 @@ describe('Email Avatar and Branded Signature Integration', () => {
       expect(res.body.senderAvatarUrl).toBe('/companion/el/el-avatar-kepala.png');
     });
 
-    it('POST /api/email/send generates branded HTML body with customer logo and signature', async () => {
+    it('POST /api/email/send generates clean HTML body without unwanted corporate badges', async () => {
       const res = await request(app)
         .post('/api/email/send')
         .set('Authorization', `Bearer ${token}`)
@@ -194,9 +192,9 @@ describe('Email Avatar and Branded Signature Integration', () => {
 
       expect(createdMsg).toBeDefined();
       expect(createdMsg?.bodyHtml).toBeDefined();
-      expect(createdMsg?.bodyHtml).toContain(`/api/settings/avatar/${customer.id}`);
-      expect(createdMsg?.bodyHtml).toContain(customer.name);
-      expect(createdMsg?.bodyHtml).toContain('EasyLegal Verified Corporate Client');
+      expect(createdMsg?.bodyHtml).toContain('Berikut terlampir draf dokumen resmi kami.');
+      expect(createdMsg?.bodyHtml).not.toContain('EasyLegal Verified Corporate Client');
+      expect(createdMsg?.bodyHtml).not.toContain('border-top: 1px solid #e2e8f0');
     });
   });
 });
