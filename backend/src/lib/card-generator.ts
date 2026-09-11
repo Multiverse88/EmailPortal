@@ -1,3 +1,5 @@
+import { MASCOT_POSES } from './mascot-assets';
+
 /**
  * Escapes characters for XML/SVG compliance to prevent parser breakage
  */
@@ -48,6 +50,34 @@ const ICONS = {
   ticket: `<path d="M2 9a3 3 0 010 6v2a2 2 0 002 2h16a2 2 0 002-2v-2a3 3 0 010-6V7a2 2 0 00-2-2H4a2 2 0 00-2 2v2z" fill="none" stroke="#f472b6" stroke-width="2"/>`,
 };
 
+// "EL" mascot stage: speech bubble + illustration in the card's right-hand lane,
+// reusing the same character art shown in the bot notification mockup
+// (easylegal-kartu-notifikasi.html). Pose/bubble text is chosen per-condition by callers.
+const MASCOT_LANE_X = 685;
+const MASCOT_LANE_CENTER_X = 780;
+const MASCOT_BOTTOM_Y = 458;
+
+function renderMascotStage(pose: keyof typeof MASCOT_POSES, bubble: string, accentColor: string): string {
+  const art = MASCOT_POSES[pose];
+  const targetH = 250;
+  const targetW = Math.round(targetH * (art.w / art.h));
+  const imgX = MASCOT_LANE_CENTER_X - targetW / 2;
+  const imgY = MASCOT_BOTTOM_Y - targetH;
+
+  const lines = wrapText(bubble, 28).slice(0, 3);
+  const bubbleH = 34 + lines.length * 18;
+  const bubbleTspans = lines
+    .map((line, idx) => `<tspan x="${MASCOT_LANE_X + 15}" dy="${idx === 0 ? 0 : 17}">${escapeXml(line)}</tspan>`)
+    .join('');
+
+  return `
+  <g>
+    <rect x="${MASCOT_LANE_X}" y="98" width="190" height="${bubbleH}" rx="14" fill="#0d1527" stroke="${accentColor}" stroke-width="1.2" />
+    <text x="${MASCOT_LANE_X + 15}" y="120" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">${bubbleTspans}</text>
+    <image href="data:image/png;base64,${art.base64}" x="${imgX}" y="${imgY}" width="${targetW}" height="${targetH}" />
+  </g>`;
+}
+
 /**
  * Generates an SVG string for a New Support Ticket
  */
@@ -67,10 +97,14 @@ export function generateTicketCardSvg(data: {
   const priorityBorder = isUrgent ? '#ef4444' : '#38bdf8';
   const priorityLabel = isUrgent ? 'URGENT (&lt; 4 JAM SLA)' : 'NORMAL (24 JAM SLA)';
   const priorityDot = isUrgent ? '#fca5a5' : '#7dd3fc';
+  const mascotPose = isUrgent ? 'menyapa' : 'melambai';
+  const mascotBubble = isUrgent
+    ? 'Urgent! SLA tinggal kurang dari 4 jam, mohon segera diambil.'
+    : `Halo tim! Ada tiket baru dari ${data.customerName}.`;
 
   const snippet = data.initialMessage || 'Tidak ada rincian pesan tambahan dari klien.';
-  const messageLines = wrapText(snippet, 70).slice(0, 3);
-  if (wrapText(snippet, 70).length > 3 && messageLines.length >= 3) {
+  const messageLines = wrapText(snippet, 50).slice(0, 3);
+  if (wrapText(snippet, 50).length > 3 && messageLines.length >= 3) {
     messageLines[2] = messageLines[2] + '...';
   }
 
@@ -135,51 +169,53 @@ export function generateTicketCardSvg(data: {
 
   <!-- Info Box -->
   <g transform="translate(45, 155)">
-    <rect width="810" height="155" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
-    
+    <rect width="620" height="155" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
+
     <!-- Left Column: Customer Details -->
     <g transform="translate(25, 20)">
       <text x="0" y="10" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1">PEMOHON / KLIEN</text>
-      
+
       <g transform="translate(0, 22) scale(0.9)">${ICONS.user}</g>
       <text x="26" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" font-weight="800" fill="#f8fafc">${escapeXml(data.customerName)}</text>
-      
+
       <g transform="translate(0, 52) scale(0.8)">${ICONS.mail}</g>
       <text x="26" y="66" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="600" fill="#93c5fd">${escapeXml(data.mailboxAddress)}</text>
-      
+
       ${data.personalEmail ? `
       <text x="26" y="88" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="400" fill="#94a3b8">Personal: ${escapeXml(data.personalEmail)}</text>` : ''}
     </g>
 
-    <line x1="430" y1="18" x2="430" y2="137" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,4" />
+    <line x1="300" y1="18" x2="300" y2="137" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,4" />
 
     <!-- Right Column: Category & Subject -->
-    <g transform="translate(455, 20)">
+    <g transform="translate(325, 20)">
       <text x="0" y="10" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1">KATEGORI</text>
-      
+
       <rect x="0" y="22" width="140" height="26" rx="13" fill="#1e293b" stroke="#64748b" stroke-width="1" />
       <g transform="translate(10, 26) scale(0.7)">${ICONS.tag}</g>
       <text x="78" y="39" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="11" font-weight="700" fill="#e2e8f0" text-anchor="middle">${escapeXml(data.category)}</text>
 
       <text x="0" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1">SUBJEK TIKET</text>
-      
+
       <g transform="translate(0, 84) scale(0.85)">${ICONS.file}</g>
-      <text x="26" y="99" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" font-weight="800" fill="#f1f5f9">${escapeXml(data.subject.length > 36 ? data.subject.slice(0, 33) + '...' : data.subject)}</text>
+      <text x="26" y="99" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" font-weight="800" fill="#f1f5f9">${escapeXml(data.subject.length > 28 ? data.subject.slice(0, 25) + '...' : data.subject)}</text>
     </g>
   </g>
 
   <!-- Message Preview Box -->
   <g transform="translate(45, 328)">
-    <rect width="810" height="110" rx="12" fill="#030712" stroke="#1e293b" stroke-width="1.2" />
+    <rect width="620" height="110" rx="12" fill="#030712" stroke="#1e293b" stroke-width="1.2" />
     <rect x="0" y="0" width="6" height="110" rx="3" fill="${isUrgent ? '#ef4444' : '#38bdf8'}" />
-    
+
     <g transform="translate(18, 14) scale(0.75)">${ICONS.chat}</g>
     <text x="42" y="28" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="11" font-weight="800" fill="#f59e0b" letter-spacing="1">RINCIAN PESAN DARI KLIEN:</text>
-    
+
     <text x="45" y="58" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-style="normal" font-weight="500" fill="#cbd5e1">
       ${messageTspans}
     </text>
   </g>
+
+  ${renderMascotStage(mascotPose, mascotBubble, priorityBorder)}
 
   <!-- FOOTER -->
   <g transform="translate(45, 478)">
@@ -218,6 +254,10 @@ export function generateDailyDigestCardSvg(data: {
   const statusBg = isHealthy ? 'url(#greenGrad)' : 'url(#urgentGrad)';
   const statusBorder = isHealthy ? '#10b981' : '#ef4444';
   const statusDot = isHealthy ? '#6ee7b7' : '#fca5a5';
+  const mascotPose = isHealthy ? 'senang' : 'memikirkan';
+  const mascotBubble = isHealthy
+    ? 'Semua sistem aman, tim bisa kerja tenang!'
+    : `${data.urgentTickets} tiket mendesak & ${data.totalMultiIp} anomali IP perlu dicek.`;
 
   return `<svg width="900" height="520" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -277,75 +317,77 @@ export function generateDailyDigestCardSvg(data: {
   <!-- 4 WIDGETS GRID -->
   <!-- 1. Webmail & Cluster (Top Left) -->
   <g transform="translate(45, 130)">
-    <rect width="395" height="150" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
+    <rect width="290" height="150" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
     <g transform="translate(20, 18)">
       <g transform="translate(0, 0) scale(0.85)">${ICONS.globe}</g>
       <text x="26" y="16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="800" fill="#38bdf8" letter-spacing="1">CLUSTER &amp; WEBMAIL</text>
 
-      <text x="0" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Titan Mail IMAP/SMTP:</text>
-      <text x="355" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="#10b981" text-anchor="end">ONLINE</text>
+      <text x="0" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Titan Mail:</text>
+      <text x="250" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="#10b981" text-anchor="end">ONLINE</text>
 
-      <text x="0" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Akun Mailbox Resmi:</text>
-      <text x="355" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.totalCustomers} Akun <tspan fill="#64748b" font-weight="400">(${data.activeCustomers} Aktif)</tspan></text>
+      <text x="0" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Mailbox Resmi:</text>
+      <text x="250" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.totalCustomers} <tspan fill="#64748b" font-weight="400">(${data.activeCustomers} Aktif)</tspan></text>
 
-      <text x="0" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Pesan Tersinkronisasi:</text>
-      <text x="355" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.totalEmails} Email <tspan fill="#38bdf8" font-weight="600">(${data.unreadEmails} Baru)</tspan></text>
+      <text x="0" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Pesan Sinkron:</text>
+      <text x="250" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.totalEmails} <tspan fill="#38bdf8" font-weight="600">(${data.unreadEmails} Baru)</tspan></text>
     </g>
   </g>
 
   <!-- 2. Security Radar (Top Right) -->
-  <g transform="translate(460, 130)">
-    <rect width="395" height="150" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
+  <g transform="translate(355, 130)">
+    <rect width="290" height="150" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
     <g transform="translate(20, 18)">
       <g transform="translate(0, 0) scale(0.85)">${ICONS.shield}</g>
       <text x="26" y="16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="800" fill="#818cf8" letter-spacing="1">RADAR KEAMANAN</text>
 
       <text x="0" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Sesi Login Aktif:</text>
-      <text x="355" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.activeSessions} Perangkat</text>
+      <text x="250" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.activeSessions}</text>
 
       <text x="0" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Anomali Multi-IP:</text>
-      <text x="355" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="${data.totalMultiIp > 0 ? '#ef4444' : '#10b981'}" text-anchor="end">${data.totalMultiIp > 0 ? `PERINGATAN: ${data.totalMultiIp} Alert` : '0 Alert Aman'}</text>
+      <text x="250" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="${data.totalMultiIp > 0 ? '#ef4444' : '#10b981'}" text-anchor="end">${data.totalMultiIp > 0 ? `${data.totalMultiIp} Alert` : '0 Aman'}</text>
 
       <text x="0" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Audit Logs (24 Jam):</text>
-      <text x="355" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.auditLogsLast24h} Entri Aktivitas</text>
+      <text x="250" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.auditLogsLast24h}</text>
     </g>
   </g>
 
   <!-- 3. Storage & Synology NAS (Bottom Left) -->
   <g transform="translate(45, 295)">
-    <rect width="395" height="150" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
+    <rect width="290" height="150" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
     <g transform="translate(20, 18)">
       <g transform="translate(0, 0) scale(0.85)">${ICONS.database}</g>
-      <text x="26" y="16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="800" fill="#fbbf24" letter-spacing="1">STORAGE &amp; ARSIP LEGAL</text>
+      <text x="26" y="16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="800" fill="#fbbf24" letter-spacing="1">STORAGE &amp; ARSIP</text>
 
       <text x="0" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Hot Storage S3:</text>
-      <text x="355" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.usedMB} MB Terpakai</text>
+      <text x="250" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.usedMB} MB</text>
 
       <text x="0" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Berkas Legal Drive:</text>
-      <text x="355" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.totalDocuments} Dokumen Hukum</text>
+      <text x="250" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#f8fafc" text-anchor="end">${data.totalDocuments}</text>
 
       <text x="0" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Synology Cold NAS:</text>
-      <text x="355" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="#10b981" text-anchor="end">TERHUBUNG</text>
+      <text x="250" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="#10b981" text-anchor="end">TERHUBUNG</text>
     </g>
   </g>
 
   <!-- 4. Support Tickets Desk (Bottom Right) -->
-  <g transform="translate(460, 295)">
-    <rect width="395" height="150" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
+  <g transform="translate(355, 295)">
+    <rect width="290" height="150" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.2" />
     <g transform="translate(20, 18)">
       <g transform="translate(0, 0) scale(0.85)">${ICONS.ticket}</g>
-      <text x="26" y="16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="800" fill="#f472b6" letter-spacing="1">PUSAT TIKET SUPPORT</text>
+      <text x="26" y="16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="800" fill="#f472b6" letter-spacing="1">TIKET SUPPORT</text>
 
-      <text x="0" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Tiket Terbuka (Open):</text>
-      <text x="355" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="${data.openTickets > 0 ? '#f59e0b' : '#10b981'}" text-anchor="end">${data.openTickets} Tiket</text>
+      <text x="0" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Tiket Terbuka:</text>
+      <text x="250" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="${data.openTickets > 0 ? '#f59e0b' : '#10b981'}" text-anchor="end">${data.openTickets}</text>
 
       <text x="0" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Prioritas Urgent:</text>
-      <text x="355" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="${data.urgentTickets > 0 ? '#ef4444' : '#10b981'}" text-anchor="end">${data.urgentTickets > 0 ? `MENDESAK: ${data.urgentTickets} Tiket` : '0 Mendesak'}</text>
+      <text x="250" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="${data.urgentTickets > 0 ? '#ef4444' : '#10b981'}" text-anchor="end">${data.urgentTickets > 0 ? `${data.urgentTickets} Mendesak` : '0 Mendesak'}</text>
 
-      <text x="0" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Tiket Selesai (Closed):</text>
-      <text x="355" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#10b981" text-anchor="end">${data.resolvedTickets} Tiket</text>
+      <text x="0" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Tiket Selesai:</text>
+      <text x="250" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" fill="#10b981" text-anchor="end">${data.resolvedTickets}</text>
     </g>
   </g>
+
+  ${renderMascotStage(mascotPose, mascotBubble, statusBorder)}
 
   <!-- FOOTER -->
   <g transform="translate(45, 478)">
@@ -409,23 +451,25 @@ export function generateSecurityAlertCardSvg(data: {
 
   <!-- Content Box -->
   <g transform="translate(45, 120)">
-    <rect width="810" height="320" rx="14" fill="url(#cardGrad)" stroke="#7f1d1d" stroke-width="1.5" />
-    
+    <rect width="620" height="320" rx="14" fill="url(#cardGrad)" stroke="#7f1d1d" stroke-width="1.5" />
+
     <g transform="translate(35, 30)">
       <text x="0" y="15" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="#f87171" letter-spacing="1">AKUN TERDAMPAK:</text>
       <text x="0" y="48" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="22" font-weight="900" fill="#ffffff">${escapeXml(data.accountName)}</text>
       <text x="0" y="76" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" font-weight="600" fill="#93c5fd">${escapeXml(data.mailboxAddress)}</text>
 
-      <line x1="0" y1="105" x2="740" y2="105" stroke="#7f1d1d" stroke-width="1" stroke-dasharray="4,4" />
+      <line x1="0" y1="105" x2="550" y2="105" stroke="#7f1d1d" stroke-width="1" stroke-dasharray="4,4" />
 
       <text x="0" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="#f87171" letter-spacing="1">JUMLAH ALAMAT IP BERBEDA:</text>
-      <text x="0" y="170" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="26" font-weight="900" fill="#ef4444">${data.uniqueIps.length} Alamat IP Serentak (${data.sessionCount} Perangkat)</text>
+      <text x="0" y="170" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="24" font-weight="900" fill="#ef4444">${data.uniqueIps.length} IP Serentak (${data.sessionCount} Perangkat)</text>
 
       <text x="0" y="210" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="12" font-weight="700" fill="#f87171" letter-spacing="1">DAFTAR IP TERDETEKSI:</text>
-      <rect x="0" y="222" width="740" height="38" rx="8" fill="#180707" stroke="#7f1d1d" stroke-width="1" />
+      <rect x="0" y="222" width="550" height="38" rx="8" fill="#180707" stroke="#7f1d1d" stroke-width="1" />
       <text x="16" y="246" font-family="monospace" font-size="13" font-weight="600" fill="#fecaca">${escapeXml(ipList)}</text>
     </g>
   </g>
+
+  ${renderMascotStage('menyapa', `${data.uniqueIps.length} IP berbeda login serentak di akun ${data.accountName}!`, '#ef4444')}
 
   <!-- FOOTER -->
   <g transform="translate(45, 478)">
