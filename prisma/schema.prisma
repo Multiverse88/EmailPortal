@@ -59,6 +59,9 @@ model MessageCache {
   id         String   @id @default(uuid())
   mailboxId  String
   uid        String // IMAP UID
+  messageId  String? // RFC 2822 Message-ID
+  inReplyTo  String? // In-Reply-To header
+  references String? // References header
   folder     String   @default("INBOX")
   subject    String?
   sender     String?

@@ -196,5 +196,28 @@ describe('Email Avatar and Branded Signature Integration', () => {
       expect(createdMsg?.bodyHtml).not.toContain('EasyLegal Verified Corporate Client');
       expect(createdMsg?.bodyHtml).not.toContain('border-top: 1px solid #e2e8f0');
     });
+
+    it('POST /api/email/send saves inReplyTo and references headers for email reply threading', async () => {
+      const res = await request(app)
+        .post('/api/email/send')
+        .set('Authorization', `Bearer ${token}`)
+        .field('to', 'ainanihj@gmail.com')
+        .field('subject', 'Re: HLOOOOOOOO')
+        .field('body', 'Halo juga! Ini balasan resmi.')
+        .field('inReplyTo', '<original-msg-123@mail.gmail.com>')
+        .field('references', '<original-msg-123@mail.gmail.com>');
+
+      expect(res.status).toBe(201);
+      expect(res.body.delivered).toBe(true);
+
+      const createdMsg = await prisma.messageCache.findUnique({
+        where: { id: res.body.id },
+      });
+
+      expect(createdMsg).toBeDefined();
+      expect(createdMsg?.inReplyTo).toBe('<original-msg-123@mail.gmail.com>');
+      expect(createdMsg?.references).toBe('<original-msg-123@mail.gmail.com>');
+      expect(createdMsg?.messageId).toMatch(/<sent-\d+@clienteasylegal\.co\.id>/);
+    });
   });
 });

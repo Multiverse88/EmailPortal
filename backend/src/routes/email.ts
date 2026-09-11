@@ -327,7 +327,7 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
   router.post('/send', upload.array('attachments', 5), async (req: Request, res: Response) => {
     try {
       const mailboxId = req.user!.id;
-      const { to, cc, subject, body } = req.body ?? {};
+      const { to, cc, subject, body, inReplyTo, references } = req.body ?? {};
       if (!to?.trim()) return res.status(400).json({ error: 'Penerima wajib diisi' });
 
       const customer = await prisma.customer.findUnique({ where: { id: mailboxId } });
@@ -414,6 +414,8 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
               name: customer.name,
               to,
               cc,
+              inReplyTo: inReplyTo?.trim() || undefined,
+              references: references?.trim() || undefined,
               subject: subject || '(tanpa subjek)',
               text,
               html,
@@ -437,10 +439,12 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
           const relayRes = await sendMail({
             user: process.env.HOSTINGER_SMTP_USER!,
             pass: process.env.HOSTINGER_SMTP_PASS!,
-            name: customer.name ? `${customer.name} (EasyLegal)` : 'EasyLegal Portal',
+            name: customer.name || 'EasyLegal Portal',
             to,
             cc,
             replyTo: customer.mailboxAddress,
+            inReplyTo: inReplyTo?.trim() || undefined,
+            references: references?.trim() || undefined,
             subject: subject || '(tanpa subjek)',
             text,
             html,
@@ -471,10 +475,14 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
 
       let messageId = `sent-${Date.now()}`;
       try {
+        const domain = (customer.mailboxAddress.split('@')[1] || 'clienteasylegal.co.id').trim();
         const message = await prisma.messageCache.create({
           data: {
             mailboxId,
             uid: messageId,
+            messageId: `<${messageId}@${domain}>`,
+            inReplyTo: inReplyTo?.trim() || null,
+            references: references?.trim() || null,
             folder: 'Sent',
             subject: subject || '(tanpa subjek)',
             sender: customer.mailboxAddress,

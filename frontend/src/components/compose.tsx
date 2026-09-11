@@ -10,6 +10,8 @@ export interface Draft {
   to?: string;
   subject?: string;
   body?: string;
+  inReplyTo?: string;
+  references?: string;
 }
 
 export function ComposeModal({
@@ -44,6 +46,8 @@ export function ComposeModal({
       if (cc) form.append('cc', cc);
       form.append('subject', subject);
       form.append('body', body);
+      if (draft.inReplyTo) form.append('inReplyTo', draft.inReplyTo);
+      if (draft.references) form.append('references', draft.references);
       files.forEach((f) => form.append('attachments', f));
       await api.post('/email/send', form);
       onSent();

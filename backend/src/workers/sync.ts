@@ -173,13 +173,18 @@ export class SyncWorker {
       const snippet = toSnippet(bodyText || meta.subject);
       const recipientStr = ''; // recipients come from the message detail; we merge below
 
-      // Fetch message detail for recipients and attachments metadata
       let recipientDetails = '';
       let attachmentMeta = '';
+      let rfcMessageId: string | null = null;
+      let inReplyTo: string | null = null;
+      let references: string | null = null;
       try {
         const detail = await api.getMessage(resourceId, folder, meta.uid);
         const d = (detail.data as any).data;
         if (d) {
+          rfcMessageId = d.messageId || d.headers?.['message-id'] || null;
+          inReplyTo = d.inReplyTo || d.headers?.['in-reply-to'] || null;
+          references = Array.isArray(d.references) ? d.references.join(' ') : (d.references || d.headers?.references || null);
           const toAddr = Array.isArray(d.to) ? d.to.map((a: any) => a.address).join(',') : '';
           const ccAddr = Array.isArray(d.cc) ? d.cc.map((a: any) => a.address).join(',') : '';
           recipientDetails = [toAddr, ccAddr].filter(Boolean).join(',');
@@ -198,6 +203,9 @@ export class SyncWorker {
         create: {
           mailboxId: customer.id,
           uid: String(meta.uid),
+          messageId: rfcMessageId,
+          inReplyTo,
+          references,
           folder,
           subject: meta.subject,
           sender: meta.sender,
@@ -210,6 +218,9 @@ export class SyncWorker {
           receivedAt: meta.date ? new Date(meta.date) : new Date(),
         },
         update: {
+          messageId: rfcMessageId,
+          inReplyTo,
+          references,
           subject: meta.subject,
           sender: meta.sender,
           isRead: wasSeen,
@@ -322,6 +333,11 @@ export class SyncWorker {
 
     const parsed = await simpleParser(raw);
     const text = parsed.text || '';
+    const rawRefs = parsed.references;
+    const referencesStr = Array.isArray(rawRefs)
+      ? rawRefs.join(' ')
+      : (typeof rawRefs === 'string' ? rawRefs : null);
+
     const data = {
       folder: 'INBOX',
       subject: parsed.subject || '(tanpa subjek)',
@@ -331,6 +347,9 @@ export class SyncWorker {
       bodyText: text,
       bodyHtml: typeof parsed.html === 'string' ? parsed.html : null,
       receivedAt: parsed.date || new Date(),
+      messageId: parsed.messageId || null,
+      inReplyTo: parsed.inReplyTo || null,
+      references: referencesStr,
     };
 
     const message = await this.prisma.messageCache.upsert({

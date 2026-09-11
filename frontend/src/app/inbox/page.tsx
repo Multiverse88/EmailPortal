@@ -58,6 +58,9 @@ interface Message {
   attachments?: EmailAttachment[];
   senderAvatarUrl?: string | null;
   fallbackAvatarUrl?: string | null;
+  messageId?: string | null;
+  inReplyTo?: string | null;
+  references?: string | null;
 }
 
 const FOLDER_META = [
@@ -661,13 +664,19 @@ function Inbox_() {
                 <div className="flex items-center gap-2">
                   <button
                     data-testid="reply"
-                    onClick={() =>
+                    onClick={() => {
+                      const cleanSub = (message.subject || '').trim();
+                      const replySubject = /^re:\s*/i.test(cleanSub) ? cleanSub : `Re: ${cleanSub || '(tanpa subjek)'}`;
                       setDraft({
                         to: message.sender ?? '',
-                        subject: `Re: ${message.subject ?? ''}`,
+                        subject: replySubject,
                         body: `\n\n--- Pesan asli dari ${message.sender} ---\n${message.bodyText ?? ''}`,
-                      })
-                    }
+                        inReplyTo: message.messageId || undefined,
+                        references: message.references
+                          ? `${message.references} ${message.messageId || ''}`.trim()
+                          : (message.messageId || undefined),
+                      });
+                    }}
                     className="flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-primary hover:bg-slate-100 px-2.5 py-1.5 rounded-lg transition-colors"
                   >
                     <Reply className="w-3.5 h-3.5" />
@@ -676,12 +685,15 @@ function Inbox_() {
 
                   <button
                     data-testid="forward"
-                    onClick={() =>
+                    onClick={() => {
+                      const cleanSub = (message.subject || '').trim();
+                      const forwardSubject = /^fwd:\s*/i.test(cleanSub) ? cleanSub : `Fwd: ${cleanSub || '(tanpa subjek)'}`;
                       setDraft({
-                        subject: `Fwd: ${message.subject ?? ''}`,
+                        subject: forwardSubject,
                         body: `\n\n--- Diteruskan dari ${message.sender} ---\n${message.bodyText ?? ''}`,
-                      })
-                    }
+                        references: message.messageId || undefined,
+                      });
+                    }}
                     className="flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-primary hover:bg-slate-100 px-2.5 py-1.5 rounded-lg transition-colors"
                   >
                     <Forward className="w-3.5 h-3.5" />
