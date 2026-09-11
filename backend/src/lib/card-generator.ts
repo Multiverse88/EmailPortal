@@ -1,5 +1,3 @@
-import { Resvg } from '@resvg/resvg-js';
-
 /**
  * Escapes characters for XML/SVG compliance to prevent parser breakage
  */
@@ -443,6 +441,9 @@ export function generateSecurityAlertCardSvg(data: {
  */
 export async function renderSvgToPng(svg: string, width = 900): Promise<Buffer | null> {
   try {
+    // Dynamically load Resvg to prevent startup crash if native binary is unavailable
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Resvg } = require('@resvg/resvg-js');
     const resvg = new Resvg(svg, {
       fitTo: { mode: 'width', value: width },
       font: {

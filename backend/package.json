@@ -15,13 +15,16 @@
     "db:clean-dummy": "tsx scripts/clean-dummy.ts"
   },
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/pdf-parse": "^1.1.5",
     "aws-sdk": "^2.1530.0",
+    "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "class-validator": "^0.14.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
+    "date-fns": "^3.6.0",
     "dotenv": "^17.4.2",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
