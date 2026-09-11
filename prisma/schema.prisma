@@ -179,6 +179,19 @@ model DocumentMetadata {
   rawExtractedText  String?  // Disimpan aman dalam local SQLite persistent memory (zero-leakage)
   confidenceScore   Float    @default(0.95)
   verifiedBy        String?  // Nama Officer atau Admin yang memverifikasi
+  // 3-Lapis Metadata Ekstraksi Legal & Cek Silang
+  subType           String?  // Sub-jenis dokumen (Akta Pendirian, Perubahan, SK AH.01.01, dsb)
+  documentDate      String?  // Tanggal dokumen resmi
+  publisher         String?  // Notaris, Kemenkumham, Lembaga OSS, Para Pihak
+  normalizedName    String?  // Nama perseroan versi ternormalisasi untuk cek silang
+  ticketId          String?  // Relasi tiket CRM terkait
+  fileHash          String?  // SHA-256 berkas untuk deteksi duplikasi / versi ganda
+  pageCount         Int?     @default(1)
+  verificationStatus String  @default("otomatis") // "otomatis" | "dicek_agen" | "ditolak"
+  fieldConfidence   String?  // JSON string: { [field]: { value, page, confidence } }
+  specificFields    String?  // JSON string: Lapis 2 Data Spesifik per Jenis Dokumen
+  crossCheckResults String?  // JSON string: Lapis 3 Hasil Cek Silang Otomatis
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
