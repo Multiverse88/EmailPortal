@@ -363,9 +363,9 @@ function renderTicket(t, stateKey){
 const SERVICES = [
   { key:'portal',  name:'Customer Portal',  ms:142, up:99.99 },
   { key:'api',     name:'API Backend',      ms:88,  up:99.98 },
-  { key:'resi',    name:'Tracking Resi',    ms:156, up:99.97 },
-  { key:'mail',    name:'Webmail',          ms:212, up:99.95 },
-  { key:'wa',      name:'WhatsApp Gateway', ms:318, up:99.93 },
+  { key:'mail',    name:'Webmail & IMAP',   ms:212, up:99.95 },
+  { key:'doc',     name:'Document Vault',   ms:165, up:99.97 },
+  { key:'db',      name:'Database Engine',  ms:45,  up:99.99 },
   { key:'ai',      name:'AI Assistant',     ms:640, up:99.96 },
 ];
 const STATUS_TXT = { ok:'Normal', slow:'Lambat', maint:'Maintenance', down:'Down' };
@@ -376,13 +376,13 @@ const SERVER_STATES = {
                  bubble:'Semua layanan aman. Tim bisa kerja tenang!', over:{} },
   gangguan:    { label:'Gangguan',    tone:'#f59e0b', deep:'#b45309', pose:'memikirkan', pill:'GANGGUAN SEBAGIAN',
                  sub:'Insiden terdeteksi • sedang dipantau', uptime:'99,91',
-                 bubble:'WhatsApp Gateway melambat. Tim infra sedang cek.', over:{ wa:{ s:'slow', ms:2840 } } },
+                 bubble:'Antrean sinkronisasi email melambat. Tim teknis sedang memantau.', over:{ mail:{ s:'slow', ms:1840 } } },
   maintenance: { label:'Maintenance', tone:'#3b82f6', deep:'#1d4ed8', pose:'saran',      pill:'MAINTENANCE TERJADWAL',
                  sub:'Pemberitahuan • 22.00–23.00 WIB', uptime:'99,96',
                  bubble:'Webmail maintenance malam ini, 22.00–23.00 WIB.', over:{ mail:{ s:'maint' } } },
   down:        { label:'Down',        tone:'#ef4444', deep:'#b91c1c', pose:'menyapa',    pill:'LAYANAN DOWN', pulse:true,
                  sub:'Insiden kritis • eskalasi otomatis', uptime:'99,62',
-                 bubble:'Customer Portal tidak bisa diakses! Tim on-call sudah dipanggil.', over:{ portal:{ s:'down' }, resi:{ s:'slow', ms:1920 } } },
+                 bubble:'Customer Portal tidak bisa diakses! Tim on-call sudah dipanggil.', over:{ portal:{ s:'down' }, api:{ s:'down', ms:0 } } },
 };
 
 // pola 30 hari yang stabil per layanan (seeded), hari terakhir = kondisi sekarang

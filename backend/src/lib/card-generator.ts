@@ -221,7 +221,7 @@ export const SERVER_STATES: Record<string, ServerStateDefinition> = {
     pill: 'GANGGUAN SEBAGIAN',
     sub: 'INSIDEN TERDETEKSI • SEDANG DIPANTAU',
     uptime: '99,91',
-    bubble: 'WhatsApp Gateway melambat. Tim infra sedang cek.',
+    bubble: 'Antrean sinkronisasi email melambat. Tim teknis sedang memantau.',
   },
   maintenance: {
     label: 'Maintenance',
@@ -256,9 +256,9 @@ export interface ServiceItem {
 export const DEFAULT_SERVICES: ServiceItem[] = [
   { key: 'portal', name: 'Customer Portal', ms: 142, up: 99.99 },
   { key: 'api', name: 'API Backend', ms: 88, up: 99.98 },
-  { key: 'resi', name: 'Tracking Resi', ms: 156, up: 99.97 },
-  { key: 'mail', name: 'Webmail', ms: 212, up: 99.95 },
-  { key: 'wa', name: 'WhatsApp Gateway', ms: 318, up: 99.93 },
+  { key: 'mail', name: 'Webmail & IMAP', ms: 212, up: 99.95 },
+  { key: 'doc', name: 'Document Vault', ms: 165, up: 99.97 },
+  { key: 'db', name: 'Database Engine', ms: 45, up: 99.99 },
   { key: 'ai', name: 'AI Assistant', ms: 640, up: 99.96 },
 ];
 
@@ -613,9 +613,10 @@ export function generateServerStatusCardSvg(data?: ServerCardInput): string {
   };
 
   const rowsMarkup = services.map((s, idx) => {
-    const status = s.status || (stateKey === 'down' && idx === 0 ? 'down' : stateKey === 'gangguan' && idx === 4 ? 'slow' : 'ok');
+    const status = s.status || (stateKey === 'down' && idx === 0 ? 'down' : stateKey === 'gangguan' && idx === 2 ? 'slow' : 'ok');
     const info = statusColorMap[status] || statusColorMap.ok;
-    const msStr = status === 'down' || status === 'maint' ? '—' : `${s.ms.toLocaleString('id-ID')} ms`;
+    const msVal = status === 'slow' && s.ms < 1000 ? 1840 : s.ms;
+    const msStr = status === 'down' || status === 'maint' ? '—' : `${msVal.toLocaleString('id-ID')} ms`;
     const upStr = (status === 'down' ? s.up - 0.41 : status === 'slow' ? s.up - 0.06 : s.up).toFixed(2).replace('.', ',');
 
     const rowY = 48 + idx * 36;
@@ -740,10 +741,10 @@ export function generateDailyDigestCardSvg(data: DailyDigestCardInput): string {
   const customServices = [
     { key: 'portal', name: 'Customer Portal', ms: 142, up: 99.99, status: 'ok' },
     { key: 'api', name: 'API Backend', ms: 88, up: 99.98, status: 'ok' },
-    { key: 'resi', name: 'Tracking Resi', ms: 156, up: 99.97, status: 'ok' },
-    { key: 'mail', name: 'Webmail Cluster', ms: 212, up: 99.95, status: 'ok' },
-    { key: 'wa', name: 'WhatsApp Gateway', ms: data.totalMultiIp > 0 ? 2840 : 318, up: 99.93, status: data.totalMultiIp > 0 ? 'slow' : 'ok' },
-    { key: 'ai', name: 'AI Assistant', ms: 640, up: 99.96, status: 'ok' },
+    { key: 'mail', name: 'Webmail & IMAP', ms: 212, up: 99.95, status: 'ok' },
+    { key: 'doc', name: 'Document Vault', ms: 165, up: 99.97, status: 'ok' },
+    { key: 'db', name: 'Database Engine', ms: 45, up: 99.99, status: 'ok' },
+    { key: 'ai', name: 'AI Assistant', ms: data.totalMultiIp > 0 ? 1850 : 640, up: 99.96, status: data.totalMultiIp > 0 ? 'slow' : 'ok' },
   ];
 
   let bubble = 'Semua layanan aman. Tim bisa kerja tenang!';

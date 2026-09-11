@@ -573,12 +573,37 @@ export async function handleTelegramMessageUpdate(
 
         const services = [
           { key: 'portal', name: 'Customer Portal', ms: hasDown ? 0 : 142, up: 99.99, status: hasDown ? 'down' : 'ok' },
-          { key: 'api', name: 'API Backend', ms: 88, up: 99.98, status: hasDown ? 'down' : 'ok' },
-          { key: 'resi', name: 'Tracking Resi', ms: 156, up: 99.97, status: 'ok' },
-          { key: 'mail', name: 'Webmail Cluster', ms: isMaintenance ? 0 : 212, up: 99.95, status: isMaintenance ? 'maint' : 'ok' },
-          { key: 'wa', name: 'WhatsApp Gateway', ms: hasSlow ? 2840 : 318, up: 99.93, status: hasSlow ? 'slow' : 'ok' },
-          { key: 'ai', name: 'AI Assistant', ms: 640, up: 99.96, status: 'ok' },
+          { key: 'api', name: 'API Backend', ms: hasDown ? 0 : 88, up: 99.98, status: hasDown ? 'down' : 'ok' },
+          { key: 'mail', name: 'Webmail & IMAP', ms: isMaintenance ? 0 : (hasSlow && !snap.security.multiIpCount ? 1420 : 212), up: 99.95, status: isMaintenance ? 'maint' : (hasSlow && !snap.security.multiIpCount ? 'slow' : 'ok') },
+          { key: 'doc', name: 'Document Vault', ms: 165, up: 99.97, status: 'ok' },
+          { key: 'db', name: 'Database Engine', ms: snap.system.dbOk ? 45 : 0, up: 99.99, status: snap.system.dbOk ? 'ok' : 'down' },
+          { key: 'ai', name: 'AI Assistant', ms: snap.security.multiIpCount > 0 ? 1850 : 640, up: 99.96, status: snap.security.multiIpCount > 0 ? 'slow' : 'ok' },
         ];
+
+        let dynamicBubble = SERVER_STATES[stateKey].bubble;
+        let dynamicPill = SERVER_STATES[stateKey].pill;
+
+        if (stateKey === 'gangguan') {
+          if (snap.tickets.urgent > 0) {
+            dynamicBubble = `${snap.tickets.urgent} tiket urgent perlu penanganan segera oleh admin!`;
+            dynamicPill = `${snap.tickets.urgent} TIKET URGENT AKTIF`;
+          } else if (snap.security.multiIpCount > 0) {
+            dynamicBubble = `${snap.security.multiIpCount} anomali Multi-IP login terdeteksi pada radar keamanan.`;
+            dynamicPill = `${snap.security.multiIpCount} ANOMALI TERDETEKSI`;
+          } else {
+            dynamicBubble = 'Antrean sinkronisasi email melambat. Tim teknis sedang memantau.';
+            dynamicPill = 'GANGGUAN SEBAGIAN';
+          }
+        } else if (stateKey === 'down') {
+          dynamicBubble = 'Database Engine tidak merespons! Tim on-call sudah dipanggil.';
+          dynamicPill = 'LAYANAN DOWN';
+        } else if (stateKey === 'maintenance') {
+          dynamicBubble = 'Webmail Cluster sedang dalam jadwal pemeliharaan berkala.';
+          dynamicPill = 'MAINTENANCE TERJADWAL';
+        } else if (stateKey === 'normal') {
+          dynamicBubble = 'Semua layanan email & portal aman. Berjalan normal!';
+          dynamicPill = 'SEMUA SISTEM NORMAL';
+        }
 
         const cardBuffer = await generateServerStatusCardPng({
           stateKey,
@@ -586,6 +611,8 @@ export async function handleTelegramMessageUpdate(
           serverNext: 'Besok 07:00 WIB',
           services,
           uptimePct: stateKey === 'normal' ? '99,98' : '99,82',
+          bubbleText: dynamicBubble,
+          pillText: dynamicPill,
         });
 
         const replyMarkup = {
