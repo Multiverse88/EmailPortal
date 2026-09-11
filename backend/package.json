@@ -15,7 +15,6 @@
     "db:clean-dummy": "tsx scripts/clean-dummy.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/pdf-parse": "^1.1.5",
     "aws-sdk": "^2.1530.0",

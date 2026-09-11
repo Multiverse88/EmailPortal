@@ -14,7 +14,8 @@ COPY prisma ./prisma
 RUN npm install && npm install --prefix backend
 
 # Generate Prisma Client
-RUN npx prisma generate --schema=./prisma/schema.prisma
+RUN npx prisma generate --schema=./prisma/schema.prisma && \
+    rm -rf backend/node_modules/@prisma
 
 # Copy backend source
 COPY backend/tsconfig.json ./backend/
@@ -45,7 +46,8 @@ COPY prisma ./prisma
 RUN npm install --omit=dev && \
     npm install --prefix backend --omit=dev && \
     npm install -g prisma@5.22.0 tsx && \
-    npx prisma generate --schema=./prisma/schema.prisma
+    npx prisma generate --schema=./prisma/schema.prisma && \
+    rm -rf backend/node_modules/@prisma
 
 # Copy compiled dist and src (needed for tsx seed script)
 COPY --from=builder /app/backend/dist ./backend/dist
