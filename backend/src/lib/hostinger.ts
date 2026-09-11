@@ -147,10 +147,15 @@ export function quotaApi(): QuotaApi {
  * Returns undefined if the mailbox is not found under the current API token.
  */
 export async function resolveResourceId(address: string): Promise<string | undefined> {
-  const me = await accountApi().getCurrentAccount();
-  const mailboxes: Array<{ resourceId: string; address: string }> =
-    (me.data as any).data?.mailboxes ?? [];
-  return mailboxes.find((m) => m.address.toLowerCase() === address.toLowerCase())?.resourceId;
+  try {
+    const me = await accountApi().getCurrentAccount();
+    const mailboxes: Array<{ resourceId: string; address: string }> =
+      (me.data as any).data?.mailboxes ?? [];
+    return mailboxes.find((m) => m.address.toLowerCase() === address.toLowerCase())?.resourceId;
+  } catch (e: any) {
+    console.warn(`resolveResourceId failed for ${address}:`, e?.message);
+    return undefined;
+  }
 }
 
 /**

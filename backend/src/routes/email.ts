@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { sanitizeHtml, toSnippet } from '../lib/sanitize';
 import { decrypt } from '../lib/crypto';
-import { sendMail } from '../lib/mail';
+import { sendMail, smtpConfigured } from '../lib/mail';
 import { checkStorageQuota } from '../lib/quota';
 import {
   fetchMessageAttachment,
@@ -77,6 +77,18 @@ export function isPublicEmailDomain(domain: string): boolean {
     'hey.com',
   ]);
   return publicList.has(d);
+}
+
+export function extractRootDomain(domain: string): string {
+  const clean = domain.toLowerCase().trim();
+  const parts = clean.split('.');
+  if (parts.length <= 2) return clean;
+  const secondLast = parts[parts.length - 2];
+  const tld2 = new Set(['co', 'or', 'ac', 'go', 'biz', 'com', 'net', 'mil', 'edu', 'sch', 'my', 'org']);
+  if (parts.length >= 3 && tld2.has(secondLast)) {
+    return parts.slice(-3).join('.');
+  }
+  return parts.slice(-2).join('.');
 }
 
 export async function resolveAvatarMap(
@@ -149,7 +161,8 @@ export async function resolveAvatarMap(
     if (!domain) continue;
 
     const hash = crypto.createHash('sha256').update(email.toLowerCase().trim()).digest('hex');
-    const gravatarUrl = `https://www.gravatar.com/avatar/${hash}?s=128&d=404`;
+    // Using d=mp (Mystery Person default image) ensures Gravatar returns HTTP 200 rather than HTTP 404, preventing browser ORB & network errors
+    const gravatarUrl = `https://www.gravatar.com/avatar/${hash}?s=128&d=mp`;
 
     if (isPublicEmailDomain(domain)) {
       // Public email (@gmail.com, @yahoo.com, etc.): Gravatar, fallback to initials
@@ -158,9 +171,10 @@ export async function resolveAvatarMap(
         fallbackAvatarUrl: null,
       });
     } else if (domain !== 'clienteasylegal.co.id') {
-      // Corporate / Company domain (@tokopedia.com, @bca.co.id, @github.com, etc.):
-      // Try Gravatar first, fallback to company domain favicon
-      const domainFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+      // Corporate / Company domain (@tokopedia.com, @bca.co.id, @hostinger.com, etc.):
+      // Resolve to root domain for favicon so subdomains (like email.hostinger.com) resolve to root domain favicon (hostinger.com)
+      const rootDomain = extractRootDomain(domain);
+      const domainFaviconUrl = `https://www.google.com/s2/favicons?domain=${rootDomain}&sz=128`;
       map.set(email, {
         avatarUrl: gravatarUrl,
         fallbackAvatarUrl: domainFaviconUrl,
@@ -370,72 +384,155 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
       const portalUrl = (process.env.CORS_ORIGIN || 'https://clienteasylegal.co.id').split(',')[0].trim();
       const html = buildBrandedEmailHtml({ customer, bodyText: text, portalUrl });
 
-      // Prefer Hostinger Mail API send when configured; SMTP is the fallback.
-      let result: { delivered: boolean };
-      if (isMailApiConfigured()) {
-        let resourceId = customer.mailboxResourceId ?? undefined;
-        if (!resourceId) {
-          resourceId = await resolveResourceId(customer.mailboxAddress);
+      let delivered = false;
+      let deliveryError: string | null = null;
+      let deliveryMethod = 'none';
+
+      // 1. Prefer Hostinger Mail API send when configured and no attachments
+      if (isMailApiConfigured() && files.length === 0) {
+        try {
+          let resourceId = customer.mailboxResourceId ?? undefined;
+          if (!resourceId) {
+            resourceId = await resolveResourceId(customer.mailboxAddress);
+            if (resourceId) {
+              await prisma.customer.update({ where: { id: customer.id }, data: { mailboxResourceId: resourceId } });
+            }
+          }
           if (resourceId) {
-            await prisma.customer.update({ where: { id: customer.id }, data: { mailboxResourceId: resourceId } });
+            const apiRes = await sendViaApi(resourceId, {
+              to,
+              cc,
+              subject: subject || '(tanpa subjek)',
+              text,
+              html,
+              displayName: customer.name,
+            });
+            if (apiRes?.delivered) {
+              delivered = true;
+              deliveryMethod = 'hostinger-api';
+            }
+          } else {
+            console.warn(`[email/send] Mailbox ${customer.mailboxAddress} has no resourceId in Mail API, falling back to SMTP`);
+          }
+        } catch (apiErr: any) {
+          const apiMsg = apiErr?.response?.data?.message || apiErr?.message;
+          console.warn(`[email/send] Hostinger Mail API send failed for ${customer.mailboxAddress}, falling back to SMTP:`, apiMsg);
+          deliveryError = apiMsg;
+        }
+      }
+
+      // 2. If not delivered yet, try SMTP with customer credentials
+      if (!delivered) {
+        let customerPass = '';
+        if (customer.passwordEnc) {
+          try {
+            customerPass = decrypt(customer.passwordEnc);
+          } catch (decErr: any) {
+            console.warn(`[email/send] Could not decrypt password for ${customer.mailboxAddress}:`, decErr?.message);
           }
         }
-        if (!resourceId) {
-          return res.status(503).json({ error: 'Mailbox belum terhubung ke Hostinger Mail API' });
+
+        if (customerPass) {
+          try {
+            const smtpRes = await sendMail({
+              user: customer.mailboxAddress,
+              pass: customerPass,
+              name: customer.name,
+              to,
+              cc,
+              subject: subject || '(tanpa subjek)',
+              text,
+              html,
+              attachments: files.map((f) => ({ filename: f.originalname, path: f.path })),
+            });
+            if (smtpRes?.delivered) {
+              delivered = true;
+              deliveryMethod = 'smtp-mailbox';
+            }
+          } catch (smtpErr: any) {
+            console.warn(`[email/send] Direct customer SMTP send failed for ${customer.mailboxAddress}:`, smtpErr?.message);
+            deliveryError = smtpErr?.message;
+          }
         }
-        result = await sendViaApi(resourceId, {
-          to,
-          cc,
-          subject: subject || '(tanpa subjek)',
-          text,
-          html,
-          displayName: customer.name,
-        });
-      } else {
-        result = await sendMail({
-          user: customer.mailboxAddress,
-          pass: decrypt(customer.passwordEnc),
-          name: customer.name,
-          to,
-          cc,
-          subject: subject || '(tanpa subjek)',
-          text,
-          html,
-          attachments: files.map((f) => ({ filename: f.originalname, path: f.path })),
+      }
+
+      // 3. Fallback: if direct customer delivery failed or password unavailable, try system SMTP relay
+      if (!delivered && smtpConfigured()) {
+        try {
+          console.log(`[email/send] Retrying delivery via system SMTP relay (${process.env.HOSTINGER_SMTP_USER})...`);
+          const relayRes = await sendMail({
+            user: process.env.HOSTINGER_SMTP_USER!,
+            pass: process.env.HOSTINGER_SMTP_PASS!,
+            name: customer.name ? `${customer.name} (EasyLegal)` : 'EasyLegal Portal',
+            to,
+            cc,
+            replyTo: customer.mailboxAddress,
+            subject: subject || '(tanpa subjek)',
+            text,
+            html,
+            attachments: files.map((f) => ({ filename: f.originalname, path: f.path })),
+          });
+          if (relayRes?.delivered) {
+            delivered = true;
+            deliveryMethod = 'smtp-relay';
+          }
+        } catch (relayErr: any) {
+          console.error(`[email/send] System SMTP relay send also failed:`, relayErr?.message);
+          deliveryError = relayErr?.message || deliveryError;
+        }
+      }
+
+      if (!delivered) {
+        for (const f of files) {
+          if (f.path && fs.existsSync(f.path)) {
+            try { fs.unlinkSync(f.path); } catch {}
+          }
+        }
+        return res.status(502).json({
+          error: deliveryError
+            ? `Gagal mengirim email: ${deliveryError}`
+            : 'Gagal mengirim email. Kredensial mailbox tidak valid atau server SMTP tidak merespons.',
         });
       }
 
-      if (!result.delivered) {
-        return res.status(502).json({ error: (result as any).reason || 'Gagal mengirim email ke server SMTP' });
-      }
-
-      const message = await prisma.messageCache.create({
-        data: {
-          mailboxId,
-          uid: `sent-${Date.now()}`,
-          folder: 'Sent',
-          subject: subject || '(tanpa subjek)',
-          sender: customer.mailboxAddress,
-          recipients: [to, cc].filter(Boolean).join(','),
-          snippet: toSnippet(text),
-          bodyText: text,
-          bodyHtml: html,
-          isRead: true,
-          receivedAt: new Date(),
-          attachments: {
-            create: files.map((f) => ({
-              filename: f.originalname,
-              mimeType: f.mimetype,
-              size: f.size,
-              path: path.basename(f.path),
-            })),
+      let messageId = `sent-${Date.now()}`;
+      try {
+        const message = await prisma.messageCache.create({
+          data: {
+            mailboxId,
+            uid: messageId,
+            folder: 'Sent',
+            subject: subject || '(tanpa subjek)',
+            sender: customer.mailboxAddress,
+            recipients: [to, cc].filter(Boolean).join(','),
+            snippet: toSnippet(text),
+            bodyText: text,
+            bodyHtml: html,
+            isRead: true,
+            receivedAt: new Date(),
+            attachments: {
+              create: files.map((f) => ({
+                filename: f.originalname,
+                mimeType: f.mimetype,
+                size: f.size,
+                path: path.basename(f.path),
+              })),
+            },
           },
-        },
-      });
+        });
+        messageId = message.id;
+      } catch (cacheErr: any) {
+        console.error('[email/send] Failed to cache sent message in DB:', cacheErr?.message);
+      }
 
-      res.status(201).json({ message: 'Email terkirim', id: message.id, delivered: result.delivered });
+      res.status(201).json({ message: 'Email terkirim', id: messageId, delivered: true, method: deliveryMethod });
     } catch (error: any) {
       console.error('Send email error:', error);
+      for (const f of ((req.files as Express.Multer.File[]) || [])) {
+        if (f.path && fs.existsSync(f.path)) {
+          try { fs.unlinkSync(f.path); } catch {}
+        }
+      }
       res.status(500).json({ error: error?.message || 'Gagal mengirim email' });
     }
   });

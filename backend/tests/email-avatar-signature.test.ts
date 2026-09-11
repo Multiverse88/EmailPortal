@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { encrypt } from '../src/lib/crypto';
 import {
   extractEmailAddress,
+  extractRootDomain,
   resolveAvatarMap,
   buildBrandedEmailHtml,
 } from '../src/routes/email';
@@ -56,6 +57,14 @@ describe('Email Avatar and Branded Signature Integration', () => {
       expect(extractEmailAddress(null)).toBeNull();
     });
 
+    it('extractRootDomain correctly strips mail and service subdomains to find root domain', () => {
+      expect(extractRootDomain('email.hostinger.com')).toBe('hostinger.com');
+      expect(extractRootDomain('hostinger.com')).toBe('hostinger.com');
+      expect(extractRootDomain('mail.tokopedia.com')).toBe('tokopedia.com');
+      expect(extractRootDomain('sub.mail.bca.co.id')).toBe('bca.co.id');
+      expect(extractRootDomain('clienteasylegal.co.id')).toBe('clienteasylegal.co.id');
+    });
+
     it('buildBrandedEmailHtml formats body and includes customer avatar URL and signature', () => {
       const html = buildBrandedEmailHtml({
         customer: {
@@ -83,6 +92,7 @@ describe('Email Avatar and Branded Signature Integration', () => {
           'EasyLegal Portal <admin@clienteasylegal.co.id>',
           'user@gmail.com',
           'support@tokopedia.com',
+          'billing@email.hostinger.com',
         ],
         customer.id
       );
@@ -104,6 +114,11 @@ describe('Email Avatar and Branded Signature Integration', () => {
       const corpAvatar = map.get('support@tokopedia.com');
       expect(corpAvatar?.avatarUrl).toContain('gravatar.com/avatar/');
       expect(corpAvatar?.fallbackAvatarUrl).toContain('google.com/s2/favicons?domain=tokopedia.com');
+
+      // Subdomain email (email.hostinger.com): maps to root domain favicon hostinger.com
+      const hostingerAvatar = map.get('billing@email.hostinger.com');
+      expect(hostingerAvatar?.avatarUrl).toContain('gravatar.com/avatar/');
+      expect(hostingerAvatar?.fallbackAvatarUrl).toBe('https://www.google.com/s2/favicons?domain=hostinger.com&sz=128');
     });
   });
 

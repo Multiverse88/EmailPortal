@@ -15,6 +15,7 @@ export async function sendMail(opts: {
   name?: string;
   to: string;
   cc?: string;
+  replyTo?: string;
   subject: string;
   text?: string;
   html?: string;
@@ -49,6 +50,7 @@ export async function sendMail(opts: {
       from,
       to: opts.to,
       cc: opts.cc,
+      replyTo: opts.replyTo,
       subject: opts.subject,
       text: opts.text,
       html: opts.html,
