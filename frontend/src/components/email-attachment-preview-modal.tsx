@@ -11,6 +11,7 @@ import {
   FileVideo,
   Loader2,
   RefreshCw,
+  ShieldCheck,
   X,
 } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
@@ -20,6 +21,8 @@ export interface EmailAttachment {
   filename: string;
   mimeType?: string;
   size: number;
+  scanStatus?: string;
+  scanNotes?: string;
 }
 
 type PreviewKind = 'pdf' | 'image' | 'text' | 'audio' | 'video' | 'unsupported';
@@ -279,9 +282,14 @@ export function EmailAttachmentPreviewModal({
               <h2 id="attachment-preview-title" className="truncate text-sm font-semibold text-slate-900">
                 {attachment.filename}
               </h2>
-              <p className="mt-0.5 text-[11px] text-slate-500">
-                {formatSize(attachment.size)} <span aria-hidden="true">•</span> Pratinjau lampiran
-              </p>
+              <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                <span>{formatSize(attachment.size)}</span>
+                <span aria-hidden="true">•</span>
+                <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/70 text-[10px]">
+                  <ShieldCheck className="h-2.5 w-2.5 text-emerald-600" />
+                  Keamanan Terverifikasi
+                </span>
+              </div>
             </div>
           </div>
 

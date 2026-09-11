@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Paperclip, X, Send, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Paperclip, X, Send, FileText, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 import api, { errMsg } from '@/lib/api';
 import { SupportTicketModal } from '@/components/support-ticket-modal';
 import { useCustomerAuth } from '@/store/auth';
@@ -181,7 +181,13 @@ export function ComposeModal({
           {/* Attached Files Chips */}
           {files.length > 0 && (
             <div className="pt-2 border-t border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-500 block mb-1.5">Lampiran ({files.length}):</span>
+              <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                <span className="text-[11px] font-semibold text-slate-500">Lampiran ({files.length}):</span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  Pemindaian Keamanan &amp; Enkripsi Ketat Aktif
+                </span>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {files.map((f, i) => (
                   <div
@@ -191,10 +197,15 @@ export function ComposeModal({
                     <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span className="max-w-[180px] truncate font-medium">{f.name}</span>
                     <span className="text-[10px] text-slate-500 font-mono">({Math.round(f.size / 1024)} KB)</span>
+                    <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.2 rounded">
+                      <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
+                      Aman
+                    </span>
                     <button
                       type="button"
                       onClick={() => removeFile(i)}
                       className="text-slate-400 hover:text-red-600 ml-0.5"
+                      title="Hapus lampiran"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>

@@ -20,6 +20,7 @@ import {
   isInlinePreviewMimeType,
   previewResponseMimeType,
 } from '../lib/attachments';
+import { scanAttachmentBuffer } from '../lib/security-scanner';
 
 export const STORAGE_DIR = path.resolve(process.env.STORAGE_DIR || './storage');
 fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -342,6 +343,26 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
       if (!customer) return res.status(404).json({ error: 'Mailbox tidak ditemukan' });
 
       const files = (req.files as Express.Multer.File[]) ?? [];
+
+      // Pre-send security scan on every attached file
+      for (const f of files) {
+        if (f.path && fs.existsSync(f.path)) {
+          const fileBuf = fs.readFileSync(f.path);
+          const scanRes = scanAttachmentBuffer(f.originalname, fileBuf);
+          if (scanRes.status === 'quarantined') {
+            for (const item of files) {
+              if (item.path && fs.existsSync(item.path)) {
+                try { fs.unlinkSync(item.path); } catch {}
+              }
+            }
+            return res.status(400).json({
+              error: `Demi keamanan data bersama, sistem EasyLegal memblokir lampiran "${f.originalname}" (${scanRes.threatType}). Pastikan berkas bebas dari script executable.`,
+              code: 'ATTACHMENT_SECURITY_BLOCKED',
+            });
+          }
+        }
+      }
+
       const text = stripCorporateSignature(body ?? '');
       const attachmentBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
 
@@ -506,6 +527,8 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
                 mimeType: f.mimetype,
                 size: f.size,
                 path: path.basename(f.path),
+                scanStatus: 'clean',
+                scanNotes: 'Telah melalui verifikasi keamanan ketat saat pengiriman',
               })),
             },
           },
@@ -533,7 +556,18 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
       const mailboxId = req.user!.id;
       const message = await prisma.messageCache.findFirst({
         where: { mailboxId, uid: req.params.uid },
-        include: { attachments: { select: { id: true, filename: true, mimeType: true, size: true } } },
+        include: {
+          attachments: {
+            select: {
+              id: true,
+              filename: true,
+              mimeType: true,
+              size: true,
+              scanStatus: true,
+              scanNotes: true,
+            },
+          },
+        },
       });
       if (!message) return res.status(404).json({ error: 'Email tidak ditemukan' });
 
@@ -647,6 +681,12 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
       });
       if (!attachment) return res.status(404).json({ error: 'Lampiran tidak ditemukan' });
 
+      if (attachment.scanStatus === 'quarantined') {
+        return res.status(403).json({
+          error: 'Berkas ini sedang dikarantina untuk tinjauan keamanan tim IT demi perlindungan data akun Anda.',
+        });
+      }
+
       if (attachment.path.startsWith('api-attach:')) {
         const remoteId = attachment.path.slice('api-attach:'.length);
         let resourceId = attachment.message.mailbox.mailboxResourceId ?? undefined;
@@ -696,6 +736,12 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
         },
       });
       if (!attachment) return res.status(404).json({ error: 'Lampiran tidak ditemukan' });
+
+      if (attachment.scanStatus === 'quarantined') {
+        return res.status(403).json({
+          error: 'Berkas ini sedang dikarantina untuk tinjauan keamanan tim IT demi perlindungan data akun Anda.',
+        });
+      }
 
       const mimeType = inferAttachmentMimeType(attachment.filename, attachment.mimeType);
       if (!isInlinePreviewMimeType(mimeType)) {

@@ -72,6 +72,8 @@ model MessageCache {
   isRead     Boolean  @default(false)
   isStarred  Boolean  @default(false)
   isDeleted  Boolean  @default(false)
+  securityStatus String @default("clean") // "clean", "suspicious", "threat"
+  securityNotes  String? // Scan summary / threat details
   receivedAt DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -86,12 +88,15 @@ model MessageCache {
 }
 
 model Attachment {
-  id        String @id @default(uuid())
-  messageId String
-  filename  String
-  mimeType  String @default("application/octet-stream")
-  size      Int    @default(0)
-  path      String // relative path under STORAGE_DIR
+  id         String   @id @default(uuid())
+  messageId  String
+  filename   String
+  mimeType   String   @default("application/octet-stream")
+  size       Int      @default(0)
+  path       String   // relative path under STORAGE_DIR
+  scanStatus String   @default("clean") // "clean", "suspicious", "quarantined"
+  scanNotes  String?  // Security scan details
+  scannedAt  DateTime @default(now())
 
   message MessageCache @relation(fields: [messageId], references: [id], onDelete: Cascade)
 

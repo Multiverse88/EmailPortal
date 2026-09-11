@@ -6,6 +6,8 @@ import {
   generateTicketCardPng,
   generateDailyDigestCardPng,
   generateSecurityAlertCardPng,
+  generateThreatCardPng,
+  ThreatCardInput,
 } from './card-generator';
 
 export interface TelegramConfig {
@@ -499,3 +501,59 @@ export async function notifySecurityAnomaly(event: {
   const res = await sendTelegramMessage(message, 'HTML', undefined, replyMarkup);
   return res.success;
 }
+
+/**
+ * Sends real-time Email / Attachment Threat Alert to Super Admin via Telegram
+ */
+export async function notifyEmailThreat(event: ThreatCardInput): Promise<boolean> {
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        { text: '🚨 Buka Super Admin Console', url: 'https://clienteasylegal.co.id/admin' }
+      ]
+    ]
+  };
+
+  const message = [
+    `🚨 <b>[AI SECURITY SHIELD] Ancaman Email / Berkas Terdeteksi!</b>`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `👤 <b>Akun Sasaran:</b> ${escapeHtml(event.accountName)} (<code>${escapeHtml(event.mailboxAddress)}</code>)`,
+    `📧 <b>Pengirim:</b> <code>${escapeHtml(event.sender)}</code>`,
+    `📝 <b>Subjek:</b> <b>${escapeHtml(event.subject)}</b>`,
+    `⚠️ <b>Jenis Ancaman:</b> <b>${escapeHtml(event.threatType)}</b>`,
+    event.filename ? `📎 <b>Berkas:</b> <code>${escapeHtml(event.filename)}</code> (${event.fileSizeStr || 'N/A'})` : '',
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `🛡️ <b>Rincian Analisis:</b>`,
+    `<i>${escapeHtml(event.threatDetails)}</i>`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `✅ <b>Tindakan Sistem:</b> ${escapeHtml(event.actionTaken || 'Berkas dikarantina. Akses unduh klien dinonaktifkan.')}`,
+    ``,
+    `🔗 <b>Buka Super Admin Console:</b>`,
+    `https://clienteasylegal.co.id/admin`,
+  ].filter(Boolean).join('\n');
+
+  try {
+    const cardBuffer = await generateThreatCardPng(event);
+    if (cardBuffer) {
+      const caption = [
+        `🚨 <b>[AI SECURITY SHIELD] Ancaman Terdeteksi!</b>`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `👤 <b>Mailbox:</b> <code>${escapeHtml(event.mailboxAddress)}</code>`,
+        `⚠️ <b>Ancaman:</b> ${escapeHtml(event.threatType)}`,
+        event.filename ? `📎 <b>Berkas:</b> <code>${escapeHtml(event.filename)}</code>` : `📝 <b>Subjek:</b> ${escapeHtml(event.subject.slice(0, 35))}`,
+        `🛡️ <b>Tindakan:</b> Berkas Dikarantina (Akses Unduh Ditangguhkan)`,
+      ].filter(Boolean).join('\n');
+
+      const photoRes = await sendTelegramPhoto(cardBuffer, caption, replyMarkup);
+      if (photoRes.success) {
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn('[Telegram Bot] Failed to send threat photo card, falling back to text:', err);
+  }
+
+  const res = await sendTelegramMessage(message, 'HTML', undefined, replyMarkup);
+  return res.success;
+}
+

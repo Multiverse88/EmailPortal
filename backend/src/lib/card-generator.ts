@@ -856,6 +856,116 @@ export function generateSecurityAlertCardSvg(data: SecurityAlertInput): string {
 </svg>`;
 }
 
+export interface ThreatCardInput {
+  accountName: string;
+  mailboxAddress: string;
+  sender: string;
+  subject: string;
+  threatType: string;
+  threatDetails: string;
+  filename?: string;
+  fileSizeStr?: string;
+  actionTaken?: string;
+}
+
+/**
+ * Generates an SVG string for Email and Attachment Security Threat Alerts
+ */
+export function generateThreatCardSvg(data: ThreatCardInput): string {
+  const st = {
+    pill: 'ANCAMAN TERDETEKSI • DIKARANTINA',
+    tone: '#ef4444',
+    deep: '#b91c1c',
+  };
+
+  const action = data.actionTaken || 'Berkas Lampiran Dikarantina Otomatis (Akses Unduh Ditangguhkan)';
+  const fileInfo = data.filename ? `${data.filename} (${data.fileSizeStr || 'Berkas'})` : null;
+
+  return `<svg width="900" height="520" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="55%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#fff5f5" />
+    </linearGradient>
+    <linearGradient id="toplineGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#b91c1c" />
+      <stop offset="100%" stop-color="#ef4444" />
+    </linearGradient>
+    <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d7232c" />
+      <stop offset="100%" stop-color="#a8141c" />
+    </linearGradient>
+    <linearGradient id="pillGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#b91c1c" />
+    </linearGradient>
+    <radialGradient id="orbTop" cx="100%" cy="0%" r="100%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.22" />
+      <stop offset="55%" stop-color="#ef4444" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#ef4444" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glowBottom" cx="100%" cy="100%" r="100%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.16" />
+      <stop offset="68%" stop-color="#ef4444" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- BASE CARD -->
+  <rect width="900" height="520" rx="18" fill="url(#cardBg)" stroke="#fecaca" stroke-width="1.2" />
+  <circle cx="820" cy="30" r="160" fill="url(#orbTop)" />
+  <circle cx="850" cy="460" r="150" fill="url(#glowBottom)" />
+
+  ${renderCardHeader('EASYLEGAL AI SECURITY SHIELD', 'PERINGATAN ANCAMAN EMAIL &amp; LAMPIRAN', st)}
+
+  <!-- BODY: SECURITY THREAT PANEL -->
+  <g transform="translate(44, 114)">
+    <rect width="626" height="326" rx="14" fill="#ffffff" stroke="#fee2e2" stroke-width="1.5" />
+
+    <g transform="translate(28, 20)">
+      <text x="0" y="8" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#dc2626" letter-spacing="1.2">MAILBOX SASARAN</text>
+      <text x="0" y="32" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="700" fill="#111827">${escapeXml(data.accountName)}</text>
+      <text x="0" y="52" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#2563eb">${escapeXml(data.mailboxAddress)}</text>
+
+      <line x1="0" y1="68" x2="570" y2="68" stroke="#fee2e2" stroke-width="1" stroke-dasharray="4,4" />
+
+      <text x="0" y="88" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#7c8596" letter-spacing="1.2">PENGIRIM &amp; SUBJEK</text>
+      <text x="0" y="108" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="600" fill="#1f2937">Dari: ${escapeXml(data.sender.slice(0, 48))}</text>
+      <text x="0" y="128" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#4b5563">Subjek: "${escapeXml(data.subject.slice(0, 52))}"</text>
+
+      <line x1="0" y1="144" x2="570" y2="144" stroke="#fee2e2" stroke-width="1" stroke-dasharray="4,4" />
+
+      <text x="0" y="164" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#dc2626" letter-spacing="1.2">DETEKSI ANCAMAN</text>
+      <text x="0" y="186" font-family="'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="800" fill="#dc2626">${escapeXml(data.threatType)}</text>
+
+      <rect x="0" y="198" width="570" height="42" rx="8" fill="#fff1f2" stroke="#fecaca" stroke-width="1" />
+      <text x="14" y="224" font-family="'Inter', -apple-system, sans-serif" font-size="11.5" font-weight="500" fill="#991b1b">${escapeXml(data.threatDetails.slice(0, 85))}</text>
+
+      ${fileInfo ? `
+      <text x="0" y="258" font-family="'Inter', sans-serif" font-size="11" font-weight="600" fill="#4b5563">Berkas: <tspan fill="#b91c1c" font-weight="700">${escapeXml(fileInfo)}</tspan></text>
+      <text x="0" y="278" font-family="'Inter', sans-serif" font-size="11" font-weight="600" fill="#059669">Tindakan: <tspan font-weight="700">${escapeXml(action)}</tspan></text>
+      ` : `
+      <text x="0" y="268" font-family="'Inter', sans-serif" font-size="11" font-weight="600" fill="#059669">Tindakan: <tspan font-weight="700">${escapeXml(action)}</tspan></text>
+      `}
+    </g>
+  </g>
+
+  ${renderMascotStage('menyapa', 'Ancaman email dicegat oleh AI Security Shield! Data akun klien terlindungi.', '#ef4444')}
+
+  ${renderCardFooter('AI Security Shield Active', 'EasyLegal Real-time Threat Intelligence', 'BUKA SUPER ADMIN CONSOLE')}
+</svg>`;
+}
+
+export async function generateThreatCardPng(data: ThreatCardInput): Promise<Buffer | null> {
+  try {
+    const svg = generateThreatCardSvg(data);
+    return await renderSvgToPng(svg, 900);
+  } catch (err) {
+    console.error('[CardGenerator] Failed to generate threat card PNG:', err);
+    return null;
+  }
+}
+
 /**
  * Converts SVG string to PNG Buffer using resvg-js in-memory
  */

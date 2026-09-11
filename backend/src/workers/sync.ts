@@ -10,6 +10,8 @@ import { inferAttachmentMimeType } from '../lib/attachments';
 import { getAccountFolderName } from '../lib/synology-sync';
 import { storage } from '../lib/storage';
 import { isMailApiConfigured, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody } from '../lib/hostinger';
+import { scanAttachmentBuffer, scanEmailContent } from '../lib/security-scanner';
+import { notifyEmailThreat } from '../lib/telegram';
 
 const STORAGE_DIR = path.resolve(process.env.STORAGE_DIR || './storage');
 fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -198,6 +200,25 @@ export class SyncWorker {
         // non-fatal; sync continues with available info
       }
 
+      const contentScan = scanEmailContent({
+        sender: meta.sender,
+        subject: meta.subject,
+        bodyText,
+        bodyHtml,
+      });
+
+      if (contentScan.status === 'threat') {
+        void notifyEmailThreat({
+          accountName: customer.name,
+          mailboxAddress: customer.mailboxAddress,
+          sender: meta.sender || 'unknown',
+          subject: meta.subject || '(tanpa subjek)',
+          threatType: contentScan.threats[0] || 'Indikasi Phishing / Rekayasa Sosial',
+          threatDetails: contentScan.details,
+          actionTaken: 'Email Ditandai untuk Tinjauan Keamanan Super Admin',
+        });
+      }
+
       const message = await this.prisma.messageCache.upsert({
         where: { mailboxId_uid: { mailboxId: customer.id, uid: String(meta.uid) } },
         create: {
@@ -215,6 +236,8 @@ export class SyncWorker {
           bodyHtml,
           isRead: wasSeen,
           isStarred: flags.includes('\\Flagged'),
+          securityStatus: contentScan.status,
+          securityNotes: contentScan.details,
           receivedAt: meta.date ? new Date(meta.date) : new Date(),
         },
         update: {
@@ -225,6 +248,8 @@ export class SyncWorker {
           sender: meta.sender,
           isRead: wasSeen,
           isStarred: flags.includes('\\Flagged'),
+          securityStatus: contentScan.status,
+          securityNotes: contentScan.details,
           receivedAt: meta.date ? new Date(meta.date) : new Date(),
           bodyHtml,
         },
@@ -242,6 +267,22 @@ export class SyncWorker {
           for (const a of parsedAtts) {
             const remotePath = `api-attach:${a.id}`;
             if (existingPaths.has(remotePath)) continue;
+
+            const attScan = scanAttachmentBuffer(a.filename, Buffer.alloc(0));
+            if (attScan.status === 'quarantined') {
+              void notifyEmailThreat({
+                accountName: customer.name,
+                mailboxAddress: customer.mailboxAddress,
+                sender: meta.sender || 'unknown',
+                subject: meta.subject || '(tanpa subjek)',
+                threatType: attScan.threatType || 'Berkas Lampiran Berbahaya',
+                threatDetails: attScan.details,
+                filename: a.filename,
+                fileSizeStr: a.size ? `${(a.size / 1024).toFixed(1)} KB` : undefined,
+                actionTaken: 'Berkas Dikarantina Otomatis (Akses Unduh Ditangguhkan)',
+              });
+            }
+
             await this.prisma.attachment.create({
               data: {
                 messageId: message.id,
@@ -249,6 +290,8 @@ export class SyncWorker {
                 mimeType: inferAttachmentMimeType(a.filename),
                 size: a.size,
                 path: remotePath,
+                scanStatus: attScan.status,
+                scanNotes: attScan.details,
               },
             });
             existingPaths.add(remotePath);
@@ -338,6 +381,25 @@ export class SyncWorker {
       ? rawRefs.join(' ')
       : (typeof rawRefs === 'string' ? rawRefs : null);
 
+    const contentScan = scanEmailContent({
+      sender: parsed.from?.text,
+      subject: parsed.subject,
+      bodyText: text,
+      bodyHtml: typeof parsed.html === 'string' ? parsed.html : null,
+    });
+
+    if (contentScan.status === 'threat' && customer) {
+      void notifyEmailThreat({
+        accountName: customer.name,
+        mailboxAddress: customer.mailboxAddress,
+        sender: parsed.from?.text || 'unknown',
+        subject: parsed.subject || '(tanpa subjek)',
+        threatType: contentScan.threats[0] || 'Indikasi Phishing / Rekayasa Sosial',
+        threatDetails: contentScan.details,
+        actionTaken: 'Email Ditandai untuk Tinjauan Keamanan Super Admin',
+      });
+    }
+
     const data = {
       folder: 'INBOX',
       subject: parsed.subject || '(tanpa subjek)',
@@ -350,6 +412,8 @@ export class SyncWorker {
       messageId: parsed.messageId || null,
       inReplyTo: parsed.inReplyTo || null,
       references: referencesStr,
+      securityStatus: contentScan.status,
+      securityNotes: contentScan.details,
     };
 
     const message = await this.prisma.messageCache.upsert({
@@ -386,6 +450,8 @@ export class SyncWorker {
         const relPath = `accounts/${accountFolder}/attachments/${diskFilename}`;
 
         const buffer = Buffer.isBuffer(att.content) ? att.content : Buffer.from(att.content);
+        const scanResult = scanAttachmentBuffer(filename, buffer);
+
         await fs.promises.writeFile(filePath, buffer);
 
         // Put to storage adapter (S3 / Local Bucket)
@@ -405,10 +471,30 @@ export class SyncWorker {
             mimeType,
             size,
             path: relPath,
+            scanStatus: scanResult.status,
+            scanNotes: scanResult.details,
           },
         });
 
-        // 2. Auto-save to LegalDocument under the customer's account in 'Lampiran Email' folder
+        if (scanResult.status === 'quarantined') {
+          if (customer) {
+            void notifyEmailThreat({
+              accountName: customer.name,
+              mailboxAddress: customer.mailboxAddress,
+              sender: parsed.from?.text || 'unknown',
+              subject: parsed.subject || '(tanpa subjek)',
+              threatType: scanResult.threatType || 'Berkas Lampiran Berbahaya',
+              threatDetails: scanResult.details,
+              filename,
+              fileSizeStr: `${(size / 1024).toFixed(1)} KB`,
+              actionTaken: 'Berkas Dikarantina Otomatis (Akses Unduh Ditangguhkan)',
+            });
+          }
+          // Isolate quarantined dangerous file: do NOT save to LegalDocument
+          continue;
+        }
+
+        // 2. Auto-save to LegalDocument under the customer's account in 'Lampiran Email' folder (clean files only)
         if (customer) {
           try {
             const existingDoc = await this.prisma.legalDocument.findFirst({
