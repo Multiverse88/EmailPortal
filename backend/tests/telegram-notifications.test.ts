@@ -15,6 +15,7 @@ import {
   generateTicketCardPng,
   generateDailyDigestCardPng,
   generateSecurityAlertCardPng,
+  generateAiAssistantCardPng,
 } from '../src/lib/card-generator';
 import { processTelegramAiMessage, gatherLiveWebsiteSnapshot } from '../src/lib/telegram-ai';
 import { handleTelegramMessageUpdate, handleTelegramCallbackQuery } from '../src/workers/telegram-bot';
@@ -455,6 +456,24 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
       expect(alertBuffer!.length).toBeGreaterThan(15000);
     });
 
+    it('should generate high-resolution PNG AI assistant card in-memory', async () => {
+      const aiCardBuffer = await generateAiAssistantCardPng({
+        query: 'Kondisi Kapasitas Server',
+        replySummary: '• S3 Storage terpakai 150 MB.\n• Webmail cluster tersinkronisasi IMAP/SMTP.\n• Tidak ada peringatan anomali keamanan.',
+        senderName: 'Super Admin',
+        category: 'AI EXECUTIVE DESK',
+        pillText: 'JAWABAN AI • REAL-TIME',
+        toneColor: '#8b5cf6',
+        deepColor: '#6d28d9',
+        pose: 'tips',
+        bubbleText: 'Informasi sistem siap ditinjau!',
+      });
+
+      expect(aiCardBuffer).not.toBeNull();
+      expect(isPng(aiCardBuffer)).toBe(true);
+      expect(aiCardBuffer!.length).toBeGreaterThan(15000);
+    });
+
     it('should send photo via Telegram Bot API with multipart FormData', async () => {
       let sentFormData: FormData | null = null;
       global.fetch = jest.fn().mockImplementation((url, opts) => {
@@ -497,10 +516,12 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
     });
 
     it('should handle callback_query for AI legal resolution draft (ai_draft)', async () => {
-      // Create a test ticket for callback test
+      const ticketNum = `TK-AI-TEST-${Date.now()}`;
+      await prisma.supportTicket.deleteMany({ where: { ticketNumber: { startsWith: 'TK-AI-TEST' } } }).catch(() => {});
+
       const testTicket = await prisma.supportTicket.create({
         data: {
-          ticketNumber: 'TK-AI-TEST-1',
+          ticketNumber: ticketNum,
           subject: 'Pembaruan SK AHU Kemenkumham',
           category: 'Legalitas',
           priority: 'urgent',
@@ -511,7 +532,9 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
 
       let sentMessageText = '';
       global.fetch = jest.fn().mockImplementation((url, opts) => {
-        if (opts.body && typeof opts.body === 'string') {
+        if (opts.body instanceof FormData) {
+          sentMessageText = (opts.body.get('caption') as string) || '';
+        } else if (opts.body && typeof opts.body === 'string') {
           try {
             const parsed = JSON.parse(opts.body);
             if (parsed.text) sentMessageText = parsed.text;
@@ -531,7 +554,7 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
       });
 
       expect(sentMessageText).toContain('REKOMENDASI DRAF SOLUSI AI');
-      expect(sentMessageText).toContain('TK-AI-TEST-1');
+      expect(sentMessageText).toContain(ticketNum);
       expect(sentMessageText).toContain('Pembaruan SK AHU Kemenkumham');
 
       // Cleanup
@@ -539,9 +562,12 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
     });
 
     it('should handle callback_query for resolving ticket directly (resolve)', async () => {
+      const ticketNum = `TK-RESOLVE-TEST-${Date.now()}`;
+      await prisma.supportTicket.deleteMany({ where: { ticketNumber: { startsWith: 'TK-RESOLVE-TEST' } } }).catch(() => {});
+
       const testTicket = await prisma.supportTicket.create({
         data: {
-          ticketNumber: 'TK-RESOLVE-TEST-1',
+          ticketNumber: ticketNum,
           subject: 'Verifikasi Berkas Notaris',
           category: 'Legalitas',
           priority: 'normal',
@@ -552,7 +578,9 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
 
       let confirmationText = '';
       global.fetch = jest.fn().mockImplementation((url, opts) => {
-        if (opts.body && typeof opts.body === 'string') {
+        if (opts.body instanceof FormData) {
+          confirmationText = (opts.body.get('caption') as string) || '';
+        } else if (opts.body && typeof opts.body === 'string') {
           try {
             const parsed = JSON.parse(opts.body);
             if (parsed.text) confirmationText = parsed.text;
@@ -572,7 +600,7 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
       });
 
       expect(confirmationText).toContain('TIKET BERHASIL DISELESAIKAN');
-      expect(confirmationText).toContain('TK-RESOLVE-TEST-1');
+      expect(confirmationText).toContain(ticketNum);
 
       // Check status in database
       const updated = await prisma.supportTicket.findUnique({ where: { id: testTicket.id } });
@@ -602,6 +630,41 @@ describe('Telegram Daily Summary (07:00 WIB) & Interactive AI Chatbot Service', 
         .expect(200);
 
       expect(res.body.ok).toBe(true);
+    });
+
+    it('should reply to incoming Telegram user messages with interactive visual photo card and inline buttons', async () => {
+      let sentPhotoCaption = '';
+      let hasPhotoAttached = false;
+      let sentReplyMarkup: any = null;
+
+      global.fetch = jest.fn().mockImplementation((url, opts) => {
+        if (opts.body instanceof FormData) {
+          hasPhotoAttached = opts.body.has('photo');
+          sentPhotoCaption = (opts.body.get('caption') as string) || '';
+          sentReplyMarkup = opts.body.get('reply_markup');
+        } else if (typeof opts.body === 'string') {
+          try {
+            const parsed = JSON.parse(opts.body);
+            if (parsed.text) sentPhotoCaption = parsed.text;
+          } catch {}
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ ok: true, result: { message_id: 9991 } }),
+        });
+      }) as any;
+
+      await handleTelegramMessageUpdate(prisma, {
+        message_id: 101,
+        chat: { id: -1001234567890, first_name: 'Super Admin' },
+        from: { id: 12345, first_name: 'Super Admin' },
+        text: '/status',
+      });
+
+      expect(hasPhotoAttached).toBe(true);
+      expect(sentPhotoCaption).toContain('STATUS & KONDISI WEBSITE EASYLEGAL');
+      expect(sentReplyMarkup).toContain('bot_cmd:status');
+      expect(sentReplyMarkup).toContain('view_tickets');
     });
   });
 });

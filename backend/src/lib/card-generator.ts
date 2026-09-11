@@ -14,6 +14,24 @@ export function escapeXml(unsafe?: string | null): string {
 }
 
 /**
+ * Strips HTML tags and unescapes entities for SVG rendering
+ */
+export function stripHtml(html?: string | null): string {
+  if (!html) return '';
+  return String(html)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+/**
  * Splits text into wrapped lines for multi-line SVG rendering (<tspan>)
  */
 export function wrapText(text: string, maxLen = 60): string[] {
@@ -863,6 +881,156 @@ export async function generateSecurityAlertCardPng(data: SecurityAlertInput): Pr
     return await renderSvgToPng(svg, 900);
   } catch (err) {
     console.error('[CardGenerator] Failed to generate security alert card PNG:', err);
+    return null;
+  }
+}
+
+export interface AiAssistantCardInput {
+  query: string;
+  replySummary: string;
+  senderName?: string;
+  category?: string;
+  pillText?: string;
+  toneColor?: string;
+  deepColor?: string;
+  pose?: string;
+  bubbleText?: string;
+  timestampStr?: string;
+}
+
+/**
+ * Generates an SVG string for AI Assistant Chat Response Card based on easylegal-kartu-notifikasi.html
+ */
+export function generateAiAssistantCardSvg(data: AiAssistantCardInput): string {
+  const toneColor = data.toneColor || '#8b5cf6';
+  const deepColor = data.deepColor || '#6d28d9';
+  const pillText = data.pillText || 'JAWABAN AI • REAL-TIME';
+  const category = data.category || 'AI EXECUTIVE ASSISTANT';
+  const pose = data.pose || 'tips';
+  const bubbleText = data.bubbleText || 'Jawaban sudah siap! Cek detailnya di bawah ya.';
+  const senderName = data.senderName || 'Super Admin';
+  const timestampStr = data.timestampStr || 'Hari ini - Real-time';
+
+  const truncatedQuery = data.query.length > 36 ? data.query.slice(0, 33) + '...' : data.query;
+
+  // Format summary text into clean rows
+  const rawLines = data.replySummary
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  const formattedLines: string[] = [];
+  for (const line of rawLines) {
+    const wrapped = wrapText(line, 56);
+    for (const w of wrapped) {
+      if (formattedLines.length < 6) {
+        formattedLines.push(w);
+      }
+    }
+  }
+
+  if (formattedLines.length === 0) {
+    formattedLines.push('Informasi data real-time telah berhasil dihimpun dari database.');
+  }
+
+  const summaryRowsSvg = formattedLines.map((line, idx) => {
+    const rowY = 56 + idx * 26;
+    const isBullet = line.startsWith('•') || line.startsWith('-');
+    const cleanText = isBullet ? line.replace(/^[•\-]\s*/, '') : line;
+
+    if (isBullet) {
+      return `
+      <g>
+        <circle cx="6" cy="${rowY - 4}" r="3" fill="${toneColor}" />
+        <text x="18" y="${rowY}" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#1f2937">${escapeXml(cleanText)}</text>
+      </g>`;
+    }
+
+    return `<text x="2" y="${rowY}" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#1f2937">${escapeXml(line)}</text>`;
+  }).join('');
+
+  return `<svg width="900" height="520" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="55%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f6f7fa" />
+    </linearGradient>
+    <linearGradient id="toplineGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="${deepColor}" />
+      <stop offset="100%" stop-color="${toneColor}" />
+    </linearGradient>
+    <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d7232c" />
+      <stop offset="100%" stop-color="#a8141c" />
+    </linearGradient>
+    <linearGradient id="pillGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${toneColor}" />
+      <stop offset="100%" stop-color="${deepColor}" />
+    </linearGradient>
+    <radialGradient id="orbTop" cx="100%" cy="0%" r="100%">
+      <stop offset="0%" stop-color="${toneColor}" stop-opacity="0.20" />
+      <stop offset="55%" stop-color="${toneColor}" stop-opacity="0.07" />
+      <stop offset="100%" stop-color="${toneColor}" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glowBottom" cx="100%" cy="100%" r="100%">
+      <stop offset="0%" stop-color="${toneColor}" stop-opacity="0.16" />
+      <stop offset="68%" stop-color="${toneColor}" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- BASE CARD -->
+  <rect width="900" height="520" rx="18" fill="url(#cardBg)" stroke="#dde2ea" stroke-width="1" />
+  <circle cx="820" cy="30" r="160" fill="url(#orbTop)" />
+  <circle cx="850" cy="460" r="150" fill="url(#glowBottom)" />
+
+  ${renderCardHeader('EASYLEGAL AI ASSISTANT', category, { pill: pillText, tone: toneColor, deep: deepColor })}
+
+  <!-- BODY: QUERY & SENDER -->
+  <g transform="translate(44, 102)">
+    <text x="0" y="10" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#7c8596" letter-spacing="1.2">TOPIK / PERTANYAAN ADMIN</text>
+    <text x="0" y="36" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="700" fill="#111827">"${escapeXml(truncatedQuery)}"</text>
+
+    <g transform="translate(380, 18)">
+      <g transform="translate(0, 2) scale(0.7)" stroke="#7c8596" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        ${ICONS.user}
+      </g>
+      <text x="18" y="14" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#4b5565">${escapeXml(senderName)} • ${escapeXml(timestampStr)}</text>
+    </g>
+  </g>
+
+  <!-- BODY: SUMMARY PANEL -->
+  <g transform="translate(44, 160)">
+    <rect width="626" height="282" rx="14" fill="#f7f8fa" stroke="#e3e7ee" stroke-width="1" />
+
+    <!-- Panel Header -->
+    <g transform="translate(24, 22)">
+      <g transform="translate(0, -1) scale(0.8)" stroke="${toneColor}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        ${ICONS.zap}
+      </g>
+      <text x="22" y="13" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="700" fill="${toneColor}" letter-spacing="1.1">RINGKASAN JAWABAN &amp; ANALISIS AI</text>
+      <line x1="0" y1="26" x2="578" y2="26" stroke="#e3e7ee" stroke-width="1" />
+
+      <!-- Text Lines / Bullet Points -->
+      ${summaryRowsSvg}
+    </g>
+  </g>
+
+  ${renderMascotStage(pose, bubbleText, toneColor)}
+
+  ${renderCardFooter('AI Assistant Ready', 'EasyLegal Secure In-Memory Enclave', 'KLIK TOMBOL DI BAWAH UNTUK AKSI CEPAT')}
+</svg>`;
+}
+
+/**
+ * High-level wrapper to generate AI Assistant Response Card PNG
+ */
+export async function generateAiAssistantCardPng(data: AiAssistantCardInput): Promise<Buffer | null> {
+  try {
+    const svg = generateAiAssistantCardSvg(data);
+    return await renderSvgToPng(svg, 900);
+  } catch (err) {
+    console.error('[CardGenerator] Failed to generate AI assistant card PNG:', err);
     return null;
   }
 }
