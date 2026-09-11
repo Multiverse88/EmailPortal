@@ -71,6 +71,15 @@ const FOLDER_META = [
   { key: 'Trash', label: 'Sampah', icon: Trash2 },
 ];
 
+function cleanQuotedBody(raw?: string | null): string {
+  if (!raw) return '';
+  return raw
+    .replace(/EasyLegal Verified Corporate Client/gi, '')
+    .replace(/EASYLEGAL CLIENT MAIL • Confirmed Safe Sender/gi, '')
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .trim();
+}
+
 const initials = (name: string | null) => {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);
@@ -670,7 +679,7 @@ function Inbox_() {
                       setDraft({
                         to: message.sender ?? '',
                         subject: replySubject,
-                        body: `\n\n--- Pesan asli dari ${message.sender} ---\n${message.bodyText ?? ''}`,
+                        body: `\n\n--- Pesan asli dari ${message.sender} ---\n${cleanQuotedBody(message.bodyText)}`,
                         inReplyTo: message.messageId || undefined,
                         references: message.references
                           ? `${message.references} ${message.messageId || ''}`.trim()
@@ -690,7 +699,7 @@ function Inbox_() {
                       const forwardSubject = /^fwd:\s*/i.test(cleanSub) ? cleanSub : `Fwd: ${cleanSub || '(tanpa subjek)'}`;
                       setDraft({
                         subject: forwardSubject,
-                        body: `\n\n--- Diteruskan dari ${message.sender} ---\n${message.bodyText ?? ''}`,
+                        body: `\n\n--- Diteruskan dari ${message.sender} ---\n${cleanQuotedBody(message.bodyText)}`,
                         references: message.messageId || undefined,
                       });
                     }}
@@ -848,25 +857,34 @@ function Inbox_() {
                   {/* Bottom Quick Reply Trigger */}
                   <div className="mt-8 pt-6 border-t border-slate-100 flex items-center gap-3">
                     <button
-                      onClick={() =>
+                      onClick={() => {
+                        const cleanSub = (message.subject || '').trim();
+                        const replySubject = /^re:\s*/i.test(cleanSub) ? cleanSub : `Re: ${cleanSub || '(tanpa subjek)'}`;
                         setDraft({
                           to: message.sender ?? '',
-                          subject: `Re: ${message.subject ?? ''}`,
-                          body: `\n\n--- Pesan asli dari ${message.sender} ---\n${message.bodyText ?? ''}`,
-                        })
-                      }
+                          subject: replySubject,
+                          body: `\n\n--- Pesan asli dari ${message.sender} ---\n${cleanQuotedBody(message.bodyText)}`,
+                          inReplyTo: message.messageId || undefined,
+                          references: message.references
+                            ? `${message.references} ${message.messageId || ''}`.trim()
+                            : (message.messageId || undefined),
+                        });
+                      }}
                       className="bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors"
                     >
                       <Reply className="w-3.5 h-3.5" />
                       <span>Balas Email Ini</span>
                     </button>
                     <button
-                      onClick={() =>
+                      onClick={() => {
+                        const cleanSub = (message.subject || '').trim();
+                        const forwardSubject = /^fwd:\s*/i.test(cleanSub) ? cleanSub : `Fwd: ${cleanSub || '(tanpa subjek)'}`;
                         setDraft({
-                          subject: `Fwd: ${message.subject ?? ''}`,
-                          body: `\n\n--- Diteruskan dari ${message.sender} ---\n${message.bodyText ?? ''}`,
-                        })
-                      }
+                          subject: forwardSubject,
+                          body: `\n\n--- Diteruskan dari ${message.sender} ---\n${cleanQuotedBody(message.bodyText)}`,
+                          references: message.messageId || undefined,
+                        });
+                      }}
                       className="bg-slate-100 hover:bg-slate-200/80 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors"
                     >
                       <Forward className="w-3.5 h-3.5" />

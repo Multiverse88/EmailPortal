@@ -7,6 +7,7 @@ import {
   extractRootDomain,
   resolveAvatarMap,
   buildBrandedEmailHtml,
+  stripCorporateSignature,
 } from '../src/routes/email';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
@@ -80,6 +81,11 @@ describe('Email Avatar and Branded Signature Integration', () => {
       expect(html).toContain('Ini adalah pesan resmi legal.');
       expect(html).not.toContain('EasyLegal Verified Corporate Client');
       expect(html).not.toContain('border-top: 1px solid #e2e8f0');
+    });
+
+    it('stripCorporateSignature strips unwanted corporate client badges and tags', () => {
+      const dirtyText = 'Halo rekan,\n\nEasyLegal Verified Corporate Client\nTerima kasih.';
+      expect(stripCorporateSignature(dirtyText)).not.toContain('EasyLegal Verified Corporate Client');
     });
 
     it('resolveAvatarMap resolves customer avatars, system admin logo, and external senders', async () => {

@@ -33,31 +33,13 @@ Berbeda dengan aplikasi perpesanan instan (WhatsApp/Telegram), aplikasi email se
 ## 2. Opsi Solusi yang Dapat Diterapkan
 
 ### Opsi 1: Tanda Tangan Email Otomatis Berlogo (HTML Branded Signature)
-> **Status:** Sangat Direkomendasikan & Paling Cepat Berfungsi (Universal).
+> **Status:** Dinonaktifkan & Dihapus (Pesan Bersih / Clean Message).
 
-- **Cara Kerja:**
-  Ketika customer mengirim email dari menu **Tulis Pesan** (`/inbox` atau `POST /api/email/send`), sistem otomatis menyematkan blok HTML Signature di bagian bawah email:
-  ```html
-  <table style="font-family: sans-serif; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
-    <tr>
-      <td style="vertical-align: top; padding-right: 14px;">
-        <img src="https://clienteasylegal.co.id/api/settings/avatar/[customerId]" 
-             alt="Logo Perusahaan" 
-             width="56" height="56" 
-             style="border-radius: 8px; object-fit: contain; border: 1px solid #e2e8f0;" />
-      </td>
-      <td style="vertical-align: top;">
-        <strong style="color: #0f172a; font-size: 14px;">[Nama Customer / Perusahaan]</strong><br/>
-        <span style="color: #64748b; font-size: 12px;">[Alamat Mailbox Korporasi]</span><br/>
-        <span style="color: #0284c7; font-size: 11px;">EasyLegal Verified Corporate Client</span>
-      </td>
-    </tr>
-  </table>
-  ```
-- **Kelebihan:**
-  - 100% muncul di **semua aplikasi penerima** (Gmail, Outlook, Yahoo Mail, HP Android, iPhone).
-  - Tampilan sangat profesional layaknya surat korporasi resmi.
-  - Sudah didukung langsung oleh endpoint avatar publik yang kita miliki (`/api/settings/avatar/:customerId`).
+- **Catatan Pembaruan:**
+  Blok tanda tangan otomatis berlogo dan lencana `EasyLegal Verified Corporate Client` sebelumnya sempat diterapkan, namun **telah dihapus sepenuhnya** agar:
+  1. Isi email murni hanya menyampaikan pesan yang diketik oleh pengguna tanpa ada embel-embel / footer tambahan.
+  2. Mencegah algoritma spam filter (seperti Google Spam Guard) mencurigai email balasan atau mengenali pola template berulang.
+  3. Pengguna yang menginginkan tanda tangan dapat mengonfigurasi teks tanda tangan manual via menu Pengaturan (General Settings).
 
 ---
 

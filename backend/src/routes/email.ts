@@ -185,12 +185,20 @@ export async function resolveAvatarMap(
   return map;
 }
 
+export function stripCorporateSignature(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/EasyLegal Verified Corporate Client/gi, '')
+    .replace(/EASYLEGAL CLIENT MAIL • Confirmed Safe Sender/gi, '')
+    .trim();
+}
+
 export function buildBrandedEmailHtml(opts: {
   customer?: { id?: string; name?: string; mailboxAddress?: string; avatarUrl?: string | null };
   bodyText: string;
   portalUrl?: string;
 }): string {
-  const rawText = opts.bodyText || '';
+  const rawText = stripCorporateSignature(opts.bodyText || '');
   const escapedText = rawText
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -334,7 +342,7 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
       if (!customer) return res.status(404).json({ error: 'Mailbox tidak ditemukan' });
 
       const files = (req.files as Express.Multer.File[]) ?? [];
-      const text = body ?? '';
+      const text = stripCorporateSignature(body ?? '');
       const attachmentBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
 
       // Enforce 5 GB storage limit: block sending if storage is full or if attachments exceed quota
