@@ -3,9 +3,10 @@ import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
-import { storage } from '../lib/storage';
+import { storage, getStorageRoot } from '../lib/storage';
 import { getCustomerStorageStats, checkStorageQuota, DEFAULT_STORAGE_QUOTA } from '../lib/quota';
 import { getAccountFolderName, sanitizeFileName } from '../lib/synology-sync';
+import { autoSyncExistingAttachmentsToDrive } from '../lib/drive-sync';
 
 const storageBase = process.env.STORAGE_DIR || './storage';
 export const STORAGE_DIR = path.isAbsolute(storageBase)
@@ -70,6 +71,9 @@ export default (prisma: PrismaClient) => {
           { filename: { contains: search } },
         ];
       }
+
+      // Ensure any existing email attachments in DB are synced to Legal Drive
+      await autoSyncExistingAttachmentsToDrive(prisma);
 
       const [documents, distinctCategories, storageStats] = await Promise.all([
         prisma.legalDocument.findMany({
@@ -247,30 +251,52 @@ export default (prisma: PrismaClient) => {
       }
 
       const isColdStorage = isDocumentColdStorage(document.createdAt);
-      let filePath = path.resolve(STORAGE_DIR, document.path);
-      if (!fs.existsSync(filePath)) {
-        filePath = path.resolve(STORAGE_DIR, path.basename(document.path));
-      }
-      const accountBucketKey = `accounts/${customerId}/documents/${path.basename(document.path)}`;
-      const legacyBucketKey = `documents/${customerId}/${path.basename(document.path)}`;
+      const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+      const accountFolder = getAccountFolderName(customer || { mailboxAddress: req.user!.email });
 
-      // 1. Check legacy storage path on disk
-      if (fs.existsSync(filePath)) {
-        res.setHeader('Content-Type', document.mimeType || 'application/pdf');
-        if (req.query.inline === 'true') {
-          res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.filename)}"`);
-          return res.sendFile(filePath);
-        } else {
-          return res.download(filePath, document.filename);
+      // 1. Check local storage path on disk (multiple candidate directories)
+      const localCandidates = [
+        path.resolve(STORAGE_DIR, document.path),
+        path.resolve(STORAGE_DIR, path.basename(document.path)),
+        path.resolve(STORAGE_DIR, 'accounts', accountFolder, 'documents', path.basename(document.path)),
+        path.resolve(STORAGE_DIR, 'accounts', accountFolder, 'attachments', path.basename(document.path)),
+        path.resolve(STORAGE_DIR, 'accounts', customerId, 'documents', path.basename(document.path)),
+        path.resolve(STORAGE_DIR, 'accounts', customerId, 'attachments', path.basename(document.path)),
+        path.join(getStorageRoot(), document.path),
+        path.join(getStorageRoot(), 'accounts', accountFolder, 'attachments', path.basename(document.path)),
+        path.join(getStorageRoot(), 'accounts', customerId, 'documents', path.basename(document.path)),
+      ];
+
+      for (const loc of localCandidates) {
+        if (fs.existsSync(loc)) {
+          res.setHeader('Content-Type', document.mimeType || 'application/pdf');
+          if (req.query.inline === 'true') {
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.filename)}"`);
+            return res.sendFile(loc);
+          } else {
+            return res.download(loc, document.filename);
+          }
         }
       }
 
-      // 2. Check storage adapter (isolated account path first, then legacy fallback)
+      // 2. Check storage adapter (S3 / Cloud Storage) with candidate keys
+      const candidateKeys = [
+        document.path,
+        `accounts/${customerId}/documents/${path.basename(document.path)}`,
+        `accounts/${accountFolder}/documents/${path.basename(document.path)}`,
+        `accounts/${accountFolder}/attachments/${path.basename(document.path)}`,
+        `accounts/${customerId}/attachments/${path.basename(document.path)}`,
+        `documents/${customerId}/${path.basename(document.path)}`,
+        `attachments/${path.basename(document.path)}`,
+        path.basename(document.path),
+      ].filter(Boolean);
+
       let streamKey: string | null = null;
-      if (await storage.objectExists(accountBucketKey)) {
-        streamKey = accountBucketKey;
-      } else if (await storage.objectExists(legacyBucketKey)) {
-        streamKey = legacyBucketKey;
+      for (const key of candidateKeys) {
+        if (await storage.objectExists(key)) {
+          streamKey = key;
+          break;
+        }
       }
 
       if (streamKey) {

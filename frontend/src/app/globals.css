@@ -26,10 +26,11 @@
 
   body {
     min-height: 100dvh;
-    font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-sf-pro), -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
     color: var(--ink);
     background-color: var(--canvas);
-    font-feature-settings: 'ss01' 1, 'cv11' 1;
+    letter-spacing: -0.011em;
+    text-rendering: optimizeLegibility;
   }
 
   ::selection {

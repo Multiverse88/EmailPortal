@@ -15,23 +15,33 @@ export async function getCustomerStorageStats(
   prisma: PrismaClient,
   customerId: string
 ): Promise<StorageStats> {
-  const [customer, docAgg, attachAgg] = await Promise.all([
+  const [customer, nonEmailDocs, emailDocs, attachAgg] = await Promise.all([
     prisma.customer.findUnique({
       where: { id: customerId },
       select: { storageQuota: true },
     }),
     prisma.legalDocument.aggregate({
-      where: { customerId },
+      where: { customerId, category: { not: 'Lampiran Email' } },
       _sum: { size: true },
     }),
-    prisma.attachment.aggregate({
+    prisma.legalDocument.findMany({
+      where: { customerId, category: 'Lampiran Email' },
+      select: { path: true, size: true },
+    }),
+    prisma.attachment.findMany({
       where: { message: { mailboxId: customerId } },
-      _sum: { size: true },
+      select: { path: true, size: true },
     }),
   ]);
 
-  const docSize = docAgg._sum.size || 0;
-  const attachSize = attachAgg._sum.size || 0;
+  const attachPaths = new Set(attachAgg.map((a) => a.path));
+  const attachSize = attachAgg.reduce((sum, a) => sum + (a.size || 0), 0);
+  const nonEmailDocSize = nonEmailDocs._sum.size || 0;
+  const extraEmailDocSize = emailDocs
+    .filter((d) => !attachPaths.has(d.path))
+    .reduce((sum, d) => sum + (d.size || 0), 0);
+
+  const docSize = nonEmailDocSize + extraEmailDocSize;
   const storageUsed = docSize + attachSize;
   const storageLimit = customer?.storageQuota || DEFAULT_STORAGE_QUOTA;
   const isFull = storageUsed >= storageLimit;

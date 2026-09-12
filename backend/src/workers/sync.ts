@@ -9,9 +9,10 @@ import { toSnippet } from '../lib/sanitize';
 import { inferAttachmentMimeType } from '../lib/attachments';
 import { getAccountFolderName } from '../lib/synology-sync';
 import { storage } from '../lib/storage';
-import { isMailApiConfigured, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody } from '../lib/hostinger';
+import { isMailApiConfigured, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody, fetchMessageAttachment } from '../lib/hostinger';
 import { scanAttachmentBuffer, scanEmailContent } from '../lib/security-scanner';
 import { notifyEmailThreat } from '../lib/telegram';
+import { saveAttachmentToDriveAndStorage, autoSyncExistingAttachmentsToDrive } from '../lib/drive-sync';
 
 const STORAGE_DIR = path.resolve(process.env.STORAGE_DIR || './storage');
 fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -125,6 +126,7 @@ export class SyncWorker {
           }
         }
       }
+      void autoSyncExistingAttachmentsToDrive(this.prisma);
     } catch (error) {
       console.error('sync pass failed:', error);
     } finally {
@@ -268,33 +270,69 @@ export class SyncWorker {
             const remotePath = `api-attach:${a.id}`;
             if (existingPaths.has(remotePath)) continue;
 
-            const attScan = scanAttachmentBuffer(a.filename, Buffer.alloc(0));
-            if (attScan.status === 'quarantined') {
-              void notifyEmailThreat({
-                accountName: customer.name,
-                mailboxAddress: customer.mailboxAddress,
-                sender: meta.sender || 'unknown',
-                subject: meta.subject || '(tanpa subjek)',
-                threatType: attScan.threatType || 'Berkas Lampiran Berbahaya',
-                threatDetails: attScan.details,
-                filename: a.filename,
-                fileSizeStr: a.size ? `${(a.size / 1024).toFixed(1)} KB` : undefined,
-                actionTaken: 'Berkas Dikarantina Otomatis (Akses Unduh Ditangguhkan)',
-              });
+            let buffer: Buffer | null = null;
+            try {
+              buffer = await fetchMessageAttachment(resourceId, folder, meta.uid, a.id);
+            } catch (fetchErr: any) {
+              console.warn(`[Sync] Could not pre-fetch attachment ${a.filename} via Mail API:`, fetchErr?.message);
             }
 
-            await this.prisma.attachment.create({
-              data: {
-                messageId: message.id,
+            if (buffer && buffer.length > 0) {
+              const attScan = scanAttachmentBuffer(a.filename, buffer);
+              if (attScan.status === 'quarantined') {
+                void notifyEmailThreat({
+                  accountName: customer.name,
+                  mailboxAddress: customer.mailboxAddress,
+                  sender: meta.sender || 'unknown',
+                  subject: meta.subject || '(tanpa subjek)',
+                  threatType: attScan.threatType || 'Berkas Lampiran Berbahaya',
+                  threatDetails: attScan.details,
+                  filename: a.filename,
+                  fileSizeStr: `${(buffer.length / 1024).toFixed(1)} KB`,
+                  actionTaken: 'Berkas Dikarantina Otomatis (Akses Unduh Ditangguhkan)',
+                });
+              }
+
+              const saved = await saveAttachmentToDriveAndStorage({
+                prisma: this.prisma,
+                customer,
                 filename: a.filename,
+                buffer,
                 mimeType: inferAttachmentMimeType(a.filename),
-                size: a.size,
-                path: remotePath,
-                scanStatus: attScan.status,
-                scanNotes: attScan.details,
-              },
-            });
-            existingPaths.add(remotePath);
+                size: buffer.length,
+                subject: meta.subject || '(tanpa subjek)',
+                senderOrRecipient: meta.sender ? `Email: ${meta.sender}` : 'Email Masuk',
+                isSent: false,
+              });
+
+              await this.prisma.attachment.create({
+                data: {
+                  messageId: message.id,
+                  filename: a.filename,
+                  mimeType: inferAttachmentMimeType(a.filename),
+                  size: buffer.length,
+                  path: saved.relPath,
+                  scanStatus: attScan.status,
+                  scanNotes: attScan.details,
+                },
+              });
+              existingPaths.add(saved.relPath);
+            } else {
+              // Fallback to api-attach stub if buffer couldn't be fetched immediately
+              const attScan = scanAttachmentBuffer(a.filename, Buffer.alloc(0));
+              await this.prisma.attachment.create({
+                data: {
+                  messageId: message.id,
+                  filename: a.filename,
+                  mimeType: inferAttachmentMimeType(a.filename),
+                  size: a.size,
+                  path: remotePath,
+                  scanStatus: attScan.status,
+                  scanNotes: attScan.details,
+                },
+              });
+              existingPaths.add(remotePath);
+            }
           }
         } catch {}
       }

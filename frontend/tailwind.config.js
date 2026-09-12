@@ -43,8 +43,26 @@ module.exports = {
         'legal-red-container': '#FFDAD6',
       },
       fontFamily: {
-        sans: ['var(--font-manrope)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        inter: ['var(--font-manrope)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: [
+          'var(--font-sf-pro)',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"SF Pro Text"',
+          '"SF Pro Display"',
+          'ui-sans-serif',
+          'system-ui',
+          'sans-serif',
+        ],
+        inter: [
+          'var(--font-sf-pro)',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"SF Pro Text"',
+          '"SF Pro Display"',
+          'ui-sans-serif',
+          'system-ui',
+          'sans-serif',
+        ],
       },
       boxShadow: {
         xs: '0 1px 2px rgba(57, 31, 31, 0.06)',

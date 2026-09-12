@@ -91,17 +91,83 @@ class LocalStorageDriver implements StorageAdapter {
   }
 }
 
-class S3StorageDriver implements StorageAdapter {
+export function normalizeS3Endpoint(raw?: string): string {
+  if (!raw) return 'https://is3.cloudhost.id';
+  let trimmed = raw.trim();
+  if (!/^https?:\/\//i.test(trimmed)) {
+    trimmed = `https://${trimmed}`;
+  }
+  return trimmed.replace(/\/+$/, '');
+}
+
+export function getS3ResolvedConfig() {
+  const accessKeyId = (
+    process.env.S3_ACCESS_KEY_ID ||
+    process.env.AWS_ACCESS_KEY_ID ||
+    process.env.S3_KEY_ID ||
+    process.env.S3_ACCESS_KEY ||
+    process.env.AWS_ACCESS_KEY ||
+    ''
+  ).trim();
+
+  const secretAccessKey = (
+    process.env.S3_SECRET_ACCESS_KEY ||
+    process.env.AWS_SECRET_ACCESS_KEY ||
+    process.env.S3_SECRET_KEY ||
+    process.env.S3_ACCESS_SECRET ||
+    process.env.AWS_SECRET_KEY ||
+    ''
+  ).trim();
+
+  const bucket = (
+    process.env.S3_BUCKET ||
+    process.env.AWS_BUCKET ||
+    process.env.AWS_S3_BUCKET ||
+    process.env.BUCKET_NAME ||
+    'emailportal'
+  ).trim();
+
+  const endpoint = normalizeS3Endpoint(
+    process.env.S3_ENDPOINT ||
+    process.env.AWS_ENDPOINT ||
+    process.env.AWS_ENDPOINT_URL ||
+    process.env.S3_HOST ||
+    'https://is3.cloudhost.id'
+  );
+
+  const region = (
+    process.env.S3_REGION ||
+    process.env.AWS_REGION ||
+    process.env.AWS_DEFAULT_REGION ||
+    'ap-southeast-3'
+  ).trim();
+
+  return {
+    accessKeyId,
+    secretAccessKey,
+    bucket,
+    endpoint,
+    region,
+  };
+}
+
+export function isS3ConfiguredEnv(): boolean {
+  const config = getS3ResolvedConfig();
+  return Boolean(config.accessKeyId && config.secretAccessKey);
+}
+
+export class S3StorageDriver implements StorageAdapter {
   private s3: AWS.S3;
   private bucket: string;
 
   constructor() {
-    this.bucket = process.env.S3_BUCKET || 'emailportal';
+    const config = getS3ResolvedConfig();
+    this.bucket = config.bucket;
     this.s3 = new AWS.S3({
-      endpoint: process.env.S3_ENDPOINT || 'https://is3.cloudhost.id',
-      region: process.env.S3_REGION || 'ap-southeast-3',
-      accessKeyId: process.env.S3_ACCESS_KEY_ID,
-      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+      endpoint: config.endpoint,
+      region: config.region,
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
       s3ForcePathStyle: true,
       signatureVersion: 'v4',
     });
@@ -112,56 +178,111 @@ class S3StorageDriver implements StorageAdapter {
   }
 
   async putObject(key: string, buffer: Buffer, mimeType = 'application/octet-stream'): Promise<string> {
-    await this.s3
-      .upload({
-        Bucket: this.bucket,
-        Key: key.replace(/^\/+/, ''),
-        Body: buffer,
-        ContentType: mimeType,
-      })
-      .promise();
+    const cleanKey = key.replace(/^\/+/, '');
 
-    // Auto-mirror to Synology Drive Client folder if configured (skip tenant keys to allow human-readable account mirroring)
-    if (!key.startsWith('accounts/')) {
-      await this.mirrorToSynology(key, buffer);
+    // 1. Always cache locally so local reads are instant and available offline
+    try {
+      const localPath = path.join(getStorageRoot(), cleanKey);
+      fs.mkdirSync(path.dirname(localPath), { recursive: true });
+      await fs.promises.writeFile(localPath, buffer);
+    } catch (localErr) {
+      console.warn('[S3StorageDriver] Warning saving local disk cache:', localErr);
     }
-    return key;
+
+    // 2. Upload to S3
+    try {
+      await this.s3
+        .upload({
+          Bucket: this.bucket,
+          Key: cleanKey,
+          Body: buffer,
+          ContentType: mimeType,
+        })
+        .promise();
+    } catch (s3Err: any) {
+      console.error(`[S3StorageDriver] S3 upload failed for ${cleanKey}:`, s3Err?.message || s3Err);
+    }
+
+    // 3. Auto-mirror to Synology Drive Client folder if configured (skip tenant keys to allow human-readable account mirroring)
+    if (!cleanKey.startsWith('accounts/')) {
+      await this.mirrorToSynology(cleanKey, buffer);
+    }
+    return cleanKey;
   }
 
   async getObject(key: string): Promise<Buffer> {
+    const cleanKey = key.replace(/^\/+/, '');
+
+    // Check local disk cache first
+    const localPath = path.join(getStorageRoot(), cleanKey);
+    if (fs.existsSync(localPath)) {
+      try {
+        return await fs.promises.readFile(localPath);
+      } catch {}
+    }
+
     const res = await this.s3
       .getObject({
         Bucket: this.bucket,
-        Key: key.replace(/^\/+/, ''),
+        Key: cleanKey,
       })
       .promise();
-    return res.Body as Buffer;
+
+    const buf = res.Body as Buffer;
+    // Populate local cache
+    try {
+      fs.mkdirSync(path.dirname(localPath), { recursive: true });
+      await fs.promises.writeFile(localPath, buf);
+    } catch {}
+
+    return buf;
   }
 
   async getObjectStream(key: string): Promise<NodeJS.ReadableStream> {
+    const cleanKey = key.replace(/^\/+/, '');
+
+    const localPath = path.join(getStorageRoot(), cleanKey);
+    if (fs.existsSync(localPath)) {
+      return fs.createReadStream(localPath);
+    }
+
     return this.s3
       .getObject({
         Bucket: this.bucket,
-        Key: key.replace(/^\/+/, ''),
+        Key: cleanKey,
       })
       .createReadStream();
   }
 
   async deleteObject(key: string): Promise<void> {
-    await this.s3
-      .deleteObject({
-        Bucket: this.bucket,
-        Key: key.replace(/^\/+/, ''),
-      })
-      .promise();
+    const cleanKey = key.replace(/^\/+/, '');
+    const localPath = path.join(getStorageRoot(), cleanKey);
+    if (fs.existsSync(localPath)) {
+      try { await fs.promises.unlink(localPath); } catch {}
+    }
+
+    try {
+      await this.s3
+        .deleteObject({
+          Bucket: this.bucket,
+          Key: cleanKey,
+        })
+        .promise();
+    } catch {}
   }
 
   async objectExists(key: string): Promise<boolean> {
+    const cleanKey = key.replace(/^\/+/, '');
+    const localPath = path.join(getStorageRoot(), cleanKey);
+    if (fs.existsSync(localPath)) {
+      return true;
+    }
+
     try {
       await this.s3
         .headObject({
           Bucket: this.bucket,
-          Key: key.replace(/^\/+/, ''),
+          Key: cleanKey,
         })
         .promise();
       return true;
@@ -184,12 +305,21 @@ class S3StorageDriver implements StorageAdapter {
   }
 }
 
-const driverType = (process.env.STORAGE_DRIVER || 'local').toLowerCase();
-const isS3Configured = Boolean(
-  process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
-);
+export { LocalStorageDriver };
 
-export const storage: StorageAdapter =
-  driverType === 's3' && isS3Configured
-    ? new S3StorageDriver()
-    : new LocalStorageDriver();
+const driverEnv = (process.env.STORAGE_DRIVER || '').trim().toLowerCase();
+const isConfigured = isS3ConfiguredEnv();
+// If driver explicitly set to 's3', OR S3 credentials exist and driver is NOT explicitly 'local', use S3
+const shouldUseS3 = driverEnv === 's3' || (isConfigured && driverEnv !== 'local');
+
+export const storage: StorageAdapter = shouldUseS3
+  ? new S3StorageDriver()
+  : new LocalStorageDriver();
+
+if (shouldUseS3) {
+  const cfg = getS3ResolvedConfig();
+  console.log(`✓ Storage Driver: Cloud S3 Active (Bucket: "${cfg.bucket}", Endpoint: ${cfg.endpoint})`);
+} else {
+  console.log(`ℹ Storage Driver: Local Storage Active (${getStorageRoot()})`);
+}
+

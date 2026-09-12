@@ -21,6 +21,9 @@ import {
   previewResponseMimeType,
 } from '../lib/attachments';
 import { scanAttachmentBuffer } from '../lib/security-scanner';
+import { saveAttachmentToDriveAndStorage } from '../lib/drive-sync';
+import { storage, getStorageRoot } from '../lib/storage';
+import { getAccountFolderName } from '../lib/synology-sync';
 
 export const STORAGE_DIR = path.resolve(process.env.STORAGE_DIR || './storage');
 fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -502,6 +505,56 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
         });
       }
 
+      // Save all sent attachments permanently to local disk, S3, Synology, and auto-save to Legal Drive
+      const attachmentRecords: Array<{
+        filename: string;
+        mimeType: string;
+        size: number;
+        path: string;
+        scanStatus: string;
+        scanNotes: string;
+      }> = [];
+
+      for (const f of files) {
+        try {
+          const fileBuffer = await fs.promises.readFile(f.path);
+          const saved = await saveAttachmentToDriveAndStorage({
+            prisma,
+            customer,
+            filename: f.originalname,
+            buffer: fileBuffer,
+            mimeType: f.mimetype,
+            size: f.size,
+            subject: subject || '(tanpa subjek)',
+            senderOrRecipient: customer.name || customer.mailboxAddress,
+            isSent: true,
+          });
+
+          attachmentRecords.push({
+            filename: f.originalname,
+            mimeType: f.mimetype || 'application/octet-stream',
+            size: f.size,
+            path: saved.relPath,
+            scanStatus: 'clean',
+            scanNotes: 'Telah melalui verifikasi keamanan ketat saat pengiriman',
+          });
+
+          if (f.path !== saved.filePath && fs.existsSync(f.path)) {
+            try { await fs.promises.unlink(f.path); } catch {}
+          }
+        } catch (saveErr) {
+          console.warn('[email/send] Failed to auto-save sent file to drive/storage:', saveErr);
+          attachmentRecords.push({
+            filename: f.originalname,
+            mimeType: f.mimetype || 'application/octet-stream',
+            size: f.size,
+            path: path.basename(f.path),
+            scanStatus: 'clean',
+            scanNotes: 'Telah melalui verifikasi keamanan ketat saat pengiriman',
+          });
+        }
+      }
+
       let messageId = `sent-${Date.now()}`;
       try {
         const domain = (customer.mailboxAddress.split('@')[1] || 'clienteasylegal.co.id').trim();
@@ -522,14 +575,7 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
             isRead: true,
             receivedAt: new Date(),
             attachments: {
-              create: files.map((f) => ({
-                filename: f.originalname,
-                mimeType: f.mimetype,
-                size: f.size,
-                path: path.basename(f.path),
-                scanStatus: 'clean',
-                scanNotes: 'Telah melalui verifikasi keamanan ketat saat pengiriman',
-              })),
+              create: attachmentRecords,
             },
           },
         });
@@ -708,15 +754,44 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
         return res.send(data);
       }
 
-      // path is stored as a relative path or basename; re-resolve and confirm it stays in STORAGE_DIR.
-      let file = path.resolve(STORAGE_DIR, attachment.path);
-      if (!fs.existsSync(file)) {
-        file = path.resolve(STORAGE_DIR, path.basename(attachment.path));
+      const customer = attachment.message.mailbox;
+      const accountFolder = getAccountFolderName(customer);
+
+      // 1. Check local candidates on disk
+      const localCandidates = [
+        path.resolve(STORAGE_DIR, attachment.path),
+        path.resolve(STORAGE_DIR, path.basename(attachment.path)),
+        path.resolve(STORAGE_DIR, 'accounts', accountFolder, 'attachments', path.basename(attachment.path)),
+        path.resolve(STORAGE_DIR, 'accounts', customer.id, 'attachments', path.basename(attachment.path)),
+        path.join(getStorageRoot(), attachment.path),
+        path.join(getStorageRoot(), 'accounts', accountFolder, 'attachments', path.basename(attachment.path)),
+      ];
+
+      for (const loc of localCandidates) {
+        if (fs.existsSync(loc)) {
+          return res.download(loc, attachment.filename);
+        }
       }
-      if (!file.startsWith(STORAGE_DIR + path.sep) || !fs.existsSync(file)) {
-        return res.status(404).json({ error: 'File tidak ada di storage' });
+
+      // 2. Check S3 Storage Adapter
+      const storageCandidates = [
+        attachment.path,
+        `accounts/${accountFolder}/attachments/${path.basename(attachment.path)}`,
+        `accounts/${customer.id}/attachments/${path.basename(attachment.path)}`,
+        `attachments/${path.basename(attachment.path)}`,
+        path.basename(attachment.path),
+      ];
+
+      for (const key of storageCandidates) {
+        if (await storage.objectExists(key)) {
+          res.setHeader('Content-Type', inferAttachmentMimeType(attachment.filename, attachment.mimeType));
+          res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(attachment.filename)}`);
+          const stream = await storage.getObjectStream(key);
+          return stream.pipe(res);
+        }
       }
-      res.download(file, attachment.filename);
+
+      return res.status(404).json({ error: 'File tidak ada di storage' });
     } catch (error) {
       console.error('Download error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -772,14 +847,40 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
         return res.send(data);
       }
 
-      let file = path.resolve(STORAGE_DIR, attachment.path);
-      if (!fs.existsSync(file)) {
-        file = path.resolve(STORAGE_DIR, path.basename(attachment.path));
+      const customer = attachment.message.mailbox;
+      const accountFolder = getAccountFolderName(customer);
+
+      const localCandidates = [
+        path.resolve(STORAGE_DIR, attachment.path),
+        path.resolve(STORAGE_DIR, path.basename(attachment.path)),
+        path.resolve(STORAGE_DIR, 'accounts', accountFolder, 'attachments', path.basename(attachment.path)),
+        path.resolve(STORAGE_DIR, 'accounts', customer.id, 'attachments', path.basename(attachment.path)),
+        path.join(getStorageRoot(), attachment.path),
+        path.join(getStorageRoot(), 'accounts', accountFolder, 'attachments', path.basename(attachment.path)),
+      ];
+
+      for (const loc of localCandidates) {
+        if (fs.existsSync(loc)) {
+          return res.sendFile(loc);
+        }
       }
-      if (!file.startsWith(STORAGE_DIR + path.sep) || !fs.existsSync(file)) {
-        return res.status(404).json({ error: 'File tidak ada di storage' });
+
+      const storageCandidates = [
+        attachment.path,
+        `accounts/${accountFolder}/attachments/${path.basename(attachment.path)}`,
+        `accounts/${customer.id}/attachments/${path.basename(attachment.path)}`,
+        `attachments/${path.basename(attachment.path)}`,
+        path.basename(attachment.path),
+      ];
+
+      for (const key of storageCandidates) {
+        if (await storage.objectExists(key)) {
+          const stream = await storage.getObjectStream(key);
+          return stream.pipe(res);
+        }
       }
-      return res.sendFile(file);
+
+      return res.status(404).json({ error: 'File tidak ada di storage' });
     } catch (error) {
       console.error('Preview attachment error:', error);
       res.status(500).json({ error: 'Gagal memuat pratinjau lampiran' });
