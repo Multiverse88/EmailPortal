@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import app, { prisma, syncWorker } from './app';
 import { startScheduler, stopScheduler } from './workers/scheduler';
 import { startTelegramBot, stopTelegramBot } from './workers/telegram-bot';
+import { startSecurityMonitor, stopSecurityMonitor } from './workers/security-monitor';
 
 const PORT = process.env.PORT || 4000;
 const worker = syncWorker;
@@ -76,6 +77,7 @@ async function startServer() {
     await worker.start();
     startScheduler(prisma);
     startTelegramBot(prisma);
+    startSecurityMonitor(prisma);
   } catch (error) {
     console.error('✗ Failed to start server:', error);
     process.exit(1);
@@ -84,6 +86,7 @@ async function startServer() {
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sig, async () => {
+    stopSecurityMonitor();
     stopTelegramBot();
     stopScheduler();
     worker.stop();

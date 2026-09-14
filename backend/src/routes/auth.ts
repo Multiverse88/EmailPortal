@@ -23,6 +23,8 @@ import {
   createMailboxOnHostinger,
   changeMailboxPasswordOnHostinger,
 } from '../lib/hostinger';
+import { extractClientInfo, recordLoginAttempt, signWithSession } from '../lib/security-auth';
+import { emitSecurityEvent } from '../lib/security-events';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -32,35 +34,6 @@ const sign = (id: string, email: string, type: 'customer' | 'admin', role?: User
 
 const signChallenge = (id: string, email: string) =>
   jwt.sign({ id, email, purpose: '2fa-challenge' }, JWT_SECRET, { expiresIn: '5m' } as jwt.SignOptions);
-
-function parseClientInfo(req: Request) {
-  const forwarded = req.headers['x-forwarded-for'];
-  let ipAddress = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress) || '127.0.0.1';
-  if (ipAddress === '::1' || ipAddress === '::ffff:127.0.0.1') {
-    ipAddress = '127.0.0.1';
-  }
-  const isLocal = ipAddress === '127.0.0.1' || ipAddress.startsWith('192.168.') || ipAddress.startsWith('10.');
-  const location = isLocal ? 'Lokal (Development)' : 'Indonesia';
-  const ua = req.headers['user-agent'] || 'Unknown Device';
-  
-  let deviceType = 'desktop';
-  if (/mobile|android|iphone|ipad/i.test(ua)) {
-    deviceType = 'mobile';
-  } else if (/macintosh|windows|linux/i.test(ua)) {
-    deviceType = 'laptop';
-  }
-
-  let browser = 'Browser Web';
-  if (/firefox/i.test(ua)) browser = 'Firefox';
-  else if (/edg/i.test(ua)) browser = 'Edge';
-  else if (/chrome/i.test(ua)) browser = 'Chrome';
-  else if (/safari/i.test(ua)) browser = 'Safari';
-
-  const os = /linux/i.test(ua) ? 'Linux' : /macintosh|mac os/i.test(ua) ? 'macOS' : /windows/i.test(ua) ? 'Windows' : 'Desktop';
-  const deviceName = `${browser} on ${os}`;
-
-  return { ipAddress, deviceName, deviceType, browser, location };
-}
 
 // FR-8: brute-force guard on the login endpoints only.
 const loginLimiter = rateLimit({
@@ -94,22 +67,35 @@ export default (prisma: PrismaClient) => {
       });
 
       if (!customer) {
+        await recordLoginAttempt(prisma, req, { email: mailboxQuery, status: 'failed', failureReason: 'not_found' });
         return res.status(401).json({ error: 'Email atau password salah' });
       }
 
       if (customer.status === 'suspended') {
+        await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'failed', failureReason: 'suspended' });
         return res.status(403).json({ error: 'Akun Anda sedang ditangguhkan. Silakan hubungi administrator.' });
       }
 
       if (customer.status === 'inactive' || customer.status === 'deleted') {
+        await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'failed', failureReason: 'inactive' });
         return res.status(403).json({ error: 'Akun Anda sedang tidak aktif. Silakan hubungi administrator.' });
       }
 
       if (!verifyPassword(password, customer.passwordEnc)) {
+        const attempt = await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'failed', failureReason: 'invalid_password' });
+        emitSecurityEvent({
+          type: 'login-attempt',
+          severity: 'warning',
+          title: 'Login Gagal: Kata Sandi Salah',
+          accountEmail: customer.mailboxAddress,
+          customerId: customer.id,
+          ipAddress: attempt.ipAddress,
+        });
         return res.status(401).json({ error: 'Email atau password salah' });
       }
 
       if (customer.twoFactorEnabled && customer.twoFactorSecret) {
+        await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: '2fa_challenge' });
         return res.json({
           requires2FA: true,
           challengeToken: signChallenge(customer.id, customer.mailboxAddress),
@@ -119,7 +105,7 @@ export default (prisma: PrismaClient) => {
 
       await prisma.customer.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } });
 
-      const clientInfo = parseClientInfo(req);
+      const clientInfo = await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'success' });
       checkAndSendNewDeviceAlert(prisma, customer, clientInfo).catch((err) =>
         console.error('New device alert dispatch failed:', err)
       );
@@ -136,13 +122,15 @@ export default (prisma: PrismaClient) => {
           browser: clientInfo.browser,
           ipAddress: clientInfo.ipAddress,
           location: clientInfo.location,
+          userAgent: clientInfo.userAgent,
+          tokenSessionId: clientInfo.tokenSessionId,
           isCurrent: true,
           lastActiveAt: new Date(),
         },
       });
 
       res.json({
-        token: sign(customer.id, customer.mailboxAddress, 'customer', 'customer'),
+        token: signWithSession(customer.id, customer.mailboxAddress, 'customer', 'customer', clientInfo.tokenSessionId),
         user: {
           id: customer.id,
           name: customer.name,
@@ -191,12 +179,21 @@ export default (prisma: PrismaClient) => {
 
       const isValid = verifyTotp(code, secret);
       if (!isValid) {
+        const attempt = await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'failed', failureReason: '2fa_invalid' });
+        emitSecurityEvent({
+          type: 'login-attempt',
+          severity: 'warning',
+          title: 'Login Gagal: Kode 2FA Salah',
+          accountEmail: customer.mailboxAddress,
+          customerId: customer.id,
+          ipAddress: attempt.ipAddress,
+        });
         return res.status(401).json({ error: 'Kode 2FA salah atau kedaluwarsa' });
       }
 
       await prisma.customer.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } });
 
-      const clientInfo = parseClientInfo(req);
+      const clientInfo = await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'success' });
       checkAndSendNewDeviceAlert(prisma, customer, clientInfo).catch((err) =>
         console.error('New device alert dispatch failed:', err)
       );
@@ -213,13 +210,15 @@ export default (prisma: PrismaClient) => {
           browser: clientInfo.browser,
           ipAddress: clientInfo.ipAddress,
           location: clientInfo.location,
+          userAgent: clientInfo.userAgent,
+          tokenSessionId: clientInfo.tokenSessionId,
           isCurrent: true,
           lastActiveAt: new Date(),
         },
       });
 
       res.json({
-        token: sign(customer.id, customer.mailboxAddress, 'customer', 'customer'),
+        token: signWithSession(customer.id, customer.mailboxAddress, 'customer', 'customer', clientInfo.tokenSessionId),
         user: {
           id: customer.id,
           name: customer.name,
@@ -275,9 +274,18 @@ export default (prisma: PrismaClient) => {
       }
 
       if (!admin || !admin.isActive || !(await bcrypt.compare(password, admin.passwordHash))) {
+        const attempt = await recordLoginAttempt(prisma, req, { email: normalizedEmail, status: 'failed', failureReason: !admin ? 'not_found' : !admin.isActive ? 'suspended' : 'invalid_password' });
+        emitSecurityEvent({
+          type: 'login-attempt',
+          severity: 'critical',
+          title: 'Login Admin Gagal',
+          accountEmail: normalizedEmail,
+          ipAddress: attempt.ipAddress,
+        });
         return res.status(401).json({ error: 'Email atau password salah' });
       }
 
+      await recordLoginAttempt(prisma, req, { email: admin.email, status: 'success' });
       await prisma.adminUser.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
       res.json({
         token: sign(admin.id, admin.email, 'admin', admin.role as UserRole),
@@ -453,8 +461,8 @@ export default (prisma: PrismaClient) => {
       const officerEmail = req.user?.email || 'admin@clienteasylegal.co.id';
       const officerRole = (req.user as any)?.role || 'officer';
 
-      const token = sign(customer.id, customer.mailboxAddress, 'customer', 'customer');
-      const clientInfo = parseClientInfo(req);
+      const clientInfo = extractClientInfo(req);
+      const token = signWithSession(customer.id, customer.mailboxAddress, 'customer', 'customer', clientInfo.tokenSessionId);
 
       await prisma.loginSession.create({
         data: {
@@ -464,6 +472,8 @@ export default (prisma: PrismaClient) => {
           browser: clientInfo.browser,
           ipAddress: clientInfo.ipAddress,
           location: clientInfo.location,
+          userAgent: clientInfo.userAgent,
+          tokenSessionId: clientInfo.tokenSessionId,
           isCurrent: true,
           lastActiveAt: new Date(),
         },

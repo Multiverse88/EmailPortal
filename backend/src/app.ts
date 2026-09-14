@@ -21,10 +21,12 @@ import adminSupportRoutes from './routes/admin-support';
 import adminTelegramRoutes from './routes/admin-telegram';
 import { SyncWorker } from './workers/sync';
 import { handleTelegramMessageUpdate, handleTelegramCallbackQuery } from './workers/telegram-bot';
+import { setHeartbeatPrisma } from './lib/security-auth';
 
 const app = express();
 export const prisma = new PrismaClient();
 export const syncWorker = new SyncWorker(prisma);
+setHeartbeatPrisma(prisma);
 
 app.set('trust proxy', 1);
 app.use(

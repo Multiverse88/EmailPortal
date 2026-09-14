@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -135,7 +135,7 @@ export default function AdminPage() {
 }
 
 function Admin_() {
-  const { user, logout } = useAdminAuth();
+  const { user, logout, token: adminToken } = useAdminAuth();
   const { customerToken } = useAuthStore();
   const router = useRouter();
 
@@ -211,6 +211,33 @@ function Admin_() {
     fetcher,
     { refreshInterval: 5000, revalidateOnFocus: true }
   );
+
+  // Live security event stream (SSE): pushes instant radar refresh + toast on anomaly/threat.
+  useEffect(() => {
+    if (!isSuperAdmin || !adminToken) return;
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/+$/, '');
+    const streamUrl = `${baseUrl}/security/admin/events?token=${encodeURIComponent(adminToken)}`;
+    const source = new EventSource(streamUrl);
+
+    source.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'connected') return;
+        mutateRadar();
+        if (payload.type === 'anomaly' || payload.type === 'threat') {
+          setToast(`🚨 ${payload.title}${payload.accountEmail ? `: ${payload.accountEmail}` : ''}`);
+          setTimeout(() => setToast(''), 6000);
+        }
+      } catch {
+        // ignore malformed events
+      }
+    };
+    source.onerror = () => {
+      // EventSource auto-reconnects; nothing to do here.
+    };
+
+    return () => source.close();
+  }, [isSuperAdmin, adminToken, mutateRadar]);
 
   const [cleaning, setCleaning] = useState(false);
 

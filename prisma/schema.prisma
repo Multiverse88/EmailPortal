@@ -33,6 +33,7 @@ model Customer {
   documents LegalDocument[]
   tickets   SupportTicket[]
   sessions  LoginSession[]
+  loginAttempts LoginAttempt[]
   documentMetadata DocumentMetadata[]
 
   @@index([mailboxAddress])
@@ -133,10 +134,34 @@ model LoginSession {
   isCurrent    Boolean   @default(false)
   lastActiveAt DateTime  @default(now())
   createdAt    DateTime  @default(now())
+  tokenSessionId String?   @unique // sid claim in JWT; enables precise per-device activity heartbeat
+  userAgent      String?
 
   customer     Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
+  @@index([lastActiveAt])
+}
+
+model LoginAttempt {
+  id            String    @id @default(uuid())
+  email         String?
+  customerId    String?
+  ipAddress     String
+  userAgent     String?
+  deviceName    String?
+  location      String?
+  status        String    @default("failed") // "success", "failed", "2fa_challenge"
+  failureReason String?   // "invalid_password", "not_found", "suspended", "2fa_invalid", "rate_limited"
+  createdAt     DateTime  @default(now())
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([ipAddress])
+  @@index([customerId])
+  @@index([status, createdAt])
+
 }
 
 model LegalDocument {

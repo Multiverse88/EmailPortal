@@ -1,8 +1,10 @@
 import { Request, Response, Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateCustomer, authenticateSuperAdmin } from '../middleware/auth';
+import { authenticateCustomer, authenticateSuperAdmin, verifyToken } from '../middleware/auth';
 import { encrypt, decrypt, verifyPassword } from '../lib/crypto';
 import { generateTotpSecret, generateTotpUri, verifyTotp } from '../lib/totp';
+import { addSSEClient, removeSSEClient } from '../lib/security-events';
+import { getHealthSnapshot } from '../workers/security-monitor';
 
 export default (prisma: PrismaClient) => {
   const router = Router();
@@ -300,6 +302,55 @@ export default (prisma: PrismaClient) => {
       console.error('Terminate all customer sessions error:', error);
       res.status(500).json({ error: 'Gagal memutuskan sesi akun' });
     }
+  });
+
+  // GET /api/security/admin/events - live SSE stream (login attempts, anomalies, threats) for the radar UI.
+  // EventSource cannot set an Authorization header, so the token is accepted via ?token= as well.
+  router.get('/admin/events', (req: Request, res: Response) => {
+    const headerToken = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.split(' ')[1]
+      : undefined;
+    const token = headerToken || (typeof req.query.token === 'string' ? req.query.token : undefined);
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+    let payload: ReturnType<typeof verifyToken>;
+    try {
+      payload = verifyToken(token);
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+    const role = (payload.role || 'admin').toLowerCase().replace('_', '');
+    if (payload.type !== 'admin' || (role !== 'superadmin' && role !== 'admin')) {
+      return res.status(403).json({ error: 'Forbidden: Super Admin access required' });
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+    res.write(
+      `data: ${JSON.stringify({ type: 'connected', severity: 'info', title: 'Terhubung ke Security Monitor 24/7', at: new Date().toISOString() })}\n\n`
+    );
+    addSSEClient(res);
+
+    const keepAlive = setInterval(() => {
+      try {
+        res.write(': ping\n\n');
+      } catch {
+        clearInterval(keepAlive);
+      }
+    }, 25000);
+
+    req.on('close', () => {
+      clearInterval(keepAlive);
+      removeSSEClient(res);
+    });
+  });
+
+  // GET /api/security/admin/monitor - 24/7 monitor health snapshot (last scan, next scan, counters)
+  router.get('/admin/monitor', authenticateSuperAdmin, async (_req: Request, res: Response) => {
+    res.json(getHealthSnapshot());
   });
 
   return router;
