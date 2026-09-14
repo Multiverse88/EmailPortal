@@ -111,9 +111,18 @@ function DocumentsContent() {
     }
   };
 
+  // Refresh list after El tidy-documents modal applies new categories.
+  // Bump a key instead of subscribing fetchDocuments directly: no stale closure over filter state.
+  const [tidyRefreshKey, setTidyRefreshKey] = useState(0);
+  useEffect(() => {
+    const handler = () => setTidyRefreshKey((k) => k + 1);
+    window.addEventListener('easylegal:documents-changed', handler);
+    return () => window.removeEventListener('easylegal:documents-changed', handler);
+  }, []);
+
   useEffect(() => {
     fetchDocuments();
-  }, [selectedFolder, activeTab]);
+  }, [selectedFolder, activeTab, tidyRefreshKey]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

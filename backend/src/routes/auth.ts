@@ -375,7 +375,7 @@ export default (prisma: PrismaClient) => {
       }
 
       try {
-        await sendOnboardingNotice(personalEmail, mailboxAddress, tempPassword, name);
+        await sendOnboardingNotice(personalEmail, mailboxAddress, tempPassword, name, customer.storageQuota ?? undefined);
       } catch (noticeErr) {
         console.warn('register: onboarding notice failed:', (noticeErr as Error).message);
       }

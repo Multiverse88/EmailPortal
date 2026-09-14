@@ -469,6 +469,33 @@ export const PORTAL_KNOWLEDGE_BASE: KnowledgeItem[] = [
     ],
   },
   {
+    id: "tidy-documents",
+    title: "Rapikan & Klasifikasikan Berkas Legal Drive ke Folder yang Tepat",
+    keywords: [
+      "rapikan berkas",
+      "rapikan dokumen",
+      "klasifikasikan dokumen",
+      "klasifikasi otomatis",
+      "folder kategori",
+      "berkas berantakan",
+      "dokumen berantakan",
+      "susun dokumen",
+      "atur kategori",
+      "pindah folder",
+      "pindah kategori",
+      "kategori folder",
+      "dokumen tidak terkategorikan",
+    ],
+    summary: "El dapat memindai seluruh dokumen di Legal Drive Anda, mengusulkan kategori folder yang tepat, lalu memindahkan berkas ke folder yang benar.",
+    content:
+      "**Legal Drive EasyLegal** mendukung 4 folder kategori utama: **Client Agreements**, **Tax Filings**, **NDA Templates**, dan **Lampiran Email**.\n\nJika dokumen Anda berantakan atau kategorinya belum tepat, El dapat **memindai seluruh berkas** di Legal Drive dan **mengusulkan kategori folder** berdasarkan nama/judul berkas. Anda tinggal meninjau usulannya dan menyetujui mana yang akan dipindahkan.\n\nCara memakai:\n1. Klik tombol **\"🧹 Rapikan Sekarang\"** di bawah pesan ini.\n2. El menampilkan daftar usulan kategori per dokumen (centang yang ingin dirapikan).\n3. Klik **\"Terapkan\"** — berkas langsung pindah ke folder barunya di Legal Drive.",
+    pose: "document",
+    quickActions: [
+      { label: "🧹 Rapikan Sekarang", action: "tidy-documents" },
+      { label: "📂 Buka Legal Drive", action: "navigate-documents", url: "/documents" },
+    ],
+  },
+  {
     id: "complex-backend-issues",
     title: "Kendala Teknis Kompleks & Gangguan Backend / Server",
     keywords: [

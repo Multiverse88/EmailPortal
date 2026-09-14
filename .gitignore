@@ -139,6 +139,10 @@ scripts/generate_presentation.py
 scripts/generate_workflow_presentation.py
 scripts/capture_real_screenshots.mjs
 scripts/recapture_tabs.mjs
+files/email-previews/
+/email-previews/
+onboard-*.html
+*.preview.html
 
 # ==========================================
 # IDE, OS, AI Assistants & Workspace Cache

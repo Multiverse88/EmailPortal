@@ -1,4 +1,5 @@
 "use client";
+import { TidyDocumentsModal } from "./tidy-documents-modal";
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
@@ -13,6 +14,7 @@ export function ElCompanion() {
   const { setPose, showBubble, backendStatus } = useCompanionStore();
 
   const [supportModalOpen, setSupportModalOpen] = useState(false);
+  const [tidyModalOpen, setTidyModalOpen] = useState(false);
   const [supportModalConfig, setSupportModalConfig] = useState<{
     category?: string;
     subject?: string;
@@ -35,6 +37,13 @@ export function ElCompanion() {
     return () => {
       window.removeEventListener("easylegal:open-support", handleOpenSupport);
     };
+  }, []);
+
+  // Listen to custom easylegal:open-tidy events (El "Rapikan Sekarang" action)
+  useEffect(() => {
+    const handleOpenTidy = () => setTidyModalOpen(true);
+    window.addEventListener("easylegal:open-tidy", handleOpenTidy);
+    return () => window.removeEventListener("easylegal:open-tidy", handleOpenTidy);
   }, []);
 
   // React contextually to route navigation and show proactive tips
@@ -62,6 +71,7 @@ export function ElCompanion() {
           if (cfg) setSupportModalConfig(cfg);
           setSupportModalOpen(true);
         }}
+        onOpenTidy={() => setTidyModalOpen(true)}
       />
       <SupportTicketModal
         isOpen={supportModalOpen}
@@ -70,6 +80,10 @@ export function ElCompanion() {
         initialSubject={supportModalConfig.subject || "Permohonan Informasi / Perpanjangan Masa Retensi Akun"}
         initialMessage={supportModalConfig.message || "Halo Tim Support EasyLegal,\n\nSaya ingin menanyakan perihal masa aktif akun saya serta permohonan perpanjangan retensi dokumen.\n\nTerima kasih."}
         initialPriority={supportModalConfig.priority || "normal"}
+      />
+      <TidyDocumentsModal
+        open={tidyModalOpen}
+        onClose={() => setTidyModalOpen(false)}
       />
     </>
   );

@@ -1,11 +1,11 @@
 # Arsitektur Infrastruktur & Storage Lifecycle — Email Portal Customer
 
 Dokumen ini menjelaskan arsitektur infrastruktur sistem **Email Portal Customer**, strategi penyimpanan **Hybrid Storage (Hot & Cold Storage)**, estimasi kapasitas serta alur data dari penerimaan dokumen hingga pengarsipan jangka panjang ke Synology NAS tanpa mengubah konfigurasi jaringan lokal kantor.
-
----
-
-### 1. Ringkasan Eksekutif
-
+	
+	---
+	
+	### 1. Ringkasan Eksekutif
+	
 | Parameter | Spesifikasi & Strategi |
 |---|---|
 | **Estimasi Beban** | 1.000 Customer / Bulan |

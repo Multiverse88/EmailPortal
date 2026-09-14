@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { sendMail } from './mail';
+import { sendMail, smtpConfigured, getPortalUrl } from './mail';
 
 export interface ClientInfo {
   ipAddress: string;
@@ -39,7 +39,7 @@ export async function checkAndSendNewDeviceAlert(
 
     // New device/IP detected - send alert to customer's personal email
     const timestampStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-    const portalUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
+    const portalUrl = getPortalUrl();
 
     const textBody = [
       `Halo ${customer.name},`,
@@ -96,16 +96,22 @@ export async function checkAndSendNewDeviceAlert(
         </p>
       </div>
     `;
+  // Skip real SMTP round-trip when unconfigured, but let NODE_ENV=test through:
+  // sendMail() short-circuits to { delivered: true } there (see new-device-alert.test.ts).
+  if (process.env.NODE_ENV !== 'test' && !smtpConfigured()) {
+    console.log('[security-alert] SMTP not configured; skipping new-device email');
+    return { isNewDevice: true, sent: false };
+  }
 
-    await sendMail({
-      user: process.env.HOSTINGER_SMTP_USER || 'security@clienteasylegal.co.id',
-      pass: process.env.HOSTINGER_SMTP_PASS || 'mock-pass',
-      name: 'EasyLegal Security Sentinel',
-      to: customer.personalEmail,
-      subject: `⚠️ Peringatan Keamanan: Login Baru Terdeteksi (${customer.mailboxAddress})`,
-      text: textBody,
-      html: htmlBody,
-    });
+  await sendMail({
+    user: process.env.HOSTINGER_SMTP_USER!,
+    pass: process.env.HOSTINGER_SMTP_PASS!,
+    name: 'EasyLegal Security Sentinel',
+    to: customer.personalEmail,
+    subject: `⚠️ Peringatan Keamanan: Login Baru Terdeteksi (${customer.mailboxAddress})`,
+    text: textBody,
+    html: htmlBody,
+  });
 
     return { isNewDevice: true, sent: true };
   } catch (error) {

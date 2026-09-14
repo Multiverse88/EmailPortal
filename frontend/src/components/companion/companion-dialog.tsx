@@ -16,9 +16,10 @@ import {
 
 interface CompanionDialogProps {
   onOpenSupport?: (config?: { category?: string; subject?: string; message?: string; priority?: "normal" | "urgent" }) => void;
+  onOpenTidy?: () => void;
 }
 
-export function CompanionDialog({ onOpenSupport }: CompanionDialogProps) {
+export function CompanionDialog({ onOpenSupport, onOpenTidy }: CompanionDialogProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -131,6 +132,12 @@ export function CompanionDialog({ onOpenSupport }: CompanionDialogProps) {
       handleSend("Bagaimana cara backup berkas dokumen saya?");
     } else if (action === "ask-support") {
       handleSend("Berapa lama tiket support saya diproses?");
+    } else if (action === "tidy-documents") {
+      if (onOpenTidy) {
+        onOpenTidy();
+      } else {
+        window.dispatchEvent(new CustomEvent("easylegal:open-tidy"));
+      }
     } else if (action === "navigate-documents" || url === "/documents") {
       router.push("/documents");
     } else if (action === "navigate-settings" || url === "/settings") {

@@ -154,7 +154,8 @@ export default (prisma: PrismaClient) => {
         customer.personalEmail,
         customer.mailboxAddress,
         password,
-        customer.name
+        customer.name,
+        customer.storageQuota ?? undefined
       );
 
       await audit(prisma, req, 'mailbox.resend_credentials', 'customer', id, {

@@ -7,6 +7,7 @@ import { storage, getStorageRoot } from '../lib/storage';
 import { getCustomerStorageStats, checkStorageQuota, DEFAULT_STORAGE_QUOTA } from '../lib/quota';
 import { getAccountFolderName, sanitizeFileName } from '../lib/synology-sync';
 import { autoSyncExistingAttachmentsToDrive } from '../lib/drive-sync';
+import { classifyDocuments } from '../lib/document-classifier';
 
 const storageBase = process.env.STORAGE_DIR || './storage';
 export const STORAGE_DIR = path.isAbsolute(storageBase)
@@ -351,6 +352,52 @@ export default (prisma: PrismaClient) => {
       });
     } catch (error) {
       console.error('Star document error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/documents/categorize/preview - return auto-classification proposals
+  router.post('/categorize/preview', async (req: Request, res: Response) => {
+    try {
+      const customerId = req.user!.id;
+      const documents = await prisma.legalDocument.findMany({
+        where: { customerId },
+        orderBy: { createdAt: 'desc' },
+      });
+      const { proposals, summary } = classifyDocuments(documents);
+      res.json({ proposals, summary });
+    } catch (error) {
+      console.error('Categorize preview error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/documents/categorize/apply - bulk-apply chosen category proposals
+  router.post('/categorize/apply', async (req: Request, res: Response) => {
+    try {
+      const customerId = req.user!.id;
+      const { items }: { items?: Array<{ id: string; category: string }> } = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ error: 'items[] required with { id, category }' });
+      }
+
+      const updated: Array<{ id: string; category: string; currentCategory: string }> = [];
+      for (const item of items) {
+        if (!item.id || typeof item.category !== 'string') continue;
+        const doc = await prisma.legalDocument.findFirst({
+          where: { id: item.id, customerId },
+        });
+        if (!doc) continue;
+        const patched = await prisma.legalDocument.update({
+          where: { id: doc.id },
+          data: { category: item.category },
+        });
+        updated.push({ id: patched.id, category: patched.category, currentCategory: doc.category });
+      }
+
+      res.json({ applied: updated.length, items: updated });
+    } catch (error) {
+      console.error('Categorize apply error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

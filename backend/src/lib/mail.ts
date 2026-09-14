@@ -1,4 +1,5 @@
-import nodemailer from 'nodemailer';
+import { DEFAULT_STORAGE_QUOTA } from './quota';
+ import nodemailer from 'nodemailer';
 
 export const smtpConfigured = () =>
   Boolean(
@@ -72,88 +73,140 @@ export async function sendMail(opts: {
   }
 }
 
-// FR-18: onboarding notice goes to the customer's *personal* address.
+// Portal URL shown to end users in email links. CORS_ORIGIN is an origin allowlist,
+// not necessarily a publicly reachable URL — PORTAL_URL overrides it in production.
+export function getPortalUrl(): string {
+  return (
+    process.env.PORTAL_URL ||
+    (process.env.CORS_ORIGIN || 'https://clienteasylegal.co.id').split(',')[0].trim()
+  );
+}
+
+function formatGb(bytes: number): string {
+  const gb = bytes / (1024 * 1024 * 1024);
+  return Number.isInteger(gb) ? `${gb} GB` : `${gb.toFixed(1)} GB`;
+}
+
+export interface OnboardingNotice {
+  subject: string;
+  text: string;
+  html: string;
+}
+
+export function buildOnboardingNotice(params: {
+  personalEmail: string;
+  mailboxAddress: string;
+  tempPassword?: string;
+  customerName?: string;
+  storageQuotaBytes?: number;
+}): OnboardingNotice {
+  const portalUrl = getPortalUrl();
+  const loginUrl = `${portalUrl}/login`;
+  const nameDisplay = params.customerName || 'Klien EasyLegal';
+  const quotaDisplay = formatGb(params.storageQuotaBytes || DEFAULT_STORAGE_QUOTA);
+
+  const subject = `Selamat Datang di EasyLegal Portal - Akun ${params.mailboxAddress} Sudah Aktif`;
+
+  const text = params.tempPassword
+    ? `Halo ${nameDisplay},\n\nAkun email korporasi resmi Anda di EasyLegal Portal telah aktif.\n\nBerikut kredensial login Anda:\n- Alamat Email Portal: ${params.mailboxAddress}\n- Email Pribadi Terdaftar: ${params.personalEmail}\n- Password Sementara: ${params.tempPassword}\n- Kapasitas Penyimpanan: ${quotaDisplay}\n\nCatatan: Anda dapat masuk menggunakan alamat email portal (${params.mailboxAddress}) maupun email pribadi Anda (${params.personalEmail}).\n\nLink login: ${loginUrl}\nDemi keamanan akun, harap segera perbarui kata sandi Anda di menu Pengaturan Keamanan setelah berhasil masuk.\n\nSalam,\nTim EasyLegal`
+    : `Halo ${nameDisplay},\n\nAkun email korporasi resmi Anda di EasyLegal Portal telah aktif.\n\nAlamat Email Portal: ${params.mailboxAddress}\nEmail Pribadi Terdaftar: ${params.personalEmail}\nKapasitas Penyimpanan: ${quotaDisplay}\n\nLink login: ${loginUrl}\nPassword sementara dikirimkan oleh admin melalui jalur komunikasi resmi terpisah.\n\nSalam,\nTim EasyLegal`;
+
+  const htmlBody = `
+    <div style="background-color: #f1f5f9; padding: 32px 16px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+      <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; color: #1e293b;">
+        <!-- Preheader: email client preview text -->
+        <div style="display:none;font-size:1px;color:transparent;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+          Akun EasyLegal Anda sudah aktif — masuk untuk mulai mengelola mailbox dan legal drive.
+        </div>
+
+        <!-- Brand accent bar -->
+        <div style="height: 4px; background: linear-gradient(90deg, #680003, #930006, #ffb4aa);"></div>
+
+        <div style="text-align: center; padding: 32px 28px 8px 28px;">
+          <img src="${portalUrl}/companion/el/el-hero-melambai.png" width="88" height="88" alt="EL - EasyLegal Assistant" style="width: 88px; height: auto; margin-bottom: 12px; display: inline-block;" />
+          <div style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 4px 12px; border-radius: 999px; margin-bottom: 10px;">&checkmark; AKUN AKTIF</div>
+          <h1 style="color: #0f172a; font-size: 20px; font-weight: 700; margin: 0;">Selamat Datang di EasyLegal Portal!</h1>
+          <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Aktivasi Akun & Akses Mailbox Resmi</p>
+        </div>
+
+        <div style="padding: 8px 28px 28px 28px;">
+          <p style="font-size: 14px; line-height: 1.6; margin: 0 0 16px 0;">
+            Halo <strong>${nameDisplay}</strong>,
+          </p>
+          <p style="font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
+            Akun portal surat-menyurat resmi dan legal drive korporasi Anda telah berhasil dibuat dan siap digunakan.
+          </p>
+
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin-bottom: 22px;">
+            <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; width: 150px; vertical-align: top;">Email Portal Resmi:</td>
+                <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">${params.mailboxAddress}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; vertical-align: top;">Email Pribadi:</td>
+                <td style="padding: 8px 0; color: #334155;">${params.personalEmail} <span style="color: #059669; font-size: 11px; font-weight: 600;">(Bisa digunakan untuk login)</span></td>
+              </tr>
+              ${
+                params.tempPassword
+                  ? `<tr>
+              <td style="padding: 8px 0; color: #64748b; vertical-align: top;">Password Sementara:</td>
+              <td style="padding: 8px 0;">
+                <code style="display: inline-block; padding: 4px 10px; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; color: #680003; user-select: all; -webkit-user-select: all;">${params.tempPassword}</code>
+                <p style="margin: 4px 0 0 0; font-size: 11px; color: #64748b;">*Klik dua kali pada kotak password di atas untuk menyalin tanpa spasi.</p>
+              </td>
+            </tr>`
+                  : ''
+              }
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; vertical-align: top;">Kapasitas Penyimpanan:</td>
+                <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">${quotaDisplay} Cloud Drive & Email Storage</td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="text-align: center; margin: 26px 0 12px 0;">
+            <a href="${loginUrl}" style="background-color: #680003; color: #ffffff; padding: 13px 32px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">&#128272; Masuk ke Portal Customer</a>
+          </div>
+          <p style="text-align: center; font-size: 12px; color: #94a3b8; margin: 0 0 22px 0; word-break: break-all;">
+            Tombol tidak muncul? Salin tautan ini: <a href="${loginUrl}" style="color: #680003; text-decoration: underline;">${loginUrl}</a>
+          </p>
+
+          ${
+            params.tempPassword
+              ? `<div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; margin: 20px 0; border-radius: 0 4px 4px 0;">
+          <p style="margin: 0; color: #991b1b; font-size: 12px; line-height: 1.5;">
+            <strong>Tips Keamanan:</strong> Anda dapat login menggunakan <strong>${params.mailboxAddress}</strong> atau <strong>${params.personalEmail}</strong>. Demi menjaga kerahasiaan korespondensi hukum dan dokumen perusahaan Anda, segera perbarui kata sandi Anda di menu <strong>Pengaturan &gt; Keamanan</strong> setelah berhasil masuk.
+          </p>
+        </div>`
+              : ''
+          }
+
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+          <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">
+            Pemberitahuan otomatis dari sistem EasyLegal Customer Portal. Jangan bagikan kata sandi Anda kepada siapa pun.
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return { subject, text, html: htmlBody };
+}
+
 export async function sendOnboardingNotice(
   personalEmail: string,
   mailboxAddress: string,
   tempPassword?: string,
-  customerName?: string
+  customerName?: string,
+  storageQuotaBytes?: number
 ) {
   if (!smtpConfigured()) {
     console.log(`[onboarding] would notify ${personalEmail} about ${mailboxAddress} (SMTP not configured: HOSTINGER_SMTP_PASS is missing or default)`);
     return { delivered: false };
   }
 
-  const portalUrl = (process.env.CORS_ORIGIN || 'https://clienteasylegal.co.id').split(',')[0].trim();
-  const nameDisplay = customerName || 'Klien EasyLegal';
-
-  const textBody = tempPassword
-    ? `Halo ${nameDisplay},\n\nAkun email korporasi resmi Anda di EasyLegal Portal telah aktif.\n\nBerikut kredensial login Anda:\n- Alamat Email Portal: ${mailboxAddress}\n- Email Pribadi Terdaftar: ${personalEmail}\n- Password Sementara: ${tempPassword}\n\nCatatan: Anda dapat masuk menggunakan alamat email portal (${mailboxAddress}) maupun email pribadi Anda (${personalEmail}).\n\nSilakan masuk di: ${portalUrl}/login\nDemi keamanan akun, harap segera perbarui kata sandi Anda di menu Pengaturan Keamanan setelah berhasil masuk.\n\nSalam,\nTim EasyLegal`
-    : `Halo ${nameDisplay},\n\nAkun email korporasi resmi Anda di EasyLegal Portal telah aktif.\n\nAlamat Email Portal: ${mailboxAddress}\nEmail Pribadi Terdaftar: ${personalEmail}\n\nSilakan masuk di: ${portalUrl}/login\nPassword sementara dikirimkan oleh admin melalui jalur komunikasi resmi terpisah.\n\nSalam,\nTim EasyLegal`;
-
-  const htmlBody = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px; color: #1e293b;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <img src="${portalUrl}/companion/el/el-avatar-kepala.png" width="56" height="56" alt="EasyLegal Portal" style="width: 56px; height: 56px; border-radius: 12px; margin-bottom: 12px; display: inline-block; object-fit: contain; border: 1px solid #e2e8f0;" />
-        <h1 style="color: #0f172a; font-size: 20px; font-weight: 700; margin: 0;">EasyLegal Customer Portal</h1>
-        <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Aktivasi Akun & Akses Mailbox Resmi</p>
-      </div>
-
-      <p style="font-size: 14px; line-height: 1.6; margin: 0 0 16px 0;">
-        Halo <strong>${nameDisplay}</strong>,
-      </p>
-      <p style="font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
-        Selamat! Akun portal surat-menyurat resmi dan legal drive korporasi Anda telah berhasil dibuat dan siap digunakan.
-      </p>
-
-      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin-bottom: 22px;">
-        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 8px 0; color: #64748b; width: 150px;">Email Portal Resmi:</td>
-            <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">${mailboxAddress}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #64748b;">Email Pribadi:</td>
-            <td style="padding: 8px 0; color: #334155;">${personalEmail} <span style="color: #059669; font-size: 11px; font-weight: 600;">(Bisa digunakan untuk login)</span></td>
-          </tr>
-          ${
-            tempPassword
-              ? `<tr>
-            <td style="padding: 8px 0; color: #64748b; vertical-align: top;">Password Sementara:</td>
-            <td style="padding: 8px 0;">
-              <code style="display: inline-block; padding: 4px 10px; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; color: #0284c7; user-select: all; -webkit-user-select: all;">${tempPassword}</code>
-              <p style="margin: 4px 0 0 0; font-size: 11px; color: #64748b;">*Klik dua kali pada kotak password di atas untuk menyalin tanpa spasi.</p>
-            </td>
-          </tr>`
-              : ''
-          }
-          <tr>
-            <td style="padding: 8px 0; color: #64748b;">Kapasitas Penyimpanan:</td>
-            <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">5.0 GB Cloud Drive & Email Storage</td>
-          </tr>
-        </table>
-      </div>
-
-      <div style="text-align: center; margin: 26px 0;">
-        <a href="${portalUrl}/login" style="background-color: #0284c7; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">Masuk ke Portal Customer</a>
-      </div>
-
-      ${
-        tempPassword
-          ? `<div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 20px 0; border-radius: 0 4px 4px 0;">
-        <p style="margin: 0; color: #1e40af; font-size: 12px; line-height: 1.5;">
-          <strong>Tips Keamanan:</strong> Anda dapat login menggunakan <strong>${mailboxAddress}</strong> atau <strong>${personalEmail}</strong>. Demi menjaga kerahasiaan korespondensi hukum dan dokumen perusahaan Anda, segera perbarui kata sandi Anda di menu <strong>Pengaturan &gt; Keamanan</strong> setelah berhasil masuk.
-        </p>
-      </div>`
-          : ''
-      }
-
-      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-      <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">
-        Pemberitahuan otomatis dari sistem EasyLegal Customer Portal. Jangan bagikan kata sandi Anda kepada siapa pun.
-      </p>
-    </div>
-  `;
+  const notice = buildOnboardingNotice({ personalEmail, mailboxAddress, tempPassword, customerName, storageQuotaBytes });
 
   try {
     return await sendMail({
@@ -161,12 +214,13 @@ export async function sendOnboardingNotice(
       pass: process.env.HOSTINGER_SMTP_PASS!,
       name: 'EasyLegal Portal',
       to: personalEmail,
-      subject: `Selamat Datang di EasyLegal Portal - Akun ${mailboxAddress} Sudah Aktif`,
-      text: textBody,
-      html: htmlBody,
+      subject: notice.subject,
+      text: notice.text,
+      html: notice.html,
     });
   } catch (err: any) {
     console.warn(`[onboarding] failed to notify ${personalEmail}:`, err.message);
     return { delivered: false };
   }
 }
+
