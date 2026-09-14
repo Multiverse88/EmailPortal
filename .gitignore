@@ -123,6 +123,24 @@ ui-review/
 .nyc_output/
 
 # ==========================================
+# Generated Presentations, Decks & Demo Screenshots
+# (one-off deliverables produced by scripts/generate_*; regenerate on demand,
+#  do not track binary exports in git history)
+# ==========================================
+/Presentasi_*.pptx
+/Presentasi_*.pdf
+/preview_workflow_deck/
+/screenshots/
+files/real-screenshots/
+files/officer-ai-document-extraction.png
+files/officer-impersonation-banner-flow.png
+files/telegram-cards-preview.png
+scripts/generate_presentation.py
+scripts/generate_workflow_presentation.py
+scripts/capture_real_screenshots.mjs
+scripts/recapture_tabs.mjs
+
+# ==========================================
 # IDE, OS, AI Assistants & Workspace Cache
 # ==========================================
 # OS Files

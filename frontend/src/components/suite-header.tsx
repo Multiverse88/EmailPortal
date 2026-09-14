@@ -55,7 +55,7 @@ export function SuiteHeader({
           customerEmail={userEmail || undefined}
         />
       )}
-      <header className="suite-header">
+      <header className="suite-header !h-auto flex-wrap gap-y-2 py-2.5 md:!h-[68px] md:flex-nowrap md:gap-y-0 md:py-0">
         <div className="flex min-w-0 items-center gap-3">
           {onMenu && (
             <button
@@ -90,7 +90,11 @@ export function SuiteHeader({
           </button>
         </div>
 
-        {search && <div className="hidden min-w-0 flex-1 px-4 md:block">{search}</div>}
+        {search && (
+          <div className="order-3 w-full min-w-0 md:order-none md:w-auto md:flex-1 md:px-4">
+            {search}
+          </div>
+        )}
 
         {!search && (
           <div className="hidden min-w-0 flex-1 px-6 md:block">

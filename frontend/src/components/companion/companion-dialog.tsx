@@ -145,7 +145,7 @@ export function CompanionDialog({ onOpenSupport }: CompanionDialogProps) {
   const isAIOnline = backendStatus.configured;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex h-[580px] w-[390px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl border border-border-subtle bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+    <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-50 flex h-[580px] max-h-[calc(100dvh-1.5rem)] w-[390px] max-w-[calc(100vw-1.5rem)] sm:max-h-[calc(100dvh-3rem)] sm:max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl border border-border-subtle bg-white shadow-2xl animate-in zoom-in-95 duration-200">
       {/* Header */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-border-subtle bg-[#fbfaf9] px-4">
         <div className="flex items-center gap-3">

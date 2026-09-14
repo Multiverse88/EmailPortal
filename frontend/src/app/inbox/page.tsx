@@ -252,7 +252,7 @@ function Inbox_() {
             data-testid="refresh"
             onClick={refresh}
             disabled={syncing}
-            className="app-icon-button hidden sm:inline-flex"
+            className="app-icon-button"
             title={syncing ? 'Sinkronisasi email Hostinger...' : 'Muat ulang'}
           >
             <RefreshCw className={`size-4 ${syncing || list.isValidating ? 'animate-spin text-primary' : ''}`} />
@@ -301,7 +301,7 @@ function Inbox_() {
           <div
             data-testid="sidebar-backdrop"
             onClick={() => setSidebar(false)}
-            className="md:hidden fixed inset-0 top-[68px] bg-slate-950/35 backdrop-blur-[1px] z-40 transition-opacity"
+            className="md:hidden absolute inset-0 bg-slate-950/35 backdrop-blur-[1px] z-40 transition-opacity"
           />
         )}
 
@@ -738,7 +738,7 @@ function Inbox_() {
                   </div>
 
                   {/* Sender Details */}
-                  <div className="flex items-start justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
+                  <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 mb-6 pb-6 border-b border-slate-100">
                     <div className="flex items-center gap-3">
                       {message.senderAvatarUrl ? (
                         <img
@@ -778,7 +778,7 @@ function Inbox_() {
                       </div>
                     </div>
 
-                    <span className="text-xs text-slate-500 font-medium shrink-0">
+                    <span className="text-xs text-slate-500 font-medium shrink-0 ml-[56px] sm:ml-0">
                       {format(new Date(message.receivedAt), 'd MMMM yyyy, HH:mm', { locale: localeId })}
                     </span>
                   </div>
