@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { sanitizeHtml, toSnippet } from '../lib/sanitize';
 import { decrypt } from '../lib/crypto';
-import { sendMail, smtpConfigured } from '../lib/mail';
+import { sendMail, smtpConfigured, getPortalUrl } from '../lib/mail';
 import { checkStorageQuota } from '../lib/quota';
 import {
   fetchMessageAttachment,
@@ -387,7 +387,7 @@ export default (prisma: PrismaClient, syncWorker?: SyncWorker) => {
         });
       }
 
-      const portalUrl = (process.env.CORS_ORIGIN || 'https://clienteasylegal.co.id').split(',')[0].trim();
+      const portalUrl = getPortalUrl();
       const html = buildBrandedEmailHtml({ customer, bodyText: text, portalUrl });
 
       let delivered = false;

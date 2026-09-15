@@ -158,11 +158,10 @@ pm2 start frontend/.next/production --name email-frontend  # or use nginx
 Untuk melakukan evaluasi UI/UX dan fungsionalitas di lingkungan live tanpa perlu konfigurasi mailbox sungguhan terlebih dahulu, sistem menyediakan 2 metode pemuatan data demo lengkap:
 
 ### Cara 1: Langsung dari Web UI (Tanpa perlu SSH ke server)
-1. Akses halaman login portal di browser Anda: `https://mail.clienteasylegal.co.id/login`
-2. Pilih tab **Administrator** dan login:
+1. Akses halaman login portal di browser Anda: `https://clienteasylegal.co.id/login`
+2. Login satu form dengan kredensial admin (role terdeteksi otomatis, langsung masuk Console Admin):
    - **Email:** `admin@clienteasylegal.co.id`
    - **Password:** `Admin123!`
-   *(Tersedia tombol 1-klik isi demo di bawah form login)*
 3. Pada halaman Dashboard Admin, klik tombol **"⚡ Muat Data Demo"** di toolbar atas sebelah tombol "Buat Mailbox Baru".
 4. Konfirmasi dialog. Seluruh data (8 akun customer, 21 email dummy beragam status, riwayat audit log, dan file fisik lampiran asli `.pdf`, `.png`, `.xlsx`) akan otomatis dibuat di database dan disk server.
 

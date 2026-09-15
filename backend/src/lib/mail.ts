@@ -76,10 +76,16 @@ export async function sendMail(opts: {
 // Portal URL shown to end users in email links. CORS_ORIGIN is an origin allowlist,
 // not necessarily a publicly reachable URL — PORTAL_URL overrides it in production.
 export function getPortalUrl(): string {
-  return (
-    process.env.PORTAL_URL ||
-    (process.env.CORS_ORIGIN || 'https://clienteasylegal.co.id').split(',')[0].trim()
-  );
+  const raw = (process.env.PORTAL_URL || '').trim();
+  if (raw && /^https?:\/\//i.test(raw) && raw !== '*') return raw.replace(/\/+$/, '');
+
+  const corsCandidate = (process.env.CORS_ORIGIN || '').split(',')[0].trim();
+  if (corsCandidate && /^https?:\/\//i.test(corsCandidate) && corsCandidate !== '*') {
+    return corsCandidate.replace(/\/+$/, '');
+  }
+
+  const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
+  return `https://${domain}`;
 }
 
 function formatGb(bytes: number): string {

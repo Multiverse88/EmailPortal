@@ -125,7 +125,7 @@ Klik **Save**.
 Setelah status deployment berubah menjadi **Healthy / Running**, klik tautan domain sementara yang dibuat di Langkah 5. Anda dapat langsung menguji portal menggunakan akun bawaan:
 
 ### A. Akun Administrator EasyLegal
-* **URL:** Buka tab **Administrator** pada layar login (`/login`)
+* **Login:** Form tunggal `/login`, masukkan email `admin@...` (role terdeteksi otomatis)
 * **Email:** `admin@clienteasylegal.co.id`
 * **Password:** `Admin123!`
 * **Fitur untuk Dicek:**
@@ -135,7 +135,7 @@ Setelah status deployment berubah menjadi **Healthy / Running**, klik tautan dom
   - Master Storage Inspector
 
 ### B. Akun Pelanggan (Budi Setiawan - PT Maju Bersama Digital)
-* **URL:** Buka tab **Customer Mail** pada layar login (`/login`)
+* **Login:** Form tunggal `/login`, masukkan email `budi@...` (role terdeteksi otomatis)
 * **Email:** `budi@clienteasylegal.co.id`
 * **Password:** `Customer123!`
 * **Fitur untuk Dicek:**

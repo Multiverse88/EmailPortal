@@ -15,10 +15,8 @@ Kredensial berikut telah aktif di sistem dan siap digunakan:
 | **Email Login**   | `admin@clienteasylegal.co.id`                                              | `officer@clienteasylegal.co.id`                                            |
 | **Password Awal** | `Admin123!`                                                                | `Officer123!`                                                              |
 | **URL Login**     | [https://clienteasylegal.co.id/login](https://clienteasylegal.co.id/login) | [https://clienteasylegal.co.id/login](https://clienteasylegal.co.id/login) |
-| **Tab Login**     | Tab **Administrator**                                                      | Tab **Administrator**                                                      |
-
 > [!NOTE]
-> Kedua akun di atas login melalui tab **Administrator** pada halaman login yang sama. Sistem akan secara otomatis mendeteksi peran (*role*) dan menampilkan dashboard sesuai hak akses masing-masing.
+> Form login tunggal (`/login`) tanpa tab role. Sistem auto-deteksi peran dari email; admin/officer diarahkan ke `/admin`, customer ke `/inbox`.
 
 ---
 
