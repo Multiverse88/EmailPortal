@@ -112,7 +112,7 @@ export function buildOnboardingNotice(params: {
     : `Halo ${nameDisplay},\n\nAkun email korporasi resmi Anda di EasyLegal Portal telah aktif.\n\nAlamat Email Portal: ${params.mailboxAddress}\nEmail Pribadi Terdaftar: ${params.personalEmail}\nKapasitas Penyimpanan: ${quotaDisplay}\n\nLink login: ${loginUrl}\nPassword sementara dikirimkan oleh admin melalui jalur komunikasi resmi terpisah.\n\nSalam,\nTim EasyLegal`;
 
   const htmlBody = `
-    <div style="background-color: #f1f5f9; padding: 32px 16px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="background-color: #f1f5f9; padding: 32px 16px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;">
       <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; color: #1e293b;">
         <!-- Preheader: email client preview text -->
         <div style="display:none;font-size:1px;color:transparent;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
@@ -123,7 +123,7 @@ export function buildOnboardingNotice(params: {
         <div style="height: 4px; background: linear-gradient(90deg, #680003, #930006, #ffb4aa);"></div>
 
         <div style="text-align: center; padding: 32px 28px 8px 28px;">
-          <img src="${portalUrl}/companion/el/el-hero-melambai.png" width="88" height="88" alt="EL - EasyLegal Assistant" style="width: 88px; height: auto; margin-bottom: 12px; display: inline-block;" />
+          <img src="${portalUrl}/companion/el/easylegal-logo.png" width="110" alt="EasyLegal" style="width: 110px; max-width: 100%; height: auto; margin: 0 auto 16px auto; display: block;" />
           <div style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 4px 12px; border-radius: 999px; margin-bottom: 10px;">&checkmark; AKUN AKTIF</div>
           <h1 style="color: #0f172a; font-size: 20px; font-weight: 700; margin: 0;">Selamat Datang di EasyLegal Portal!</h1>
           <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Aktivasi Akun & Akses Mailbox Resmi</p>
