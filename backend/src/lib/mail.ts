@@ -1,6 +1,6 @@
+import crypto from 'crypto';
 import { DEFAULT_STORAGE_QUOTA } from './quota';
- import nodemailer from 'nodemailer';
-
+import nodemailer from 'nodemailer';
 export const smtpConfigured = () =>
   Boolean(
     process.env.HOSTINGER_SMTP_HOST &&
@@ -23,6 +23,7 @@ export async function sendMail(opts: {
   text?: string;
   html?: string;
   attachments?: { filename: string; path: string }[];
+  headers?: Record<string, string>;
 }) {
   if (process.env.NODE_ENV === 'test') {
     return { delivered: true };
@@ -36,7 +37,11 @@ export async function sendMail(opts: {
   const port = parseInt(process.env.HOSTINGER_SMTP_PORT || '465');
   const secure = port === 465;
 
+  const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
+  const senderDomain = opts.user.includes('@') ? opts.user.split('@')[1].trim().toLowerCase() : domain;
+
   const transport = nodemailer.createTransport({
+    name: senderDomain, // RFC-compliant FQDN for SMTP EHLO/HELO greeting (avoids Docker container-id spam score)
     host,
     port,
     secure,
@@ -49,6 +54,9 @@ export async function sendMail(opts: {
   const from = opts.name ? `"${opts.name}" <${opts.user}>` : opts.user;
 
   try {
+    // Generate RFC 5322 compliant Message-ID with sender's domain (prevents MSGID_NOT_FQDN spam filter penalties)
+    const messageId = `<${Date.now()}.${crypto.randomBytes(8).toString('hex')}@${senderDomain}>`;
+
     const info = await transport.sendMail({
       from,
       to: opts.to,
@@ -56,12 +64,18 @@ export async function sendMail(opts: {
       replyTo: opts.replyTo,
       inReplyTo: opts.inReplyTo,
       references: opts.references,
+      messageId,
       subject: opts.subject,
       text: opts.text,
       html: opts.html,
       attachments: opts.attachments,
+      headers: {
+        'X-Mailer': 'EasyLegal Mail Portal 1.0',
+        'X-Entity-Ref-ID': messageId,
+        ...(opts.headers || {}),
+      },
     });
-    return { delivered: true, messageId: info.messageId };
+    return { delivered: true, messageId: info.messageId || messageId };
   } catch (error: any) {
     console.error(`SMTP send failed for ${opts.user}:`, error.message);
     if (error.responseCode === 535 || error.code === 'EAUTH') {
@@ -120,9 +134,9 @@ export function buildOnboardingNotice(params: {
   const htmlBody = `
     <div style="background-color: #f1f5f9; padding: 32px 16px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;">
       <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; color: #1e293b;">
-        <!-- Preheader: email client preview text -->
-        <div style="display:none;font-size:1px;color:transparent;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
-          Akun EasyLegal Anda sudah aktif — masuk untuk mulai mengelola mailbox dan legal drive.
+        <!-- Preheader: safe email preview text without spam-triggering transparent or 1px font -->
+        <div style="display: none; max-height: 0px; overflow: hidden; mso-hide: all; font-size: 0; line-height: 0; visibility: hidden;">
+          Akun EasyLegal Anda sudah aktif &mdash; masuk untuk mulai mengelola mailbox dan legal drive.
         </div>
 
         <!-- Brand accent bar -->
@@ -172,7 +186,7 @@ export function buildOnboardingNotice(params: {
           </div>
 
           <div style="text-align: center; margin: 26px 0 12px 0;">
-            <a href="${loginUrl}" style="background-color: #680003; color: #ffffff; padding: 13px 32px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">&#128272; Masuk ke Portal Customer</a>
+            <a href="${loginUrl}" style="background-color: #680003; color: #ffffff; padding: 13px 32px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">Masuk ke Portal Customer &rarr;</a>
           </div>
           <p style="text-align: center; font-size: 12px; color: #94a3b8; margin: 0 0 22px 0; word-break: break-all;">
             Tombol tidak muncul? Salin tautan ini: <a href="${loginUrl}" style="color: #680003; text-decoration: underline;">${loginUrl}</a>
@@ -223,6 +237,10 @@ export async function sendOnboardingNotice(
       subject: notice.subject,
       text: notice.text,
       html: notice.html,
+      headers: {
+        'Auto-Submitted': 'auto-generated',
+        'X-Auto-Response-Suppress': 'OOF, AutoReply',
+      },
     });
   } catch (err: any) {
     console.warn(`[onboarding] failed to notify ${personalEmail}:`, err.message);
