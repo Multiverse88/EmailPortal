@@ -54,7 +54,7 @@ curl -X POST http://localhost:4000/api/auth/register \
 POST /api/auth/login
 { "email": "budi@clienteasylegal.co.id", "password": "Bu4t!KuatS3kali" }
 ```
-→ JWT 7 hari → Inbox.
+-> JWT 3 jam -> Inbox.
 
 ### 4. (Opsional, disarankan) Mail API Key
 

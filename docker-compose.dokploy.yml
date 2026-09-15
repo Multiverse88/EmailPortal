@@ -11,6 +11,7 @@ services:
       - STORAGE_DIR=/app/storage
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-easy-legal-portal-secret-key-2026}
       - JWT_SECRET=${JWT_SECRET:-easy-legal-jwt-secret-dokploy-2026}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-3h}
       - HOSTINGER_DOMAIN=${HOSTINGER_DOMAIN:-clienteasylegal.co.id}
       - CORS_ORIGIN=*
       - PORTAL_URL=${PORTAL_URL:-https://clienteasylegal.co.id}

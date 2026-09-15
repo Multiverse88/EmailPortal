@@ -27,7 +27,7 @@ import { extractClientInfo, recordLoginAttempt, signWithSession } from '../lib/s
 import { emitSecurityEvent } from '../lib/security-events';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '3h';
 
 const sign = (id: string, email: string, type: 'customer' | 'admin', role?: UserRole) =>
   jwt.sign({ id, email, type, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
