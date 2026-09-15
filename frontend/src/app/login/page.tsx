@@ -7,7 +7,6 @@ import api, { errMsg } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 
 export default function LoginPage() {
-  const [tab, setTab] = useState<'customer' | 'admin'>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,15 +29,16 @@ export default function LoginPage() {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const cleanPassword = password.trim();
-      const res = await api.post(`/auth/login/${tab}`, { email: normalizedEmail, password: cleanPassword });
+      const res = await api.post('/auth/login', { email: normalizedEmail, password: cleanPassword });
       if (res.data.requires2FA && res.data.challengeToken) {
         setRequires2FA(true);
         setChallengeToken(res.data.challengeToken);
         setOtpCode('');
         return;
       }
-      setAuth(res.data.token, res.data.user, tab);
-      router.push(tab === 'admin' ? '/admin' : '/inbox');
+      const detectedRole = res.data.role === 'admin' ? 'admin' : 'customer';
+      setAuth(res.data.token, res.data.user, detectedRole);
+      router.push(res.data.redirectTo ?? (detectedRole === 'admin' ? '/admin' : '/inbox'));
     } catch (err) {
       setError(errMsg(err, 'Login gagal'));
     } finally {
@@ -137,25 +137,6 @@ export default function LoginPage() {
           </div>
 
           {/* Role Tabs (hidden during 2FA step) */}
-          {!requires2FA && (
-            <div className="mb-6 grid w-full grid-cols-2 rounded-xl border border-border-subtle bg-[#ebe8e6] p-1">
-              {(['customer', 'admin'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  data-testid={`tab-${t}`}
-                  onClick={() => { setTab(t); handleCancel2FA(); }}
-                  className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-all duration-200 ${
-                    tab === t
-                      ? 'bg-white text-primary shadow-xs'
-                      : 'text-slate-600 hover:bg-white/55 hover:text-slate-950'
-                  }`}
-                >
-                  {t === 'customer' ? 'Customer Mail' : 'Administrator'}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Error Alert */}
           {error && (
@@ -234,7 +215,7 @@ export default function LoginPage() {
           ) : (
             <>
               {/* Active Session Indicator */}
-              {tab === 'customer' && customerToken && customerUser && (
+              {customerToken && customerUser && (
                 <div
                   data-testid="active-customer-session"
                   className="mb-5 flex flex-col gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/80 p-3.5 text-xs text-emerald-900 animate-in fade-in duration-200"
@@ -259,12 +240,12 @@ export default function LoginPage() {
                     </button>
                   </div>
                   <p className="border-t border-emerald-200/70 pt-2 text-[11px] text-emerald-800/80">
-                    Atau masuk dengan akun customer lain:
+                    Atau masuk dengan akun lain:
                   </p>
                 </div>
               )}
 
-              {tab === 'admin' && adminToken && adminUser && (
+              {adminToken && adminUser && (
                 <div
                   data-testid="active-admin-session"
                   className="mb-5 flex flex-col gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/80 p-3.5 text-xs text-emerald-900 animate-in fade-in duration-200"
@@ -289,7 +270,7 @@ export default function LoginPage() {
                     </button>
                   </div>
                   <p className="border-t border-emerald-200/70 pt-2 text-[11px] text-emerald-800/80">
-                    Atau masuk dengan akun administrator lain:
+                    Atau masuk dengan akun lain:
                   </p>
                 </div>
               )}
@@ -299,13 +280,8 @@ export default function LoginPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label htmlFor="email" className="block text-xs font-semibold text-slate-700">
-                      {tab === 'customer' ? 'Alamat Email' : 'Email Administrator'}
+                      Email / Alamat Portal
                     </label>
-                    {tab === 'customer' && (
-                      <span className="text-[11px] text-slate-500">
-                        Email Portal / Pribadi
-                      </span>
-                    )}
                   </div>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
@@ -321,15 +297,11 @@ export default function LoginPage() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder={tab === 'customer' ? 'nama@clienteasylegal.co.id atau email pribadi' : 'admin@clienteasylegal.co.id'}
+                      placeholder="nama@clienteasylegal.co.id atau email terdaftar"
                       className="w-full rounded-xl border border-border-subtle bg-white py-3 pl-10 pr-3.5 text-sm text-slate-950 shadow-xs transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                     />
                   </div>
-                  {tab === 'customer' && (
-                    <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
-                      💡 Anda dapat masuk menggunakan alamat email resmi (misal <code>ptanda@clienteasylegal.co.id</code>) maupun email pribadi yang didaftarkan.
-                    </p>
-                  )}
+
                 </div>
 
                 <div>
@@ -378,7 +350,7 @@ export default function LoginPage() {
                     </>
                   ) : (
                     <>
-                      <span>Masuk ke Mailbox</span>
+                      <span>Masuk ke Portal</span>
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                     </>
                   )}
