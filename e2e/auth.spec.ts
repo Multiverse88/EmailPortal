@@ -9,8 +9,6 @@ test.describe('Autentikasi', () => {
     await expect(page.getByRole('heading', { name: 'Email Portal' })).toBeVisible();
     await expect(page.getByTestId('email')).toBeVisible();
     await expect(page.getByTestId('password')).toBeVisible();
-    await expect(page.getByTestId('tab-customer')).toBeVisible();
-    await expect(page.getByTestId('tab-admin')).toBeVisible();
   });
 
   test('root redirect ke /login', async ({ page }) => {
@@ -33,18 +31,18 @@ test.describe('Autentikasi', () => {
   });
 
   test('customer tidak bisa membuka halaman admin', async ({ page }) => {
-    await login(page, CUSTOMER, 'customer');
+    await login(page, CUSTOMER);
     await page.goto('/admin');
     await expect(page).toHaveURL(/\/inbox/);
   });
 
   test('admin login masuk ke dashboard admin', async ({ page }) => {
-    await login(page, ADMIN, 'admin');
+    await login(page, ADMIN);
     await expect(page.getByTestId('mailbox-table')).toBeVisible();
   });
 
   test('logout membersihkan sesi', async ({ page }) => {
-    await login(page, CUSTOMER, 'customer');
+    await login(page, CUSTOMER);
     await page.getByTestId('logout').click();
     await expect(page).toHaveURL(/\/login/);
     await page.goto('/inbox');
@@ -53,13 +51,13 @@ test.describe('Autentikasi', () => {
 
   test('admin dan customer bisa login bersamaan tanpa saling menimpa', async ({ page, context }) => {
     // 1. Login sebagai Admin
-    await login(page, ADMIN, 'admin');
+    await login(page, ADMIN);
     await expect(page).toHaveURL(/\/admin/);
     await expect(page.getByTestId('mailbox-table')).toBeVisible();
 
     // 2. Buka tab baru di browser yang sama dan login sebagai Customer
     const customerPage = await context.newPage();
-    await login(customerPage, CUSTOMER, 'customer');
+    await login(customerPage, CUSTOMER);
     await expect(customerPage).toHaveURL(/\/inbox/);
     await expect(customerPage.getByTestId('message-list')).toBeVisible();
 

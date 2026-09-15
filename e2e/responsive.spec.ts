@@ -14,7 +14,7 @@ test.describe('Tampilan mobile', () => {
   });
 
   test('sidebar tersembunyi dan dibuka lewat tombol menu', async ({ page }) => {
-    await login(page, CUSTOMER, 'customer');
+    await login(page, CUSTOMER);
     await expect(page.getByTestId('sidebar')).toBeHidden();
     await page.getByRole('button', { name: 'Menu' }).click();
     await expect(page.getByTestId('sidebar')).toBeVisible();
@@ -23,7 +23,7 @@ test.describe('Tampilan mobile', () => {
   });
 
   test('daftar email tidak meluber di layar sempit', async ({ page }) => {
-    await login(page, CUSTOMER, 'customer');
+    await login(page, CUSTOMER);
     await expect(page.getByTestId('message-list')).toBeVisible();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
@@ -32,14 +32,14 @@ test.describe('Tampilan mobile', () => {
   });
 
   test('pengirim tetap terlihat di daftar email mobile', async ({ page }) => {
-    await login(page, CUSTOMER, 'customer');
+    await login(page, CUSTOMER);
     // Regression: sender was `hidden sm:block`, so on a phone you could not tell
     // who an email came from.
     await expect(page.getByTestId('message-row').first()).toContainText('billing@vendor.co.id');
   });
 
   test('backdrop menutup sidebar saat disentuh di luar', async ({ page }) => {
-    await login(page, CUSTOMER, 'customer');
+    await login(page, CUSTOMER);
     await page.getByRole('button', { name: 'Menu' }).click();
     await expect(page.getByTestId('sidebar')).toBeVisible();
     // the backdrop spans the viewport, so its centre sits *under* the 240px

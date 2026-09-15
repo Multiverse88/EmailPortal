@@ -297,7 +297,96 @@ export default (prisma: PrismaClient) => {
     }
   });
 
-  // FR-1..FR-3, FR-6: admin-only mailbox provisioning (Officer or Admin).
+  // Unified login endpoint: auto-detect role by email (admin first, then customer).
+  router.post('/login', loginLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body ?? {};
+      if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
+
+      const normalizedInput = String(email).trim().toLowerCase();
+      const domain = (process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id').trim().toLowerCase();
+      const mailboxQuery = normalizedInput.includes('@') ? normalizedInput : `${normalizedInput}@${domain}`;
+
+      // 1. Check admin users first (superadmin / officer). Admin wins on email match.
+      let admin = await prisma.adminUser.findUnique({ where: { email: mailboxQuery } });
+      if (!admin) {
+        if (mailboxQuery === `admin@${domain}`) {
+          const defaultPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Admin123!';
+          admin = await prisma.adminUser.create({
+            data: { name: 'Admin Utama EasyLegal', email: `admin@${domain}`, passwordHash: await bcrypt.hash(defaultPassword, 10), role: 'superadmin', isActive: true },
+          });
+        } else if (mailboxQuery === `officer@${domain}`) {
+          const defaultOfficerPassword = process.env.INITIAL_OFFICER_PASSWORD || 'Officer123!';
+          admin = await prisma.adminUser.create({
+            data: { name: 'Officer Staf Legal', email: `officer@${domain}`, passwordHash: await bcrypt.hash(defaultOfficerPassword, 10), role: 'officer', isActive: true },
+          });
+        }
+      }
+      if (admin) {
+        if (!admin.isActive || !(await bcrypt.compare(password, admin.passwordHash))) {
+          const attempt = await recordLoginAttempt(prisma, req, { email: admin.email, status: 'failed', failureReason: !admin.isActive ? 'suspended' : 'invalid_password' });
+          emitSecurityEvent({ type: 'login-attempt', severity: 'critical', title: 'Login Admin Gagal', accountEmail: admin.email, ipAddress: attempt.ipAddress });
+          return res.status(401).json({ error: 'Email atau password salah' });
+        }
+        await recordLoginAttempt(prisma, req, { email: admin.email, status: 'success' });
+        await prisma.adminUser.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
+        return res.json({
+          token: sign(admin.id, admin.email, 'admin', admin.role as UserRole),
+          user: { id: admin.id, name: admin.name, email: admin.email, type: 'admin', role: admin.role },
+          role: 'admin' as const,
+          redirectTo: '/admin',
+        });
+      }
+
+      // 2. Fallback to customer lookup
+      const customer = await prisma.customer.findFirst({
+        where: { OR: [{ mailboxAddress: mailboxQuery }, { personalEmail: normalizedInput }] },
+      });
+      if (!customer) {
+        await recordLoginAttempt(prisma, req, { email: mailboxQuery, status: 'failed', failureReason: 'not_found' });
+        return res.status(401).json({ error: 'Email atau password salah' });
+      }
+      if (customer.status === 'suspended') {
+        await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'failed', failureReason: 'suspended' });
+        return res.status(403).json({ error: 'Akun Anda sedang ditangguhkan. Silakan hubungi administrator.' });
+      }
+      if (customer.status === 'inactive' || customer.status === 'deleted') {
+        await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'failed', failureReason: 'inactive' });
+        return res.status(403).json({ error: 'Akun Anda sedang tidak aktif. Silakan hubungi administrator.' });
+      }
+      if (!verifyPassword(password, customer.passwordEnc)) {
+        const attempt = await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'failed', failureReason: 'invalid_password' });
+        emitSecurityEvent({ type: 'login-attempt', severity: 'warning', title: 'Login Gagal: Kata Sandi Salah', accountEmail: customer.mailboxAddress, customerId: customer.id, ipAddress: attempt.ipAddress });
+        return res.status(401).json({ error: 'Email atau password salah' });
+      }
+      if (customer.twoFactorEnabled && customer.twoFactorSecret) {
+        await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: '2fa_challenge' });
+        return res.json({
+          requires2FA: true,
+          challengeToken: signChallenge(customer.id, customer.mailboxAddress),
+          message: 'Verifikasi 2 langkah diperlukan. Masukkan kode 6 digit dari aplikasi autentikator Anda.',
+          role: 'customer' as const,
+          redirectTo: null,
+        });
+      }
+      await prisma.customer.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } });
+      const clientInfo = await recordLoginAttempt(prisma, req, { email: customer.mailboxAddress, customerId: customer.id, status: 'success' });
+      checkAndSendNewDeviceAlert(prisma, customer, clientInfo).catch((e) => console.error('New device alert failed:', e));
+      await prisma.loginSession.updateMany({ where: { customerId: customer.id }, data: { isCurrent: false } });
+      await prisma.loginSession.create({ data: { customerId: customer.id, deviceName: clientInfo.deviceName, deviceType: clientInfo.deviceType, browser: clientInfo.browser, ipAddress: clientInfo.ipAddress, location: clientInfo.location, userAgent: clientInfo.userAgent, tokenSessionId: clientInfo.tokenSessionId, isCurrent: true, lastActiveAt: new Date() } });
+      return res.json({
+        token: signWithSession(customer.id, customer.mailboxAddress, 'customer', 'customer', clientInfo.tokenSessionId),
+        user: { id: customer.id, name: customer.name, email: customer.mailboxAddress, type: 'customer', role: 'customer', avatarUrl: customer.avatarUrl ? `/api/settings/avatar/${customer.id}?v=${new Date(customer.updatedAt).getTime()}` : null, storageQuota: customer.storageQuota },
+        role: 'customer' as const,
+        redirectTo: '/inbox',
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+   // FR-1..FR-3, FR-6: admin-only mailbox provisioning (Officer or Admin).
   router.post('/register', authenticateOfficerOrAdmin, async (req: Request, res: Response) => {
     try {
       const { name, personalEmail, localPart } = req.body ?? {};

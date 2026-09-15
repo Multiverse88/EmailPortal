@@ -5,7 +5,7 @@ test.describe('Admin mailbox', () => {
   test.beforeAll(resetDb);
 
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN, 'admin');
+    await login(page, ADMIN);
   });
 
   test('menampilkan tabel mailbox dan kuota', async ({ page }) => {

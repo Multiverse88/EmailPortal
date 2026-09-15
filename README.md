@@ -86,8 +86,7 @@ Backend berjalan di `http://localhost:4000`, Frontend di `http://localhost:3000`
 ## API Endpoints
 
 **Auth & Profil**
-- `POST /api/auth/login/customer` — Login customer
-- `POST /api/auth/login/admin` — Login admin
+- `POST /api/auth/login` — Login terpadu (role admin/customer terdeteksi otomatis dari email)
 - `POST /api/auth/register` — Admin membuat mailbox baru
 - `POST /api/auth/change-password` — Customer ganti password sendiri
 - `GET  /api/auth/me` — Profil customer aktif

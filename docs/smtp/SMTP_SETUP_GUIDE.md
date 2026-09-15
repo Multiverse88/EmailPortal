@@ -51,7 +51,7 @@ curl -X POST http://localhost:4000/api/auth/register \
 ### 3. Customer login portal
 
 ```
-POST /api/auth/login/customer
+POST /api/auth/login
 { "email": "budi@clienteasylegal.co.id", "password": "Bu4t!KuatS3kali" }
 ```
 → JWT 7 hari → Inbox.

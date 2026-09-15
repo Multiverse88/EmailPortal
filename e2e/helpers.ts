@@ -10,20 +10,20 @@ export function resetDb() {
   execSync('npm run seed', { stdio: 'pipe' });
 }
 
+// Unified login: role inferred from email, so only the account differs.
 export async function login(
   page: Page,
-  who: { email: string; password: string },
-  tab: 'customer' | 'admin' = 'customer'
+  who: { email: string; password: string } = CUSTOMER
 ) {
+  const isAdmin = who.email === ADMIN.email || who.email === 'officer@clienteasylegal.co.id';
   await page.goto('/login');
-  await page.getByTestId(`tab-${tab}`).click();
   await page.getByTestId('email').fill(who.email);
   await page.getByTestId('password').fill(who.password);
   await page.getByTestId('submit').click();
-  await expect(page).toHaveURL(tab === 'admin' ? /\/admin/ : /\/inbox/);
+  await expect(page).toHaveURL(isAdmin ? /\/admin/ : /\/inbox/);
 }
 
 export async function loginAsCustomer(page: Page) {
-  await login(page, CUSTOMER, 'customer');
+  await login(page, CUSTOMER);
   await expect(page.getByTestId('message-list')).toBeVisible();
 }

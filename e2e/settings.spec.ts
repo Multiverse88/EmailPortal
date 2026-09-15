@@ -48,7 +48,7 @@ test.describe('Pengaturan akun', () => {
 
     await page.getByTestId('back-inbox').click();
     await page.getByTestId('logout').click();
-    await login(page, { email: CUSTOMER.email, password: next }, 'customer');
+    await login(page, { email: CUSTOMER.email, password: next });
 
     // restore so the rest of the suite keeps the seeded password
     await page.getByTestId('nav-settings').click();
