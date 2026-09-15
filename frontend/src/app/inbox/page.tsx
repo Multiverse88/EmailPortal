@@ -42,6 +42,7 @@ import {
   Eye,
 } from 'lucide-react';
 import api, { fetcher, errMsg } from '@/lib/api';
+import { LegalDisclaimerModal } from '@/components/legal-disclaimer-modal';
 
 interface Message {
   id: string;
@@ -116,7 +117,6 @@ export default function InboxPage() {
     </AuthGuard>
   );
 }
-
 function Inbox_() {
   const { user, logout } = useCustomerAuth();
   const router = useRouter();
@@ -129,6 +129,9 @@ function Inbox_() {
   const [toast, setToast] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<EmailAttachment | null>(null);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const disclaimerAcceptedRef = useRef(false);
+  const countedUidRef = useRef<string | null>(null);
 
   // Prevent browser default file drop behavior (which attempts navigation to file:///)
   useEffect(() => {
@@ -194,6 +197,61 @@ function Inbox_() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Legal Disclaimer check on mount: verify server preferences if not yet marked locally
+  useEffect(() => {
+    if (!user?.id || typeof window === 'undefined') return;
+    if (localStorage.getItem('staff_impersonation')) return;
+
+    const localAccepted = localStorage.getItem(`el_disclaimer_accepted_${user.id}`);
+    if (localAccepted === '1') {
+      disclaimerAcceptedRef.current = true;
+      return;
+    }
+
+    fetcher('/settings')
+      .then((res) => {
+        if (res?.preferences?.disclaimerAcceptedAt) {
+          localStorage.setItem(`el_disclaimer_accepted_${user.id}`, '1');
+          disclaimerAcceptedRef.current = true;
+        }
+      })
+      .catch(() => {});
+  }, [user?.id]);
+
+  // Show disclaimer on 1st and 2nd email open for real customers
+  useEffect(() => {
+    if (!openUid || !user?.id || typeof window === 'undefined') return;
+    if (localStorage.getItem('staff_impersonation')) return;
+    if (disclaimerAcceptedRef.current) return;
+    if (localStorage.getItem(`el_disclaimer_accepted_${user.id}`) === '1') {
+      disclaimerAcceptedRef.current = true;
+      return;
+    }
+
+    // Guard against counting the same message UID multiple times
+    if (countedUidRef.current === openUid) return;
+    countedUidRef.current = openUid;
+
+    const openKey = `el_disclaimer_opens_${user.id}`;
+    const currentCount = parseInt(localStorage.getItem(openKey) || '0', 10);
+    const nextCount = currentCount + 1;
+    localStorage.setItem(openKey, nextCount.toString());
+
+    if (nextCount === 1 || nextCount === 2) {
+      setShowDisclaimer(true);
+    }
+  }, [openUid, user?.id]);
+
+  const handleAcceptDisclaimer = () => {
+    if (!user?.id) return;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`el_disclaimer_accepted_${user.id}`, '1');
+    }
+    disclaimerAcceptedRef.current = true;
+    api.put('/settings/preferences', { disclaimerAcceptedAt: new Date().toISOString() }).catch(() => {});
+    setShowDisclaimer(false);
+  };
+
 
   const refresh = async () => {
     if (syncing) return;
@@ -974,6 +1032,8 @@ function Inbox_() {
           <span>{toast}</span>
         </div>
       )}
+
+      <LegalDisclaimerModal open={showDisclaimer} onAccept={handleAcceptDisclaimer} />
     </div>
   );
 }
