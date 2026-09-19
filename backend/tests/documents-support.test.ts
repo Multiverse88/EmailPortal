@@ -136,7 +136,8 @@ describe('Documents & Support API Routes (TDD)', () => {
       },
     });
 
-    // Create tickets
+    // Create tickets (ensure previous runs cleaned up)
+    await prisma.supportTicket.deleteMany({ where: { ticketNumber: { in: ['#TK-1001', '#TK-2002'] } } }).catch(() => {});
     testTicket = await prisma.supportTicket.create({
       data: {
         customerId: customerA.id,

@@ -575,7 +575,7 @@ export async function handleTelegramMessageUpdate(
         const snap = await gatherLiveWebsiteSnapshot(prisma);
         const isMaintenance = process.env.MAINTENANCE_MODE === 'true';
         const hasDown = !snap.system.dbOk;
-        const hasSlow = snap.security.multiIpCount > 0 || snap.tickets.urgent > 0;
+        const hasSlow = (snap.security.threatsCount || 0) > 0 || snap.tickets.urgent > 0;
 
         let stateKey: 'normal' | 'gangguan' | 'maintenance' | 'down' = 'normal';
         if (hasDown) {
@@ -591,10 +591,10 @@ export async function handleTelegramMessageUpdate(
         const services = [
           { key: 'portal', name: 'Customer Portal', ms: hasDown ? 0 : 142, up: 99.99, status: hasDown ? 'down' : 'ok' },
           { key: 'api', name: 'API Backend', ms: hasDown ? 0 : 88, up: 99.98, status: hasDown ? 'down' : 'ok' },
-          { key: 'mail', name: 'Webmail & IMAP', ms: isMaintenance ? 0 : (hasSlow && !snap.security.multiIpCount ? 1420 : 212), up: 99.95, status: isMaintenance ? 'maint' : (hasSlow && !snap.security.multiIpCount ? 'slow' : 'ok') },
+          { key: 'mail', name: 'Webmail & IMAP', ms: isMaintenance ? 0 : 212, up: 99.95, status: isMaintenance ? 'maint' : 'ok' },
           { key: 'doc', name: 'Document Vault', ms: 165, up: 99.97, status: 'ok' },
           { key: 'db', name: 'Database Engine', ms: snap.system.dbOk ? 45 : 0, up: 99.99, status: snap.system.dbOk ? 'ok' : 'down' },
-          { key: 'ai', name: 'AI Assistant', ms: snap.security.multiIpCount > 0 ? 1850 : 640, up: 99.96, status: snap.security.multiIpCount > 0 ? 'slow' : 'ok' },
+          { key: 'ai', name: 'AI Assistant', ms: 640, up: 99.96, status: 'ok' },
         ];
 
         let dynamicBubble = SERVER_STATES[stateKey].bubble;
@@ -604,9 +604,9 @@ export async function handleTelegramMessageUpdate(
           if (snap.tickets.urgent > 0) {
             dynamicBubble = `${snap.tickets.urgent} tiket urgent perlu penanganan segera oleh admin!`;
             dynamicPill = `${snap.tickets.urgent} TIKET URGENT AKTIF`;
-          } else if (snap.security.multiIpCount > 0) {
-            dynamicBubble = `${snap.security.multiIpCount} anomali Multi-IP login terdeteksi pada radar keamanan.`;
-            dynamicPill = `${snap.security.multiIpCount} ANOMALI TERDETEKSI`;
+          } else if ((snap.security.threatsCount || 0) > 0) {
+            dynamicBubble = `${snap.security.threatsCount} ancaman email terdeteksi oleh AI Sentinel.`;
+            dynamicPill = `${snap.security.threatsCount} ANCAMAN TERDETEKSI`;
           } else {
             dynamicBubble = 'Antrean sinkronisasi email melambat. Tim teknis sedang memantau.';
             dynamicPill = 'GANGGUAN SEBAGIAN';
@@ -802,65 +802,50 @@ export async function handleTelegramMessageUpdate(
     ) {
       try {
         const snap = await gatherLiveWebsiteSnapshot(prisma);
-        const hasAlerts = snap.security.multiIpCount > 0;
+        const hasAlerts = (snap.security.threatsCount || 0) > 0;
 
         let cardBuffer: Buffer | null = null;
         let caption = '';
 
         if (hasAlerts) {
-          const multiIpSessions = await prisma.loginSession.groupBy({
-            by: ['customerId'],
-            having: {
-              ipAddress: { _count: { gt: 1 } },
-            },
-          }).catch(() => []);
-
-          const affectedCustId = multiIpSessions[0]?.customerId;
-          const cust = affectedCustId ? await prisma.customer.findUnique({ where: { id: affectedCustId } }) : null;
-          const ips = affectedCustId
-            ? (await prisma.loginSession.findMany({
-                where: { customerId: affectedCustId },
-                select: { ipAddress: true },
-                distinct: ['ipAddress'],
-              })).map((s: any) => s.ipAddress).filter(Boolean)
-            : ['182.253.140.22', '36.88.90.15'];
+          const latestThreat = await prisma.messageCache.findFirst({
+            where: { securityStatus: 'threat' },
+            orderBy: { receivedAt: 'desc' },
+            include: { mailbox: true },
+          });
 
           cardBuffer = await generateSecurityAlertCardPng({
-            accountName: cust?.name || 'Akun Terdeteksi Multi-IP',
-            mailboxAddress: cust?.mailboxAddress || 'user@clienteasylegal.co.id',
-            uniqueIps: ips.length > 0 ? ips : ['182.253.140.22', '36.88.90.15'],
-            sessionCount: ips.length || 2,
+            accountName: latestThreat?.mailbox?.name || 'Email Klien Terancam',
+            mailboxAddress: latestThreat?.mailbox?.mailboxAddress || 'user@clienteasylegal.co.id',
+            uniqueIps: ['AI Sentinel Protected'],
+            sessionCount: snap.security.threatsCount || 1,
           });
 
           caption = [
-            `🚨 <b>[RADAR KEAMANAN] Anomali Multi-IP Terdeteksi!</b>`,
-            `• Akun: <b>${escapeHtml(cust?.name || 'Multi-IP User')}</b>`,
-            `• Terdeteksi dari <b>${ips.length} IP berbeda</b> secara bersamaan.`,
+            `🚨 <b>[RADAR KEAMANAN] Ancaman Email AI Sentinel!</b>`,
+            `• Akun Sasaran: <b>${escapeHtml(latestThreat?.mailbox?.name || 'Customer')}</b>`,
+            `• Pengirim: <code>${escapeHtml(latestThreat?.sender || 'Unknown')}</code>`,
+            `• Catatan AI: <i>${escapeHtml(latestThreat?.securityNotes || 'Terdeteksi ancaman phishing/BEC')}</i>`,
             `👉 <i>Buka Security Radar di Admin Console untuk investigasi.</i>`,
           ].join('\n');
         } else {
           cardBuffer = await generateAiAssistantCardPng({
-            query: 'Radar Keamanan & Anomali Sesi',
+            query: 'Radar Keamanan & AI Sentinel',
             replySummary: [
               `• Sesi Aktif: ${snap.security.activeSessions} perangkat terhubung.`,
-              `• Peringatan Multi-IP: 0 Alert (Kondisi 100% aman).`,
+              `• AI Threat Sentinel: 0 Ancaman (Kondisi 100% aman).`,
               '• Enkripsi TOTP 2FA: Aktif siaga (AES-256).',
               '• Proteksi AI: 100% Zero-Leakage Enclave aktif.',
             ].join('\n'),
-            senderName,
-            category: 'RADAR KEAMANAN SISTEM',
-            pillText: 'SISTEM AMAN',
-            toneColor: '#22c55e',
-            deepColor: '#15803d',
-            pose: 'senang',
-            bubbleText: 'Radar aman! Tidak ada anomali.',
+            senderName: 'EasyLegal AI Sentinel',
           });
 
           caption = [
-            `🛡️ <b>[RADAR KEAMANAN] Kondisi 100% Aman</b>`,
-            `• Sesi Aktif: <b>${snap.security.activeSessions} Perangkat</b>`,
-            `• Anomali Multi-IP: 🟢 <b>0 Alert</b>`,
-            `• Proteksi: <b>2FA TOTP &amp; Zero-Leakage Enclave Aktif</b>`,
+            '🛡️ <b>[RADAR KEAMANAN] Seluruh Parameter Aman</b>',
+            `• Sesi login aktif: <b>${snap.security.activeSessions} perangkat</b>.`,
+            '• Status AI Sentinel: 🟢 <b>Nol ancaman BEC/Phishing (100% Aman)</b>.',
+            '• Kepatuhan zero data leakage: 🟢 <b>100% In-Memory Buffer Sanitized</b>.',
+            '• Proteksi 2FA: 🟢 <b>Enkripsi AES-256 Siaga</b>.',
           ].join('\n');
         }
 

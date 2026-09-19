@@ -103,6 +103,7 @@ Fondasi proteksi data dan kedaulatan akun hukum pelanggan.
 | **Modal Konfigurasi 2FA** | Modal QR code aktivasi TOTP (Google Authenticator/Authy) dan modal verifikasi sandi saat disable. | 🟢 Selesai | `frontend/src/app/settings/page.tsx`<br/>`backend/src/routes/security.ts` |
 | **Deteksi Perangkat/IP Baru** | Sentinel pemeriksa riwayat login IP & User-Agent dengan pengiriman otomatis alert email ke `personalEmail`. | 🟢 Selesai | `backend/src/lib/security-alerts.ts` |
 | **Pelacakan Sesi Aktif** | Audit perangkat yang sedang login (lokasi, IP, peramban) dan tombol darurat *Revoke All Other Sessions*. | 🟢 Selesai | `backend/src/routes/security.ts` |
+| **AI Email Sentinel (Anti-BEC & Phishing)** | Dual-engine hybrid (deteksi instan lokal + analisis semantik 9router background) dengan sanitasi PII in-memory zero data leakage. | 🟢 Selesai | `backend/src/lib/ai-email-sentinel.ts`<br/>`backend/src/workers/sync.ts` |
 
 ---
 
@@ -129,7 +130,7 @@ Panel manajemen pusat untuk administrator dan staf officer EasyLegal.
 | **Provisioning Mailbox Hostinger** | Pembuatan akun email baru langsung ke Hostinger API lengkap dengan pengecekan kuota tersisa. | 🟢 Selesai | `backend/src/routes/mailboxes.ts` |
 | **Officer 1-Click Impersonation** | Staf/Admin dapat masuk ke akun customer tanpa menanyakan password untuk mempermudah bantuan teknis. | 🟢 Selesai | `backend/src/routes/auth.ts`<br/>`frontend/src/app/auth/impersonate/` |
 | **Top Banner Sesi Impersonasi** | Banner warna amber di header customer suite dengan tombol *"Keluar Sesi Impersonasi"*. | 🟢 Selesai | `frontend/src/components/layout/StaffImpersonationBanner.tsx` |
-| **Multi-IP Security Radar** | Monitor real-time sesi login mencurigakan dari IP/lokasi berbeda dalam 24 jam untuk Super Admin. | 🟢 Selesai | `backend/src/routes/security.ts`<br/>`frontend/src/app/admin/page.tsx` |
+| **Super Admin Security Radar & AI Threat Feed** | Monitor sesi aktif real-time, deteksi brute-force login, eliminasi ambiguitas multi-IP, dan feed deteksi ancaman AI Sentinel. | 🟢 Selesai | `backend/src/routes/security.ts`<br/>`frontend/src/app/admin/page.tsx` |
 | **Master Storage Inspector** | Inspeksi agregat kapasitas penyimpanan lintas penyewa (S3 Hot Storage vs Synology Cold Storage). | 🟢 Selesai | `backend/src/routes/storage.ts`<br/>`frontend/src/app/admin/page.tsx` |
 | **Panel Sinkronisasi Synology** | Antarmuka monitoring status sinkronisasi NAS kantor dan pemicu sinkronisasi manual. | 🟢 Selesai | `backend/src/routes/storage.ts` |
 

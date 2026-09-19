@@ -213,31 +213,47 @@ export default (prisma: PrismaClient) => {
   // GET /api/security/admin/radar - global radar across all customer accounts
   router.get('/admin/radar', authenticateSuperAdmin, async (_req: Request, res: Response) => {
     try {
-      const customers = await prisma.customer.findMany({
-        where: { status: { not: 'deleted' } },
-        select: {
-          id: true,
-          name: true,
-          mailboxAddress: true,
-          personalEmail: true,
-          status: true,
-          lastLoginAt: true,
-          sessions: {
-            orderBy: { lastActiveAt: 'desc' },
+      const [customers, recentThreats] = await Promise.all([
+        prisma.customer.findMany({
+          where: { status: { not: 'deleted' } },
+          select: {
+            id: true,
+            name: true,
+            mailboxAddress: true,
+            personalEmail: true,
+            status: true,
+            lastLoginAt: true,
+            sessions: {
+              orderBy: { lastActiveAt: 'desc' },
+            },
           },
-        },
-      });
+        }),
+        prisma.messageCache.findMany({
+          where: { securityStatus: 'threat' },
+          orderBy: { receivedAt: 'desc' },
+          take: 20,
+          select: {
+            id: true,
+            mailboxId: true,
+            subject: true,
+            sender: true,
+            securityStatus: true,
+            securityNotes: true,
+            receivedAt: true,
+            mailbox: {
+              select: { name: true, mailboxAddress: true },
+            },
+          },
+        }),
+      ]);
 
       let totalActiveSessions = 0;
-      let multiIpAlertCount = 0;
 
       const accountReports = customers.map((c) => {
         const activeSessions = c.sessions;
         const uniqueIps = Array.from(new Set(activeSessions.map((s) => s.ipAddress)));
-        const isMultiIpAlert = uniqueIps.length > 1;
 
         totalActiveSessions += activeSessions.length;
-        if (isMultiIpAlert) multiIpAlertCount++;
 
         return {
           id: c.id,
@@ -248,16 +264,12 @@ export default (prisma: PrismaClient) => {
           lastLoginAt: c.lastLoginAt,
           activeSessionsCount: activeSessions.length,
           uniqueIps,
-          isMultiIpAlert,
+          isMultiIpAlert: false, // Retired to remove ambiguity
           sessions: activeSessions,
         };
       });
-
-      // Sort accounts: multi-IP alert first, active sessions next (most recent first), inactive last
+      // Sort accounts: active sessions first (most recent first), inactive last
       accountReports.sort((a, b) => {
-        if (a.isMultiIpAlert && !b.isMultiIpAlert) return -1;
-        if (!a.isMultiIpAlert && b.isMultiIpAlert) return 1;
-
         if (a.activeSessionsCount > 0 && b.activeSessionsCount === 0) return -1;
         if (a.activeSessionsCount === 0 && b.activeSessionsCount > 0) return 1;
 
@@ -270,8 +282,10 @@ export default (prisma: PrismaClient) => {
         summary: {
           totalAccounts: customers.length,
           totalActiveSessions,
-          multiIpAlertCount,
+          multiIpAlertCount: 0,
+          threatsCount: recentThreats.length,
         },
+        threats: recentThreats,
         accounts: accountReports,
       });
     } catch (error) {

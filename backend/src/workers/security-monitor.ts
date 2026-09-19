@@ -3,7 +3,6 @@ import { emitSecurityEvent } from '../lib/security-events';
 import { sendTelegramMessage, sendTelegramPhoto } from '../lib/telegram';
 import { generateServerStatusCardPng } from '../lib/card-generator';
 
-const THRESHOLD_MULTI_IP = 1;
 const THRESHOLD_BRUTE_FORCE = 5;
 const WINDOW_SEC = 300;
 
@@ -13,7 +12,7 @@ let lastSnapshot: MonitorSnapshot | null = null;
 const alertedAccounts = new Set<string>();
 
 export interface MonitorAnomaly {
-  type: 'multi_ip' | 'brute_force';
+  type: 'brute_force';
   accountEmail: string;
   customerId: string;
   detail: string;
@@ -92,38 +91,14 @@ export async function runSecurityScan(prisma: PrismaClient): Promise<MonitorSnap
     });
   }
 
-  // Multi-IP: > 1 unique IP among active sessions (dedup repeat alerts)
+  // Active session tally (multi-IP detection retired to eliminate false alarms and ambiguity)
   for (const c of customers) {
     const active = c.sessions;
     activeSessions += active.length;
     if (active.length === 0) {
       if (c.status === 'active') offlineAccounts++;
-      alertedAccounts.delete(c.id);
-      continue;
-    }
-    const uniqueIps = Array.from(new Set(active.map((s) => s.ipAddress)));
-    if (uniqueIps.length > THRESHOLD_MULTI_IP) {
-      multiIpAlerts++;
-      if (!alertedAccounts.has(c.id)) {
-        alertedAccounts.add(c.id);
-        const detail = `Multi-IP login: ${active.length} sesi aktif dari ${uniqueIps.length} IP: ${uniqueIps.join(', ')}`;
-        const riskScore = Math.min(95, 45 + (uniqueIps.length - THRESHOLD_MULTI_IP) * 12);
-        anomalies.push({ type: 'multi_ip', accountEmail: c.mailboxAddress, customerId: c.id, detail, riskScore });
-        emitSecurityEvent({
-          type: 'anomaly',
-          severity: 'warning',
-          title: 'Login Multi-IP Terdeteksi',
-          accountEmail: c.mailboxAddress,
-          customerId: c.id,
-          ipAddress: uniqueIps.join(', '),
-          riskScore,
-        });
-      }
-    } else {
-      alertedAccounts.delete(c.id);
     }
   }
-
   const snapshot: MonitorSnapshot = {
     totalAccounts: customers.length,
     activeSessions,
@@ -143,7 +118,7 @@ export async function runSecurityScan(prisma: PrismaClient): Promise<MonitorSnap
     const caption = [
       '📊 <b>[24/7 MONITOR] Ringkasan Keamanan</b>',
       `🕒 ${dateStr} | Total akun: ${snapshot.totalAccounts} | Sesi aktif: ${activeSessions}`,
-      `🚨 Multi-IP: ${multiIpAlerts} | 🔥 Brute force: ${bruteForceAccounts} | Anomali: ${anomalies.length}`,
+      `🔥 Brute force: ${bruteForceAccounts} | Anomali: ${anomalies.length}`,
       ...anomalies.slice(0, 5).map((a) => `• <b>${a.type.toUpperCase()}</b> (risiko ${a.riskScore}/100) ${a.accountEmail}: ${a.detail}`),
     ].join('\n');
     try {
@@ -152,7 +127,7 @@ export async function runSecurityScan(prisma: PrismaClient): Promise<MonitorSnap
         serverTime: dateStr,
         serverNext: 'Pantau berikutnya otomatis',
         pillText: `${anomalies.length} ANOMALI KEAMANAN TERDETEKSI`,
-        bubbleText: `Multi-IP: ${multiIpAlerts}, brute force: ${bruteForceAccounts}. Cek Security Radar.`,
+        bubbleText: `Brute force: ${bruteForceAccounts}. Cek Security Radar.`,
       });
       if (png) {
         await sendTelegramPhoto(png, caption.slice(0, 1000), replyMarkup);

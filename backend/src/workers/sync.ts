@@ -12,6 +12,8 @@ import { storage } from '../lib/storage';
 import { isMailApiConfigured, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody, fetchMessageAttachment } from '../lib/hostinger';
 import { scanAttachmentBuffer, scanEmailContent } from '../lib/security-scanner';
 import { notifyEmailThreat } from '../lib/telegram';
+import { analyzeEmailThreat } from '../lib/ai-email-sentinel';
+import { emitSecurityEvent } from '../lib/security-events';
 import { saveAttachmentToDriveAndStorage, autoSyncExistingAttachmentsToDrive } from '../lib/drive-sync';
 
 const STORAGE_DIR = path.resolve(process.env.STORAGE_DIR || './storage');
@@ -209,7 +211,15 @@ export class SyncWorker {
         bodyHtml,
       });
 
-      if (contentScan.status === 'threat') {
+      // Only alert on a NEW threat detection. Without this guard, every sync
+      // pass (every SYNC_INTERVAL_MS) re-scans the same still-present email
+      // and re-fires the Telegram alert forever, unrelated to any login session.
+      const previousMessage = await this.prisma.messageCache.findUnique({
+        where: { mailboxId_uid: { mailboxId: customer.id, uid: String(meta.uid) } },
+        select: { securityStatus: true },
+      });
+
+      if (contentScan.status === 'threat' && previousMessage?.securityStatus !== 'threat') {
         void notifyEmailThreat({
           accountName: customer.name,
           mailboxAddress: customer.mailboxAddress,
@@ -256,6 +266,19 @@ export class SyncWorker {
           bodyHtml,
         },
       });
+      // Asynchronous non-blocking AI Sentinel background enrichment
+      void this.enrichWithAiSentinel({
+        messageId: message.id,
+        customer: { id: customer.id, name: customer.name, mailboxAddress: customer.mailboxAddress },
+        emailData: {
+          sender: meta.sender,
+          subject: meta.subject,
+          bodyText,
+          bodyHtml,
+        },
+        currentStatus: contentScan.status,
+      });
+
 
       if (attachmentMeta) {
         try {
@@ -426,7 +449,14 @@ export class SyncWorker {
       bodyHtml: typeof parsed.html === 'string' ? parsed.html : null,
     });
 
-    if (contentScan.status === 'threat' && customer) {
+    // Only alert on a NEW threat detection; see equivalent guard in
+    // syncCustomerViaApi for why this must not re-fire on every sync pass.
+    const previousMessage = await this.prisma.messageCache.findUnique({
+      where: { mailboxId_uid: { mailboxId, uid } },
+      select: { securityStatus: true },
+    });
+
+    if (contentScan.status === 'threat' && customer && previousMessage?.securityStatus !== 'threat') {
       void notifyEmailThreat({
         accountName: customer.name,
         mailboxAddress: customer.mailboxAddress,
@@ -459,6 +489,20 @@ export class SyncWorker {
       create: { mailboxId, uid, ...data },
       update: data,
     });
+    // Asynchronous non-blocking AI Sentinel background enrichment
+    if (customer) {
+      void this.enrichWithAiSentinel({
+        messageId: message.id,
+        customer: { id: customer.id, name: customer.name, mailboxAddress: customer.mailboxAddress },
+        emailData: {
+          sender: parsed.from?.text,
+          subject: parsed.subject,
+          bodyText: text,
+          bodyHtml: typeof parsed.html === 'string' ? parsed.html : null,
+        },
+        currentStatus: contentScan.status,
+      });
+    }
 
     if (parsed.attachments && Array.isArray(parsed.attachments) && parsed.attachments.length > 0) {
       const accountFolder = getAccountFolderName(customer);
@@ -574,6 +618,85 @@ export class SyncWorker {
 
         existingKeys.add(key);
       }
+    }
+  }
+  private async enrichWithAiSentinel(params: {
+    messageId: string;
+    customer: { id: string; name: string; mailboxAddress: string };
+    emailData: {
+      sender?: string | null;
+      subject?: string | null;
+      bodyText?: string | null;
+      bodyHtml?: string | null;
+    };
+    currentStatus: string;
+  }): Promise<void> {
+    try {
+      const sentinelResult = await analyzeEmailThreat(params.emailData);
+      if (sentinelResult.isThreat) {
+        const threatTag = sentinelResult.threatCategory
+          ? `[AI SENTINEL: ${sentinelResult.threatCategory}]`
+          : '[AI SENTINEL]';
+        const formattedNotes = `${threatTag} ${sentinelResult.summary} (Keyakinan: ${Math.round(
+          sentinelResult.confidenceScore * 100
+        )}%)`;
+
+        await this.prisma.messageCache.update({
+          where: { id: params.messageId },
+          data: {
+            securityStatus: 'threat',
+            securityNotes: formattedNotes,
+          },
+        });
+
+        emitSecurityEvent({
+          type: 'threat',
+          severity: 'critical',
+          title: `AI Sentinel: ${sentinelResult.threatCategory || 'Deteksi Ancaman Email'}`,
+          detail: sentinelResult.summary,
+          accountEmail: params.customer.mailboxAddress,
+          customerId: params.customer.id,
+          riskScore: Math.round(sentinelResult.confidenceScore * 100),
+        });
+
+        const superAdmin = await this.prisma.adminUser.findFirst({
+          where: { role: 'superadmin' },
+        });
+        if (superAdmin) {
+          await this.prisma.auditLog.create({
+            data: {
+              actorId: superAdmin.id,
+              action: 'SECURITY_EMAIL_THREAT_DETECTED',
+              targetType: 'message',
+              targetId: params.customer.id,
+              details: JSON.stringify({
+                messageId: params.messageId,
+                mailboxAddress: params.customer.mailboxAddress,
+                sender: params.emailData.sender,
+                subject: params.emailData.subject,
+                threatCategory: sentinelResult.threatCategory,
+                confidenceScore: sentinelResult.confidenceScore,
+                reasons: sentinelResult.reasons,
+                source: sentinelResult.source,
+              }),
+            },
+          });
+        }
+
+        if (params.currentStatus !== 'threat') {
+          void notifyEmailThreat({
+            accountName: params.customer.name,
+            mailboxAddress: params.customer.mailboxAddress,
+            sender: params.emailData.sender || 'unknown',
+            subject: params.emailData.subject || '(tanpa subjek)',
+            threatType: `AI Sentinel: ${sentinelResult.threatCategory || 'Ancaman BEC/Phishing'}`,
+            threatDetails: sentinelResult.summary,
+            actionTaken: 'Email Ditandai untuk Tinjauan Keamanan Super Admin',
+          });
+        }
+      }
+    } catch {
+      // Non-fatal: AI Sentinel enrichment must NEVER disrupt sync worker
     }
   }
 }

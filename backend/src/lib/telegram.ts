@@ -315,7 +315,7 @@ export async function sendDailyDigest(
     urgentTickets,
     resolvedTickets,
     activeSessions,
-    multiIpAlerts,
+    threatsLast24h,
     auditLogsLast24h,
   ] = await Promise.all([
     prisma.customer.count(),
@@ -329,13 +329,13 @@ export async function sendDailyDigest(
     prisma.supportTicket.count({ where: { status: 'open', priority: 'urgent' } }),
     prisma.supportTicket.count({ where: { status: 'resolved' } }),
     prisma.loginSession.count(),
-    // Multi-IP detection
-    prisma.loginSession.groupBy({
-      by: ['customerId'],
-      having: {
-        ipAddress: { _count: { gt: 1 } },
+    // AI threats detected in past 24 hours
+    prisma.messageCache.count({
+      where: {
+        securityStatus: 'threat',
+        receivedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
-    }).catch(() => []),
+    }),
     // Audit logs in past 24 hours
     prisma.auditLog.count({
       where: {
@@ -346,7 +346,7 @@ export async function sendDailyDigest(
 
   const usedBytes = docSizeAgg._sum.size || 0;
   const usedMB = (usedBytes / (1024 * 1024)).toFixed(1);
-  const totalMultiIp = Array.isArray(multiIpAlerts) ? multiIpAlerts.length : 0;
+  const totalThreats = threatsLast24h || 0;
 
   const replyMarkup = {
     inline_keyboard: [
@@ -372,7 +372,7 @@ export async function sendDailyDigest(
     ``,
     `🛡️ <b>2. RADAR KEAMANAN & ANOMALI LOGIN</b>`,
     `• Sesi Login Aktif: <b>${activeSessions} Perangkat</b>`,
-    `• Anomali Multi-IP: ${totalMultiIp > 0 ? `🚨 <b>${totalMultiIp} Akun Terdeteksi Multi-IP!</b>` : `🟢 <b>0 Alert (Kondisi Aman)</b>`}`,
+    `• AI Threat Sentinel (24 Jam): ${totalThreats > 0 ? `🚨 <b>${totalThreats} Ancaman Email Terdeteksi!</b>` : `🟢 <b>0 Ancaman (Kondisi Aman)</b>`}`,
     `• Aktivitas Audit Log (24 Jam): <b>${auditLogsLast24h} Entri Tercatat</b>`,
     `• AI Security Protocol: 🛡️ <b>100% In-Memory Zero-Leakage Aktif</b>`,
     ``,
@@ -404,7 +404,7 @@ export async function sendDailyDigest(
       usedMB,
       totalDocuments,
       activeSessions,
-      totalMultiIp,
+      totalMultiIp: totalThreats,
       auditLogsLast24h,
       openTickets,
       urgentTickets,
@@ -417,7 +417,7 @@ export async function sendDailyDigest(
         `📅 <i>${dateStr} WIB</i>`,
         `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
         `🌐 <b>Cluster &amp; Webmail:</b> 🟢 Online (${totalCustomers} Akun, ${totalEmails} Email)`,
-        `🛡️ <b>Radar Keamanan:</b> ${activeSessions} Sesi • ${totalMultiIp > 0 ? `🚨 ${totalMultiIp} Multi-IP!` : '🟢 0 Alert Aman'}`,
+        `🛡️ <b>Radar Keamanan:</b> ${activeSessions} Sesi • ${totalThreats > 0 ? `🚨 ${totalThreats} Ancaman AI!` : '🟢 0 Ancaman Aman'}`,
         `💾 <b>Storage:</b> ${usedMB} MB S3 • Synology NAS Terhubung`,
         `🎫 <b>Tiket:</b> ${openTickets} Open (${urgentTickets} Urgent) • ${resolvedTickets} Selesai`,
         `━━━━━━━━━━━━━━━━━━━━━━━━━━`,

@@ -54,6 +54,7 @@ export interface LiveWebsiteSnapshot {
   security: {
     activeSessions: number;
     multiIpCount: number;
+    threatsCount: number;
     multiIpClients: string[];
     recentAuditLogs: {
       action: string;
@@ -96,7 +97,7 @@ export async function gatherLiveWebsiteSnapshot(prisma: PrismaClient): Promise<L
     resolvedTickets,
     activeTicketsList,
     activeSessions,
-    multiIpGroups,
+    threatsDetectedLast24h,
     recentAuditLogs,
   ] = await Promise.all([
     prisma.customer.count(),
@@ -146,10 +147,10 @@ export async function gatherLiveWebsiteSnapshot(prisma: PrismaClient): Promise<L
       },
     }),
     prisma.loginSession.count(),
-    prisma.loginSession.groupBy({
-      by: ['customerId'],
-      having: { ipAddress: { _count: { gt: 1 } } },
-    }).catch(() => []),
+    // AI threats in past 24 hours
+    prisma.messageCache.count({
+      where: { securityStatus: 'threat', receivedAt: { gte: oneDayAgo } },
+    }),
     prisma.auditLog.findMany({
       take: 8,
       orderBy: { createdAt: 'desc' },
@@ -214,7 +215,8 @@ export async function gatherLiveWebsiteSnapshot(prisma: PrismaClient): Promise<L
     },
     security: {
       activeSessions,
-      multiIpCount: Array.isArray(multiIpGroups) ? multiIpGroups.length : 0,
+      multiIpCount: 0,
+      threatsCount: threatsDetectedLast24h,
       multiIpClients: [],
       recentAuditLogs: recentAuditLogs.map((log) => ({
         action: log.action,
@@ -333,7 +335,7 @@ export async function formatCommandResponse(
       `🛡️ <b>[RADAR KEAMANAN & ANOMALI WEBSITE]</b>`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       `• Sesi Login Aktif: <b>${snap.security.activeSessions} Perangkat</b>`,
-      `• Peringatan Multi-IP: ${snap.security.multiIpCount > 0 ? `🚨 <b>${snap.security.multiIpCount} Akun Multi-IP!</b>` : `🟢 <b>0 Alert (Aman)</b>`}`,
+      `• AI Threat Sentinel: ${snap.security.threatsCount > 0 ? `🚨 <b>${snap.security.threatsCount} Ancaman Email Terdeteksi!</b>` : `🟢 <b>0 Ancaman (Aman)</b>`}`,
       `• Status Isolasi PDF AI: 🛡️ <b>100% In-Memory Zero-Leakage Aktif</b>`,
       `• Otentikasi 2FA TOTP: 🟢 <b>Enkripsi AES-256 Siaga</b>`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
@@ -433,7 +435,7 @@ Tugas Anda: Menjawab pertanyaan Super Admin tentang segala KONDISI, TRANSAKSI, K
 - Tiket Support Klien: ${snap.tickets.open} tiket open, ${snap.tickets.urgent} urgent, ${snap.tickets.resolved} selesai.
   Tiket aktif saat ini:
   ${snap.tickets.activeList.map((t) => `  * ${t.ticketNumber} [${t.priority.toUpperCase()}] "${t.subject}" oleh ${t.clientName} (${t.status})`).join('\n') || '  (Tidak ada tiket aktif)'}
-- Radar Keamanan: ${snap.security.activeSessions} sesi login aktif, ${snap.security.multiIpCount} deteksi multi-IP.
+- Radar Keamanan: ${snap.security.activeSessions} sesi login aktif, ${snap.security.threatsCount} ancaman email terdeteksi.
   Log audit / transaksi terbaru:
   ${snap.security.recentAuditLogs.map((l) => `  * [${l.date}] ${l.action} oleh ${l.actor} pada target ${l.target} (IP: ${l.ip})`).join('\n') || '  (Belum ada log)'}
 
@@ -642,7 +644,7 @@ function generateLocalHeuristicResponse(
       `🛡️ <b>[KONDISI RADAR KEAMANAN]</b>`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       `• Jumlah Sesi Login Terhubung: <b>${snap.security.activeSessions} Perangkat</b>`,
-      `• Deteksi Multi-IP Login: ${snap.security.multiIpCount > 0 ? `🚨 <b>${snap.security.multiIpCount} Akun Terdeteksi Multi-IP!</b>` : `🟢 <b>0 Alert (Kondisi Aman)</b>`}`,
+      `• AI Threat Sentinel: ${snap.security.threatsCount > 0 ? `🚨 <b>${snap.security.threatsCount} Ancaman Email Terdeteksi!</b>` : `🟢 <b>0 Ancaman (Kondisi Aman)</b>`}`,
       `• Perlindungan Zero Data Leakage: 🛡️ <b>100% In-Memory Aktif</b>`,
       `• Otentikasi 2FA TOTP: 🟢 <b>Berjalan Normal</b>`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
@@ -681,7 +683,7 @@ function generateLocalHeuristicResponse(
     `• <b>Akun Klien:</b> 👥 <b>${snap.accounts.total} Akun</b> (${snap.accounts.active} Aktif)`,
     `• <b>Tiket Bantuan:</b> 🎫 <b>${snap.tickets.open} Terbuka</b> (${snap.tickets.urgent} Urgent)`,
     `• <b>Penyimpanan S3:</b> 💾 <b>${snap.documents.totalSizeMb} MB</b> (${snap.documents.total} Dokumen)`,
-    `• <b>Keamanan:</b> 🛡️ <b>${snap.security.activeSessions} Sesi</b> (${snap.security.multiIpCount} Anomali IP)`,
+    `• <b>Keamanan:</b> 🛡️ <b>${snap.security.activeSessions} Sesi</b> (${snap.security.threatsCount} Ancaman AI)`,
     ``,
     `Silakan ketik pertanyaan spesifik seperti:`,
     `• <i>"Tampilkan kegiatan dan transaksi terbaru"</i>`,

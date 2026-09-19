@@ -79,6 +79,20 @@ interface StorageOverview {
   }[];
 }
 
+interface SecurityRadarThreat {
+  id: string;
+  mailboxId: string;
+  subject: string | null;
+  sender: string | null;
+  securityStatus: string;
+  securityNotes: string | null;
+  receivedAt: string;
+  mailbox?: {
+    name: string;
+    mailboxAddress: string;
+  };
+}
+
 interface SecurityRadarAccount {
   id: string;
   name: string;
@@ -88,7 +102,7 @@ interface SecurityRadarAccount {
   lastLoginAt: string | null;
   activeSessionsCount: number;
   uniqueIps: string[];
-  isMultiIpAlert: boolean;
+  isMultiIpAlert?: boolean;
   sessions: {
     id: string;
     deviceName: string;
@@ -105,8 +119,10 @@ interface SecurityRadarData {
   summary: {
     totalAccounts: number;
     totalActiveSessions: number;
-    multiIpAlertCount: number;
+    multiIpAlertCount?: number;
+    threatsCount?: number;
   };
+  threats?: SecurityRadarThreat[];
   accounts: SecurityRadarAccount[];
 }
 
@@ -609,9 +625,9 @@ function Admin_() {
                 >
                   <Radio className="w-4 h-4 text-amber-600" />
                   <span>Security Radar</span>
-                  {radarData?.summary.multiIpAlertCount ? (
+                  {radarData?.summary.threatsCount ? (
                     <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-100 text-red-700 font-bold animate-pulse">
-                      {radarData.summary.multiIpAlertCount} Alert
+                      {radarData.summary.threatsCount} Ancaman AI
                     </span>
                   ) : (
                     <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-bold">
@@ -1257,18 +1273,23 @@ function Admin_() {
           {/* ========================================================================= */}
           {activeTab === 'radar' && isSuperAdmin && (
             <div className="space-y-6">
-              {/* Multi-IP Anomaly Alert Banner */}
-              {radarData && radarData.summary.multiIpAlertCount > 0 && (
-                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-3 shadow-xs">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+              {/* AI Sentinel Active Threat Banner */}
+              {radarData && (radarData.summary.threatsCount ?? 0) > 0 && (
+                <div className="p-4 rounded-2xl bg-red-50 border border-red-300 text-red-950 flex items-start gap-3 shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0">
                     <ShieldAlert className="w-5 h-5" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-bold text-amber-900">
-                      Peringatan Keamanan: Terdeteksi Akses Multi-IP Simultan ({radarData.summary.multiIpAlertCount} Akun)
-                    </h3>
-                    <p className="text-xs text-amber-800 mt-1">
-                      Akun yang ditandai dengan badge merah sedang diakses dari beberapa alamat IP publik berbeda secara bersamaan. Pastikan apakah ini staf resmi customer atau potensi akses tanpa izin. Anda dapat memutuskan sesi yang mencurigakan di bawah ini.
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-red-900">
+                        Peringatan Keamanan AI Sentinel: Terdeteksi {radarData.summary.threatsCount} Email Berbahaya
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-200 text-red-800 font-bold uppercase">
+                        Kritis
+                      </span>
+                    </div>
+                    <p className="text-xs text-red-800 mt-1">
+                      AI Sentinel mendeteksi indikasi Business Email Compromise (BEC), pengalihan rekening perorangan palsu, atau rekayasa sosial pada email masuk. Tinjau rincian di panel Deteksi Ancaman di bawah ini.
                     </p>
                   </div>
                 </div>
@@ -1293,15 +1314,68 @@ function Admin_() {
                 </div>
 
                 <div className="app-panel p-5">
-                  <span className="text-xs font-semibold text-slate-500 uppercase">Anomali Multi-IP</span>
-                  <div className={`text-2xl font-bold mt-1 ${radarData?.summary.multiIpAlertCount ? 'text-red-600' : 'text-slate-900'}`}>
-                    {radarData?.summary.multiIpAlertCount ?? 0}
+                  <span className="text-xs font-semibold text-slate-500 uppercase">Ancaman AI Sentinel</span>
+                  <div className={`text-2xl font-bold mt-1 ${(radarData?.summary.threatsCount ?? 0) > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    {radarData?.summary.threatsCount ?? 0}
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    {radarData?.summary.multiIpAlertCount ? 'Memerlukan verifikasi' : 'Seluruh akun dalam kondisi aman'}
+                    {(radarData?.summary.threatsCount ?? 0) > 0 ? 'Email terindikasi BEC / Phishing' : 'Seluruh email dalam kondisi aman'}
                   </p>
                 </div>
               </div>
+
+              {/* AI Threat Detection Feed */}
+              {radarData?.threats && radarData.threats.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-red-600" />
+                        <span>Feed Deteksi Ancaman Email (AI Sentinel)</span>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Email yang ditandai oleh AI Sentinel karena indikasi Business Email Compromise, pancingan kredensial, atau manipulasi rekening.
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                      {radarData.threats.length} Terdeteksi
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {radarData.threats.map((threat) => (
+                      <div
+                        key={threat.id}
+                        className="app-panel p-4 border-red-200 bg-red-50/20 hover:border-red-300 transition-all"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase">
+                                Ancaman
+                              </span>
+                              <h4 className="text-xs font-bold text-slate-900">{threat.subject || '(Tanpa Subjek)'}</h4>
+                            </div>
+                            <div className="text-[11px] text-slate-600">
+                              <span className="font-semibold text-slate-700">Pengirim:</span> {threat.sender || '-'}
+                              <span className="mx-1.5">•</span>
+                              <span className="font-semibold text-slate-700">Sasaran:</span> {threat.mailbox?.name} ({threat.mailbox?.mailboxAddress})
+                            </div>
+                            {threat.securityNotes && (
+                              <div className="text-xs text-red-800 bg-red-100/50 p-2.5 rounded-lg border border-red-200/60 mt-2 font-mono text-[11px]">
+                                {threat.securityNotes}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-slate-400 whitespace-nowrap">
+                            {new Date(threat.receivedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Search & Account Sessions List */}
               <div className="space-y-4">
@@ -1387,11 +1461,7 @@ function Admin_() {
                   {filteredRadarAccounts.map((account) => (
                     <div
                       key={account.id}
-                      className={`app-panel p-5 transition-all ${
-                        account.isMultiIpAlert
-                          ? 'border-red-300 bg-red-50/20 shadow-sm'
-                          : 'hover:border-slate-300'
-                      }`}
+                      className="app-panel p-5 transition-all hover:border-slate-300"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                         <div className="flex items-center gap-3">
@@ -1401,12 +1471,6 @@ function Admin_() {
                           <div>
                             <div className="flex items-center gap-2">
                               <h4 className="text-xs font-bold text-slate-900">{account.name}</h4>
-                              {account.isMultiIpAlert && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
-                                  <AlertTriangle className="w-3 h-3" />
-                                  Multi-IP ({account.uniqueIps.length} Lokasi IP)
-                                </span>
-                              )}
                             </div>
                             <span className="font-mono text-slate-500 text-[11px]">{account.mailboxAddress}</span>
                           </div>
