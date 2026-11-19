@@ -49,6 +49,7 @@ interface Mailbox {
   name: string;
   personalEmail: string;
   mailboxAddress: string;
+  serviceCategory: string;
   status: string;
   createdAt: string;
   lastLoginAt: string | null;
@@ -871,6 +872,7 @@ function Admin_() {
                       <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
                         <th className="px-5 py-3.5">Nama & Identitas</th>
                         <th className="px-5 py-3.5">Alamat Mailbox</th>
+                        <th className="px-5 py-3.5 hidden lg:table-cell">Kategori</th>
                         <th className="px-5 py-3.5 hidden md:table-cell">Email Pribadi</th>
                         <th className="px-5 py-3.5 hidden sm:table-cell">Login Terakhir</th>
                         <th className="px-5 py-3.5">Status</th>
@@ -880,7 +882,7 @@ function Admin_() {
                     <tbody className="divide-y divide-slate-100 text-slate-700">
                       {isLoading && (
                         <tr>
-                          <td colSpan={6} className="px-5 py-10 text-center text-slate-400">
+                          <td colSpan={7} className="px-5 py-10 text-center text-slate-400">
                             <div className="flex items-center justify-center gap-2">
                               <RefreshCw className="w-4 h-4 animate-spin text-primary" />
                               <span>Memuat data mailbox...</span>
@@ -891,7 +893,7 @@ function Admin_() {
 
                       {!isLoading && mailboxes.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="px-5 py-12 text-center text-slate-400" data-testid="admin-empty">
+                          <td colSpan={7} className="px-5 py-12 text-center text-slate-400" data-testid="admin-empty">
                             Belum ada mailbox customer terdaftar.
                           </td>
                         </tr>
@@ -899,7 +901,7 @@ function Admin_() {
 
                       {!isLoading && mailboxes.length > 0 && filteredMailboxes.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="px-5 py-10 text-center text-slate-400">
+                          <td colSpan={7} className="px-5 py-10 text-center text-slate-400">
                             Tidak ada customer yang cocok dengan kata kunci &quot;{searchQuery}&quot;
                           </td>
                         </tr>
@@ -953,6 +955,19 @@ function Admin_() {
                                   </button>
                                 )}
                               </div>
+                            </td>
+
+                            {/* Service category */}
+                            <td className="px-5 py-3.5 hidden lg:table-cell">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                  m.serviceCategory === 'Pendaftaran Merek'
+                                    ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                                    : 'bg-violet-50 text-violet-700 border border-violet-200'
+                                }`}
+                              >
+                                {m.serviceCategory || 'Pendirian PT'}
+                              </span>
                             </td>
 
                             {/* Personal email */}
@@ -1880,6 +1895,7 @@ function NewMailboxForm({
   const [name, setName] = useState('');
   const [personalEmail, setPersonalEmail] = useState('');
   const [localPart, setLocalPart] = useState('');
+  const [serviceCategory, setServiceCategory] = useState('Pendirian PT');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -1944,6 +1960,22 @@ function NewMailboxForm({
               placeholder="Contoh: PT Sinar Jaya / Hendra Setiawan"
               className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
+          </div>
+
+          <div>
+            <label htmlFor="serviceCategory" className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Kategori Layanan
+            </label>
+            <select
+              id="serviceCategory"
+              data-testid="form-category"
+              value={serviceCategory}
+              onChange={(e) => setServiceCategory(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+            >
+              <option value="Pendirian PT">Pendirian PT</option>
+              <option value="Pendaftaran Merek">Pendaftaran Merek</option>
+            </select>
           </div>
 
           <div>

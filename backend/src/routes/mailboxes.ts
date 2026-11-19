@@ -23,7 +23,7 @@ export default (prisma: PrismaClient) => {
           take: limit,
           orderBy: { createdAt: 'desc' },
           select: {
-            id: true, name: true, personalEmail: true, mailboxAddress: true,
+            id: true, name: true, personalEmail: true, mailboxAddress: true, serviceCategory: true,
             status: true, createdAt: true, lastLoginAt: true,
             _count: { select: { messages: true } },
           },

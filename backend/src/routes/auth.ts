@@ -399,6 +399,8 @@ export default (prisma: PrismaClient) => {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(personalEmail)) {
         return res.status(400).json({ error: 'Email pribadi tidak valid' });
       }
+      const SERVICE_CATEGORIES = ['Pendirian PT', 'Pendaftaran Merek'];
+      const serviceCategory = SERVICE_CATEGORIES.includes(reqServiceCategory) ? reqServiceCategory : 'Pendirian PT';
 
       // FR-2: refuse before hitting the mail provider when the plan is full.
       const quota = parseInt(process.env.MAILBOX_QUOTA || '100');
@@ -419,7 +421,7 @@ export default (prisma: PrismaClient) => {
 
       const tempPassword = generatePassword();
       const customer = await prisma.customer.create({
-        data: { name, personalEmail, mailboxAddress, passwordEnc: encrypt(tempPassword), status: 'active' },
+        data: { name, personalEmail, mailboxAddress, passwordEnc: encrypt(tempPassword), status: 'active', serviceCategory },
       });
 
       // ─── Real provisioning via hPanel API ──────────────────────────────
