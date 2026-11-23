@@ -7,6 +7,7 @@ Platform terintegrasi layanan korporat dan custom email client bergaya Google Mi
 1. **✉️ EasyLegal Mail (`/inbox`)**
    - Webmail client minimalis Google-style dengan dukungan folder (Inbox, Terkirim, Draf, Sampah).
    - Pratinjau email HTML, penandaan bintang, pencarian instan, dan compose/balas/teruskan dengan lampiran hingga 10MB.
+   - Sesuai kebijakan portal, seluruh pesan Spam/Junk dipindahkan ke Inbox pada sinkronisasi berikutnya, termasuk spam lama. Pemindahan dilakukan di server sebelum cache memakai UID tujuan; folder Trash tidak dipindahkan. Pemindaian lampiran dan penandaan ancaman tetap aktif. Akun dengan autentikasi gagal tetap memerlukan kredensial yang benar.
 2. **📁 Legal Documents Drive (`/documents`)**
    - Repositori berkas legal korporasi (Perjanjian Kerjasama, SK Kemenkumham, Invoice, Bukti Bayar).
    - Modal interaktif **Document Preview** dengan visualizer berkas, pelacak riwayat versi (Version History Timeline), status dokumen (CONFIDENTIAL / Urgent Review), serta unduh berkas asli.
@@ -24,6 +25,10 @@ Platform terintegrasi layanan korporat dan custom email client bergaya Google Mi
    - **Notifications**: Preferensi peringatan desktop dan bunyi notifikasi.
 5. **🎛️ Google-Style App Launcher (9-Dots Popover)**
    - Akses navigasi cepat lintas aplikasi (Mail, Documents, Support, Settings) yang tersedia di header setiap halaman serta sidebar navigasi.
+
+Admin `/admin`: dashboard lebar penuh dengan daftar mailbox 15 akun per halaman, pencarian server-side pada seluruh akun, dan total aktif/nonaktif global. Officer/Admin dapat mengubah kategori melalui dropdown pada kolom Kategori; perubahan langsung disimpan dan dicatat dalam audit log. Pemeriksaan pagination dan edit kategori terisolasi: `npx tsx backend/scripts/check-mailbox-pagination.ts`.
+Filter Kategori dan Status pada toolbar dapat digabung dengan pencarian; perubahan filter kembali ke halaman pertama. Tombol **Reset filter** mengembalikan seluruh hasil, tanpa mengubah data akun.
+LO Akuisisi dapat dipilih saat membuat mailbox, diubah langsung melalui dropdown pada kolom **LO Akuisisi** di sebelah kiri **Kategori**, dan difilter melalui **Semua LO akuisisi** / **Belum ditentukan** / nama LO. Daftar delapan LO bersumber dari `backend/src/lib/legal-officers.ts`; akun lama tetap tanpa penanggung jawab hingga ditetapkan, dan perubahan dicatat di audit log.
 
 ## Tech Stack
 
