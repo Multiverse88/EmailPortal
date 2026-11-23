@@ -1,9 +1,11 @@
 import { Request, Response, Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { audit } from '../lib/audit';
 import { purgeDummyData } from '../lib/clean-data';
 import { decrypt, encrypt, generatePassword } from '../lib/crypto';
 import { sendOnboardingNotice } from '../lib/mail';
+import { deleteMailboxOnHostinger, findHostingerMailboxId, isProvisioningConfigured } from '../lib/hostinger';
+import { LEGAL_OFFICERS } from '../lib/legal-officers';
 
 export default (prisma: PrismaClient) => {
   const router = Router();
@@ -12,29 +14,85 @@ export default (prisma: PrismaClient) => {
   router.get('/', async (req: Request, res: Response) => {
     try {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const limit = Math.min(100, parseInt(req.query.limit as string) || 20);
+      const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string) || 20));
       const status = (req.query.status as string) || 'all';
-      const where = status === 'all' ? { status: { not: 'deleted' } } : { status };
+      const search = ((req.query.search as string) || '').trim();
+      const where: Prisma.CustomerWhereInput = status === 'all' ? { status: { not: 'deleted' } } : { status };
+      const serviceCategory = req.query.serviceCategory ?? 'all';
+      if (serviceCategory !== 'all') {
+        if (typeof serviceCategory !== 'string' || !['Pendirian PT', 'Pendaftaran Merek'].includes(serviceCategory)) {
+          return res.status(400).json({ error: 'Kategori layanan tidak valid' });
+        }
+        where.serviceCategory = serviceCategory;
+      }
+      const acquisitionLo = req.query.acquisitionLo ?? 'all';
+      if (acquisitionLo === 'unassigned') {
+        where.acquisitionLo = null;
+      } else if (acquisitionLo !== 'all') {
+        if (typeof acquisitionLo !== 'string' || !LEGAL_OFFICERS.includes(acquisitionLo)) {
+          return res.status(400).json({ error: 'LO akuisisi tidak valid' });
+        }
+        where.acquisitionLo = acquisitionLo;
+      }
+      if (search) {
+        where.OR = [
+          { name: { contains: search } },
+          { mailboxAddress: { contains: search } },
+          { personalEmail: { contains: search } },
+        ];
+      }
 
-      const [mailboxes, total, quotaUsed] = await Promise.all([
+      const [mailboxes, total, quotaUsed, activeTotal, inactiveTotal, coidCount, comCount, onlineCount] = await Promise.all([
         prisma.customer.findMany({
           where,
           skip: (page - 1) * limit,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           select: {
             id: true, name: true, personalEmail: true, mailboxAddress: true, serviceCategory: true,
+            acquisitionLo: true,
             status: true, createdAt: true, lastLoginAt: true,
             _count: { select: { messages: true } },
           },
         }),
         prisma.customer.count({ where }),
         prisma.customer.count({ where: { status: { not: 'deleted' } } }),
+        prisma.customer.count({ where: { status: 'active' } }),
+        prisma.customer.count({ where: { status: 'inactive' } }),
+        prisma.customer.count({ where: { status: { not: 'deleted' }, mailboxAddress: { endsWith: '@clienteasylegal.co.id' } } }),
+        prisma.customer.count({ where: { status: { not: 'deleted' }, mailboxAddress: { endsWith: '@clienteasylegal.com' } } }),
+        prisma.customer.count({ where: { status: { not: 'deleted' }, mailboxAddress: { endsWith: '@clienteasylegal.online' } } }),
       ]);
+
+      const coidLimit = 100;
+      const comLimit = 100;
+      const onlineLimit = 100;
+      let recommendedDomain = 'clienteasylegal.co.id';
+      if (coidCount >= coidLimit && comCount < comLimit) {
+        recommendedDomain = 'clienteasylegal.com';
+      } else if (coidCount >= coidLimit && comCount >= comLimit && onlineCount < onlineLimit) {
+        recommendedDomain = 'clienteasylegal.online';
+      } else if (coidCount < coidLimit) {
+        recommendedDomain = 'clienteasylegal.co.id';
+      } else {
+        recommendedDomain = comCount < onlineCount ? 'clienteasylegal.com' : 'clienteasylegal.online';
+      }
 
       res.json({
         data: mailboxes.map(({ _count, ...m }) => ({ ...m, messageCount: _count.messages })),
-        quota: { used: quotaUsed, limit: parseInt(process.env.MAILBOX_QUOTA || '100') },
+        legalOfficers: LEGAL_OFFICERS,
+        activeTotal,
+        inactiveTotal,
+        quota: {
+          used: quotaUsed,
+          limit: parseInt(process.env.MAILBOX_QUOTA || '300'),
+          domains: {
+            'clienteasylegal.co.id': { used: coidCount, limit: coidLimit, available: Math.max(0, coidLimit - coidCount), status: coidCount >= coidLimit ? 'full' : 'available' },
+            'clienteasylegal.com': { used: comCount, limit: comLimit, available: Math.max(0, comLimit - comCount), status: comCount >= comLimit ? 'full' : 'available' },
+            'clienteasylegal.online': { used: onlineCount, limit: onlineLimit, available: Math.max(0, onlineLimit - onlineCount), status: onlineCount >= onlineLimit ? 'full' : 'available' },
+          },
+          recommendedDomain,
+        },
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
       });
     } catch (error) {
@@ -49,6 +107,7 @@ export default (prisma: PrismaClient) => {
         where: { id: req.params.id },
         select: {
           id: true, name: true, personalEmail: true, mailboxAddress: true,
+          acquisitionLo: true,
           status: true, createdAt: true, lastLoginAt: true,
           messages: { take: 50, orderBy: { receivedAt: 'desc' } },
         },
@@ -58,6 +117,55 @@ export default (prisma: PrismaClient) => {
     } catch (error) {
       console.error('Get mailbox error:', error);
       res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  router.patch('/:id/category', async (req: Request, res: Response) => {
+    try {
+      const serviceCategory = req.body?.serviceCategory;
+      if (!['Pendirian PT', 'Pendaftaran Merek'].includes(serviceCategory)) {
+        return res.status(400).json({ error: 'Kategori layanan tidak valid' });
+      }
+      const existing = await prisma.customer.findUnique({ where: { id: req.params.id } });
+      if (!existing) return res.status(404).json({ error: 'Customer tidak ditemukan' });
+
+      const updated = await prisma.customer.update({
+        where: { id: existing.id },
+        data: { serviceCategory },
+        select: { id: true, serviceCategory: true },
+      });
+      await audit(prisma, req, 'mailbox.category', 'customer', existing.id, {
+        from: existing.serviceCategory,
+        to: serviceCategory,
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error('Update mailbox category error:', error);
+      res.status(500).json({ error: 'Gagal mengubah kategori mailbox' });
+    }
+  });
+
+  router.patch('/:id/acquisition-lo', async (req: Request, res: Response) => {
+    try {
+      const acquisitionLo = req.body?.acquisitionLo === '' ? null : req.body?.acquisitionLo;
+      if (acquisitionLo !== null && (typeof acquisitionLo !== 'string' || !LEGAL_OFFICERS.includes(acquisitionLo))) {
+        return res.status(400).json({ error: 'LO akuisisi tidak valid' });
+      }
+      const existing = await prisma.customer.findUnique({ where: { id: req.params.id } });
+      if (!existing) return res.status(404).json({ error: 'Customer tidak ditemukan' });
+      const updated = await prisma.customer.update({
+        where: { id: existing.id },
+        data: { acquisitionLo },
+        select: { id: true, acquisitionLo: true },
+      });
+      await audit(prisma, req, 'mailbox.acquisition-lo', 'customer', existing.id, {
+        from: existing.acquisitionLo,
+        to: acquisitionLo,
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error('Update acquisition LO error:', error);
+      res.status(500).json({ error: 'Gagal mengubah LO akuisisi' });
     }
   });
 
@@ -89,7 +197,24 @@ export default (prisma: PrismaClient) => {
       const existing = await prisma.customer.findUnique({ where: { id } });
       if (!existing) return res.status(404).json({ error: 'Customer tidak ditemukan' });
 
-      // Clean associated relational data before customer deletion
+      // 1. Sync deletion directly to Hostinger hPanel API
+      if (isProvisioningConfigured()) {
+        try {
+          let resourceId: string | undefined = existing.mailboxResourceId ?? undefined;
+          if (!resourceId) {
+            resourceId = await findHostingerMailboxId(existing.mailboxAddress);
+          }
+          if (resourceId) {
+            await deleteMailboxOnHostinger(resourceId);
+            console.log(`✓ Mailbox ${existing.mailboxAddress} (${resourceId}) berhasil dihapus di Hostinger`);
+          }
+        } catch (hostingerError: unknown) {
+          const msg = hostingerError instanceof Error ? hostingerError.message : 'Unknown error';
+          console.warn(`Peringatan: Gagal menghapus mailbox di Hostinger (${existing.mailboxAddress}):`, msg);
+        }
+      }
+
+      // 2. Clean associated relational data before customer deletion
       await prisma.loginSession.deleteMany({ where: { customerId: id } });
       await prisma.ticketMessage.deleteMany({ where: { ticket: { customerId: id } } });
       await prisma.supportTicket.deleteMany({ where: { customerId: id } });

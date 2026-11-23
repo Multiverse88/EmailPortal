@@ -25,6 +25,7 @@ import {
 } from '../lib/hostinger';
 import { extractClientInfo, recordLoginAttempt, signWithSession } from '../lib/security-auth';
 import { emitSecurityEvent } from '../lib/security-events';
+import { LEGAL_OFFICERS } from '../lib/legal-officers';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '3h';
@@ -61,6 +62,9 @@ export default (prisma: PrismaClient) => {
         where: {
           OR: [
             { mailboxAddress: mailboxQuery },
+            { mailboxAddress: `${normalizedInput}@clienteasylegal.co.id` },
+            { mailboxAddress: `${normalizedInput}@clienteasylegal.com` },
+            { mailboxAddress: `${normalizedInput}@clienteasylegal.online` },
             { personalEmail: normalizedInput },
           ],
         },
@@ -340,7 +344,15 @@ export default (prisma: PrismaClient) => {
 
       // 2. Fallback to customer lookup
       const customer = await prisma.customer.findFirst({
-        where: { OR: [{ mailboxAddress: mailboxQuery }, { personalEmail: normalizedInput }] },
+        where: {
+          OR: [
+            { mailboxAddress: mailboxQuery },
+            { mailboxAddress: `${normalizedInput}@clienteasylegal.co.id` },
+            { mailboxAddress: `${normalizedInput}@clienteasylegal.com` },
+            { mailboxAddress: `${normalizedInput}@clienteasylegal.online` },
+            { personalEmail: normalizedInput },
+          ],
+        },
       });
       if (!customer) {
         await recordLoginAttempt(prisma, req, { email: mailboxQuery, status: 'failed', failureReason: 'not_found' });
@@ -389,7 +401,7 @@ export default (prisma: PrismaClient) => {
    // FR-1..FR-3, FR-6: admin-only mailbox provisioning (Officer or Admin).
   router.post('/register', authenticateOfficerOrAdmin, async (req: Request, res: Response) => {
     try {
-      const { name, personalEmail, localPart } = req.body ?? {};
+      const { name, personalEmail, localPart, domain: reqDomain } = req.body ?? {};
       if (!name || !personalEmail || !localPart) {
         return res.status(400).json({ error: 'Nama, email pribadi, dan local part wajib diisi' });
       }
@@ -402,15 +414,64 @@ export default (prisma: PrismaClient) => {
       const SERVICE_CATEGORIES = ['Pendirian PT', 'Pendaftaran Merek'];
       const reqServiceCategory = req.body?.serviceCategory;
       const serviceCategory = SERVICE_CATEGORIES.includes(reqServiceCategory) ? reqServiceCategory : 'Pendirian PT';
+      const acquisitionLo = req.body.acquisitionLo === '' ? null : req.body.acquisitionLo ?? null;
+      if (acquisitionLo !== null && (typeof acquisitionLo !== 'string' || !LEGAL_OFFICERS.includes(acquisitionLo))) {
+        return res.status(400).json({ error: 'LO akuisisi tidak valid' });
+      }
 
       // FR-2: refuse before hitting the mail provider when the plan is full.
-      const quota = parseInt(process.env.MAILBOX_QUOTA || '100');
+      const quota = parseInt(process.env.MAILBOX_QUOTA || '300');
       const used = await prisma.customer.count({ where: { status: { not: 'deleted' } } });
       if (used >= quota) {
         return res.status(409).json({ error: `Kuota mailbox penuh (${used}/${quota}). Upgrade paket dulu.` });
       }
 
-      const domain = process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id';
+      const ALLOWED_DOMAINS = ['clienteasylegal.co.id', 'clienteasylegal.com', 'clienteasylegal.online'];
+      let requestedDomain = String(reqDomain || 'auto').trim().toLowerCase();
+
+      // AI smart auto-distributor: automatically select domain with available quota
+      if (requestedDomain === 'auto' || !ALLOWED_DOMAINS.includes(requestedDomain)) {
+        const [coidCount, comCount, onlineCount] = await Promise.all([
+          prisma.customer.count({ where: { status: { not: 'deleted' }, mailboxAddress: { endsWith: '@clienteasylegal.co.id' } } }),
+          prisma.customer.count({ where: { status: { not: 'deleted' }, mailboxAddress: { endsWith: '@clienteasylegal.com' } } }),
+          prisma.customer.count({ where: { status: { not: 'deleted' }, mailboxAddress: { endsWith: '@clienteasylegal.online' } } }),
+        ]);
+
+        if (coidCount < 100) {
+          requestedDomain = 'clienteasylegal.co.id';
+        } else if (comCount < 100) {
+          requestedDomain = 'clienteasylegal.com';
+        } else if (onlineCount < 100) {
+          requestedDomain = 'clienteasylegal.online';
+        } else {
+          return res.status(409).json({ error: 'Kapasitas kuota seluruh domain (@clienteasylegal.co.id, @clienteasylegal.com, dan @clienteasylegal.online) sudah penuh.' });
+        }
+      } else {
+        // Safe fallback: if manual selection is already at capacity (100/100), auto-route to available sibling domain
+        const currentCount = await prisma.customer.count({
+          where: { status: { not: 'deleted' }, mailboxAddress: { endsWith: `@${requestedDomain}` } },
+        });
+        if (currentCount >= 100) {
+          const candidates = ['clienteasylegal.com', 'clienteasylegal.online', 'clienteasylegal.co.id'].filter(d => d !== requestedDomain);
+          let foundAlt: string | null = null;
+          for (const cand of candidates) {
+            const count = await prisma.customer.count({
+              where: { status: { not: 'deleted' }, mailboxAddress: { endsWith: `@${cand}` } },
+            });
+            if (count < 100) {
+              foundAlt = cand;
+              break;
+            }
+          }
+          if (foundAlt) {
+            requestedDomain = foundAlt;
+          } else {
+            return res.status(409).json({ error: `Kuota untuk seluruh domain sudah penuh (300/300).` });
+          }
+        }
+      }
+
+      const domain = requestedDomain;
       const mailboxAddress = `${localPart.toLowerCase()}@${domain}`;
 
       if (await prisma.customer.findUnique({ where: { mailboxAddress } })) {
@@ -422,7 +483,7 @@ export default (prisma: PrismaClient) => {
 
       const tempPassword = generatePassword();
       const customer = await prisma.customer.create({
-        data: { name, personalEmail, mailboxAddress, passwordEnc: encrypt(tempPassword), status: 'active', serviceCategory },
+        data: { name, personalEmail, mailboxAddress, passwordEnc: encrypt(tempPassword), status: 'active', serviceCategory, acquisitionLo },
       });
 
       // ─── Real provisioning via hPanel API ──────────────────────────────
@@ -432,12 +493,18 @@ export default (prisma: PrismaClient) => {
         try {
           // orderId comes from the Mail API /v1/me when available; otherwise
           // it must be provided via env (hPanel → Email → API).
-          const orderId = process.env.HOSTINGER_ORDER_ID
+          const DOMAIN_ORDERS: Record<string, string> = {
+            'clienteasylegal.co.id': process.env.HOSTINGER_ORDER_ID || 'OR31f5c5e72318c1c7ed4b36518b58',
+            'clienteasylegal.com': process.env.HOSTINGER_ORDER_ID_COM || 'OR129eadaeda93c702a8e9e03aac0f',
+            'clienteasylegal.online': process.env.HOSTINGER_ORDER_ID_ONLINE || 'ORf077fbe8a83f23235cc3c17386d4',
+          };
+          const orderId = DOMAIN_ORDERS[domain]
+            || process.env.HOSTINGER_ORDER_ID
             || await resolveOrderResourceId().catch(() => undefined);
           if (!orderId) {
             throw new Error('Order ID Hostinger tidak ditemukan. Cantumkan HOSTINGER_ORDER_ID di backend/.env atau pastikan token memiliki akses ke order email.');
           } else {
-            const mailbox = await createMailboxOnHostinger(orderId, localPart.toLowerCase(), tempPassword);
+            const mailbox = await createMailboxOnHostinger(orderId, localPart.toLowerCase(), tempPassword, domain);
             await prisma.customer.update({
               where: { id: customer.id },
               data: { mailboxResourceId: mailbox.id },

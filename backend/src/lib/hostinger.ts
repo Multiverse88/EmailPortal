@@ -12,6 +12,7 @@ import {
   Configuration,
   AccountApi,
   MessagesApi,
+  FoldersApi,
   SendApi,
   QuotaApi,
 } from 'hostinger-mail-api-sdk';
@@ -39,7 +40,12 @@ export function getBaseUrl(): string {
  * Create a mailbox on Hostinger via hPanel API.
  * Returns the created mailbox info or throws.
  */
-export async function createMailboxOnHostinger(orderId: string, localPart: string, password: string): Promise<{
+export async function createMailboxOnHostinger(
+  orderId: string,
+  localPart: string,
+  password: string,
+  domain?: string,
+): Promise<{
   id: string;
   address: string;
   status: string;
@@ -47,7 +53,7 @@ export async function createMailboxOnHostinger(orderId: string, localPart: strin
   const token = getApiToken();
   if (!token) throw new Error('HOSTINGER_API_TOKEN or HOSTINGER_MAIL_API_KEY not set');
 
-  const domain = process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id';
+  const resolvedDomain = domain || process.env.HOSTINGER_DOMAIN || 'clienteasylegal.co.id';
   const res = await axios.post(
     `${getBaseUrl()}/api/mail/v1/orders/${orderId}/mailboxes`,
     { local_part: localPart, password },
@@ -63,7 +69,7 @@ export async function createMailboxOnHostinger(orderId: string, localPart: strin
   const mailbox = res.data?.data ?? res.data;
   return {
     id: mailbox?.id || mailbox?.resourceId || mailbox?.mailbox_id || '',
-    address: mailbox?.address || `${localPart}@${domain}`,
+    address: mailbox?.address || `${localPart}@${resolvedDomain}`,
     status: mailbox?.status ?? 'active',
   };
 }
@@ -78,6 +84,34 @@ export async function deleteMailboxOnHostinger(mailboxId: string): Promise<void>
     headers: { 'Authorization': `Bearer ${token}` },
     timeout: 30000,
   });
+}
+
+/**
+ * Find mailbox ID on Hostinger by full address.
+ */
+export async function findHostingerMailboxId(address: string): Promise<string | undefined> {
+  const token = getApiToken();
+  if (!token) return undefined;
+  const domain = address.split('@')[1] || 'clienteasylegal.co.id';
+  const DOMAIN_ORDERS: Record<string, string> = {
+    'clienteasylegal.co.id': process.env.HOSTINGER_ORDER_ID || 'OR31f5c5e72318c1c7ed4b36518b58',
+    'clienteasylegal.com': process.env.HOSTINGER_ORDER_ID_COM || 'OR129eadaeda93c702a8e9e03aac0f',
+    'clienteasylegal.online': process.env.HOSTINGER_ORDER_ID_ONLINE || 'ORf077fbe8a83f23235cc3c17386d4',
+  };
+  const orderId = DOMAIN_ORDERS[domain] || process.env.HOSTINGER_ORDER_ID;
+  if (!orderId) return undefined;
+
+  try {
+    const res = await axios.get(
+      `${getBaseUrl()}/api/mail/v1/orders/${orderId}/mailboxes?search=${encodeURIComponent(address.split('@')[0])}`,
+      { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }
+    );
+    const items = Array.isArray(res.data?.data) ? (res.data.data as Array<{ id?: string; address?: string }>) : [];
+    const found = items.find((m) => m.address?.toLowerCase() === address.toLowerCase());
+    return found?.id;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -102,6 +136,7 @@ export async function changeMailboxPasswordOnHostinger(mailboxId: string, newPas
 let _config: Configuration | null = null;
 let _accountApi: AccountApi | null = null;
 let _messagesApi: MessagesApi | null = null;
+let _foldersApi: FoldersApi | null = null;
 let _sendApi: SendApi | null = null;
 let _quotaApi: QuotaApi | null = null;
 
@@ -130,6 +165,11 @@ export function accountApi(): AccountApi {
 export function messagesApi(): MessagesApi {
   if (!_messagesApi) _messagesApi = new MessagesApi(config());
   return _messagesApi;
+}
+
+export function foldersApi(): FoldersApi {
+  if (!_foldersApi) _foldersApi = new FoldersApi(config());
+  return _foldersApi;
 }
 
 export function sendApi(): SendApi {

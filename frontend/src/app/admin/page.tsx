@@ -25,6 +25,9 @@ import {
   ExternalLink,
   FolderArchive,
   Play,
+  Pause,
+  ChevronLeft,
+  ChevronRight,
   Laptop,
   Smartphone,
   Globe,
@@ -50,6 +53,7 @@ interface Mailbox {
   personalEmail: string;
   mailboxAddress: string;
   serviceCategory: string;
+  acquisitionLo: string | null;
   status: string;
   createdAt: string;
   lastLoginAt: string | null;
@@ -173,7 +177,14 @@ function Admin_() {
   const [created, setCreated] = useState<{ mailboxAddress: string; temporaryPassword: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mailboxPage, setMailboxPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [loFilter, setLoFilter] = useState('all');
+  const [savingLo, setSavingLo] = useState(false);
 
   // Storage tab state
   const [syncingSynology, setSyncingSynology] = useState(false);
@@ -198,11 +209,40 @@ function Admin_() {
   } | null>(null);
   const [copiedResend, setCopiedResend] = useState(false);
 
+  // Debounce search input 300ms and reset to page 1 on change.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+      setMailboxPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const MAILBOX_PAGE_SIZE = 15;
+
   // Mailboxes data
-  const { data, mutate, isLoading } = useSWR<{ data: Mailbox[]; quota: { used: number; limit: number } }>(
-    '/mailboxes?limit=100',
+  const { data, mutate, isLoading } = useSWR<{
+    data: Mailbox[];
+    legalOfficers: string[];
+    activeTotal: number;
+    inactiveTotal: number;
+    quota: {
+      used: number;
+      limit: number;
+      domains?: Record<string, { used: number; limit: number; available: number; status: 'full' | 'available' }>;
+      recommendedDomain?: string;
+    };
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }>(
+    `/mailboxes?limit=${MAILBOX_PAGE_SIZE}&page=${mailboxPage}&status=${statusFilter}&serviceCategory=${encodeURIComponent(categoryFilter)}&acquisitionLo=${encodeURIComponent(loFilter)}${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ''}`,
     fetcher
   );
+
+  useEffect(() => {
+    if (data?.pagination && mailboxPage > data.pagination.totalPages) {
+      setMailboxPage(data.pagination.totalPages);
+    }
+  }, [data?.pagination, mailboxPage]);
 
   // Storage Overview data (Super Admin only)
   const { data: storageData, mutate: mutateStorage, isLoading: isStorageLoading } = useSWR<StorageOverview>(
@@ -395,6 +435,34 @@ function Admin_() {
     }
   };
 
+  const updateCategory = async (id: string, serviceCategory: string) => {
+    setSavingCategory(true);
+    try {
+      await api.patch(`/mailboxes/${id}/category`, { serviceCategory });
+      await mutate();
+      setToast('Kategori mailbox berhasil diubah');
+    } catch (error) {
+      setToast(errMsg(error, 'Gagal mengubah kategori mailbox'));
+    } finally {
+      setSavingCategory(false);
+      setTimeout(() => setToast(''), 3000);
+    }
+  };
+
+  const updateAcquisitionLo = async (id: string, acquisitionLo: string) => {
+    setSavingLo(true);
+    try {
+      await api.patch(`/mailboxes/${id}/acquisition-lo`, { acquisitionLo: acquisitionLo || null });
+      await mutate();
+      setToast('LO akuisisi berhasil diubah');
+    } catch (error) {
+      setToast(errMsg(error, 'Gagal mengubah LO akuisisi'));
+    } finally {
+      setSavingLo(false);
+      setTimeout(() => setToast(''), 3000);
+    }
+  };
+
   const copyPassword = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -462,19 +530,13 @@ function Admin_() {
 
   const mailboxes = data?.data ?? [];
   const quota = data?.quota;
+  const mailboxPagination = data?.pagination;
 
-  const activeCount = mailboxes.filter((m) => m.status === 'active').length;
-  const inactiveCount = mailboxes.filter((m) => m.status === 'inactive').length;
+  const activeCount = data?.activeTotal ?? 0;
+  const inactiveCount = data?.inactiveTotal ?? 0;
 
-  const filteredMailboxes = mailboxes.filter((m) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      (m.name && m.name.toLowerCase().includes(q)) ||
-      (m.mailboxAddress && m.mailboxAddress.toLowerCase().includes(q)) ||
-      (m.personalEmail && m.personalEmail.toLowerCase().includes(q))
-    );
-  });
+  // Search & pagination happen server-side; the fetched page is already the result set.
+  const filteredMailboxes = mailboxes;
 
   const filteredStorageAccounts = (storageData?.accounts || []).filter((acc) => {
     if (!storageSearch.trim()) return true;
@@ -533,7 +595,7 @@ function Admin_() {
 
       {/* Main Container */}
       <main className="page-canvas w-full flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+        <div className="w-full min-w-0 space-y-6 p-4 sm:p-5 lg:p-6">
           
           {/* Header Title & Role Badge */}
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -549,7 +611,7 @@ function Admin_() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-500 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-                Domain: clienteasylegal.co.id
+                Domain: clienteasylegal.co.id, .com &amp; .online
               </span>
             </div>
           </div>
@@ -568,7 +630,7 @@ function Admin_() {
               <Users className="w-4 h-4 text-primary" />
               <span>Akun Mailbox</span>
               <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-bold">
-                {mailboxes.length}
+                {mailboxPagination?.total ?? mailboxes.length}
               </span>
             </button>
 
@@ -805,9 +867,9 @@ function Admin_() {
               )}
 
               {/* Action Header & Search Filter */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Live Search */}
-                <div className="relative flex-1 max-w-md">
+                <div className="relative min-w-0 basis-64 flex-1 max-w-md">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Search className="w-4 h-4" />
                   </div>
@@ -830,8 +892,51 @@ function Admin_() {
                   )}
                 </div>
 
+                <select
+                  aria-label="Filter kategori"
+                  data-testid="mailbox-category-filter"
+                  value={categoryFilter}
+                  onChange={(e) => { setCategoryFilter(e.target.value); setMailboxPage(1); }}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="all">Semua kategori</option>
+                  <option value="Pendirian PT">Pendirian PT</option>
+                  <option value="Pendaftaran Merek">Pendaftaran Merek</option>
+                </select>
+                <select
+                  aria-label="Filter status"
+                  data-testid="mailbox-status-filter"
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setMailboxPage(1); }}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="all">Semua status</option>
+                  <option value="active">Aktif</option>
+                  <option value="inactive">Nonaktif</option>
+                </select>
+                <select
+                  aria-label="Filter LO akuisisi"
+                  data-testid="mailbox-lo-filter"
+                  value={loFilter}
+                  onChange={(e) => { setLoFilter(e.target.value); setMailboxPage(1); }}
+                  className="max-w-full sm:max-w-56 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="all">Semua LO akuisisi</option>
+                  <option value="unassigned">Belum ditentukan</option>
+                  {(data?.legalOfficers ?? []).map(name => <option key={name} value={name}>{name}</option>)}
+                </select>
+                {(categoryFilter !== 'all' || statusFilter !== 'all' || loFilter !== 'all' || searchQuery) && (
+                  <button
+                    type="button"
+                    onClick={() => { setCategoryFilter('all'); setStatusFilter('all'); setLoFilter('all'); setSearchQuery(''); setMailboxPage(1); }}
+                    className="rounded-lg px-2 py-2 text-xs font-semibold text-primary hover:bg-primary/10"
+                  >
+                    Reset filter
+                  </button>
+                )}
+
                 {/* Action CTAs */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="ml-auto flex flex-wrap items-center gap-2">
                   {isSuperAdmin && mailboxes.length > 0 && (
                     <button
                       type="button"
@@ -866,23 +971,22 @@ function Admin_() {
 
               {/* Mailbox Data Table */}
               <div className="app-panel overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs" data-testid="mailbox-table">
+                <div className="min-w-0">
+                  <table className="w-full table-fixed text-left text-xs [&_td]:px-3 [&_th]:px-3 [&_td]:break-words" data-testid="mailbox-table">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
-                        <th className="px-5 py-3.5">Nama & Identitas</th>
-                        <th className="px-5 py-3.5">Alamat Mailbox</th>
-                        <th className="px-5 py-3.5 hidden lg:table-cell">Kategori</th>
-                        <th className="px-5 py-3.5 hidden md:table-cell">Email Pribadi</th>
-                        <th className="px-5 py-3.5 hidden sm:table-cell">Login Terakhir</th>
-                        <th className="px-5 py-3.5">Status</th>
-                        <th className="px-5 py-3.5 text-right">Aksi</th>
+                        <th className="px-5 py-3.5">Mailbox</th>
+                        <th className="py-3.5 w-[19%]">LO Akuisisi</th>
+                        <th className="py-3.5 hidden lg:table-cell w-[15%]">Kategori</th>
+                        <th className="py-3.5 hidden md:table-cell w-[18%]">Email Pribadi</th>
+                        <th className="py-3.5 w-28">Status</th>
+                        <th className="py-3.5 text-right w-28">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
                       {isLoading && (
                         <tr>
-                          <td colSpan={7} className="px-5 py-10 text-center text-slate-400">
+                          <td colSpan={6} className="px-5 py-10 text-center text-slate-400">
                             <div className="flex items-center justify-center gap-2">
                               <RefreshCw className="w-4 h-4 animate-spin text-primary" />
                               <span>Memuat data mailbox...</span>
@@ -893,16 +997,10 @@ function Admin_() {
 
                       {!isLoading && mailboxes.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="px-5 py-12 text-center text-slate-400" data-testid="admin-empty">
-                            Belum ada mailbox customer terdaftar.
-                          </td>
-                        </tr>
-                      )}
-
-                      {!isLoading && mailboxes.length > 0 && filteredMailboxes.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="px-5 py-10 text-center text-slate-400">
-                            Tidak ada customer yang cocok dengan kata kunci &quot;{searchQuery}&quot;
+                          <td colSpan={6} className="px-5 py-12 text-center text-slate-400" data-testid="admin-empty">
+                            {debouncedSearch || categoryFilter !== 'all' || statusFilter !== 'all' || loFilter !== 'all'
+                              ? 'Tidak ada mailbox yang sesuai dengan pencarian dan filter.'
+                              : 'Belum ada mailbox customer terdaftar.'}
                           </td>
                         </tr>
                       )}
@@ -915,59 +1013,70 @@ function Admin_() {
                             data-testid="mailbox-row"
                             className="hover:bg-slate-50/80 transition-colors group"
                           >
-                            {/* Name & Avatar */}
+                            {/* Mailbox: avatar, name, address + 1-click login, all in one cell */}
                             <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
                                 <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">
                                   {initials(m.name)}
                                 </div>
-                                <div>
-                                  <span className="font-semibold text-slate-900 block text-xs">{m.name}</span>
-                                  <span className="text-[10px] text-slate-400">
-                                    Dibuat: {format(new Date(m.createdAt), 'd MMM yyyy', { locale: localeId })}
-                                  </span>
+                                <div className="min-w-0">
+                                  <span title={m.name} className="font-semibold text-slate-900 block text-xs break-words">{m.name}</span>
+                                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                    <span className="max-w-full [overflow-wrap:anywhere] font-mono text-slate-600 text-[11px] bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200/60">
+                                      {m.mailboxAddress}
+                                    </span>
+                                    {isActive && (
+                                      <button
+                                        type="button"
+                                        data-testid={`impersonate-${m.id}`}
+                                        title={`Login 1-klik ke mailbox ${m.mailboxAddress}`}
+                                        onClick={() => handleImpersonate(m.id)}
+                                        disabled={impersonatingId === m.id}
+                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shrink-0 shadow-2xs disabled:opacity-50 cursor-pointer"
+                                      >
+                                        {impersonatingId === m.id ? (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
+                                        )}
+                                        <span>Buka</span>
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </td>
 
-                            {/* Mailbox address + 1-Click Login Button */}
                             <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-slate-800 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
-                                  {m.mailboxAddress}
-                                </span>
-                                {isActive && (
-                                  <button
-                                    type="button"
-                                    data-testid={`impersonate-${m.id}`}
-                                    title={`Login 1-klik ke mailbox ${m.mailboxAddress}`}
-                                    onClick={() => handleImpersonate(m.id)}
-                                    disabled={impersonatingId === m.id}
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shrink-0 shadow-2xs disabled:opacity-50 cursor-pointer"
-                                  >
-                                    {impersonatingId === m.id ? (
-                                      <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
-                                    )}
-                                    <span>Buka Akun</span>
-                                    <ExternalLink className="w-3 h-3 ml-0.5 opacity-75" />
-                                  </button>
-                                )}
-                              </div>
+                              <select
+                                aria-label={`LO akuisisi ${m.mailboxAddress}`}
+                                title={m.acquisitionLo || 'Belum ditentukan'}
+                                value={m.acquisitionLo ?? ''}
+                                disabled={savingLo}
+                                onChange={(e) => void updateAcquisitionLo(m.id, e.target.value)}
+                                className="w-full min-w-0 rounded-lg border border-primary/20 bg-primary/5 px-2 py-1.5 text-[11px] font-semibold text-primary cursor-pointer disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                              >
+                                <option value="">Belum ditentukan</option>
+                                {(data?.legalOfficers ?? []).map(name => <option key={name} value={name}>{name}</option>)}
+                              </select>
                             </td>
 
                             {/* Service category */}
                             <td className="px-5 py-3.5 hidden lg:table-cell">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              <select
+                                aria-label={`Kategori layanan ${m.mailboxAddress}`}
+                                value={m.serviceCategory}
+                                disabled={savingCategory}
+                                onChange={(e) => void updateCategory(m.id, e.target.value)}
+                                className={`w-full min-w-0 rounded-lg border px-2 py-1.5 text-[11px] font-semibold cursor-pointer disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary/30 ${
                                   m.serviceCategory === 'Pendaftaran Merek'
-                                    ? 'bg-sky-50 text-sky-700 border border-sky-200'
-                                    : 'bg-violet-50 text-violet-700 border border-violet-200'
+                                    ? 'bg-sky-50 text-sky-700 border-sky-200'
+                                    : 'bg-violet-50 text-violet-700 border-violet-200'
                                 }`}
                               >
-                                {m.serviceCategory || 'Pendirian PT'}
-                              </span>
+                                <option value="Pendirian PT">Pendirian PT</option>
+                                <option value="Pendaftaran Merek">Pendaftaran Merek</option>
+                              </select>
                             </td>
 
                             {/* Personal email */}
@@ -975,14 +1084,7 @@ function Admin_() {
                               {m.personalEmail}
                             </td>
 
-                            {/* Last Login */}
-                            <td className="px-5 py-3.5 hidden sm:table-cell text-slate-500">
-                              {m.lastLoginAt
-                                ? format(new Date(m.lastLoginAt), 'd MMM, HH:mm', { locale: localeId })
-                                : <span className="text-slate-400 italic">Belum pernah</span>}
-                            </td>
-
-                            {/* Status */}
+                            {/* Status + last login */}
                             <td className="px-5 py-3.5">
                               <span
                                 className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
@@ -994,27 +1096,34 @@ function Admin_() {
                                 <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                                 {m.status}
                               </span>
+                              <div className="text-[10px] text-slate-400 mt-1">
+                                {m.lastLoginAt
+                                  ? format(new Date(m.lastLoginAt), 'd MMM, HH:mm', { locale: localeId })
+                                  : 'Belum pernah login'}
+                              </div>
                             </td>
 
-                            {/* Action buttons */}
+                            {/* Action buttons: icon-only, compact — no slide needed */}
                             <td className="px-5 py-3.5 text-right">
-                              <div className="inline-flex items-center gap-2">
+                              <div className="inline-flex items-center gap-1">
                                 {m.status === 'active' && (
                                   <button
                                     data-testid="deactivate"
                                     onClick={() => act(() => api.post(`/mailboxes/${m.id}/deactivate`), 'Mailbox dinonaktifkan')}
-                                    className="px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200/80"
+                                    title="Nonaktifkan mailbox"
+                                    className="p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200/80"
                                   >
-                                    Nonaktifkan
+                                    <Pause className="w-3.5 h-3.5" />
                                   </button>
                                 )}
                                 {m.status === 'inactive' && (
                                   <button
                                     data-testid="reactivate"
                                     onClick={() => act(() => api.post(`/mailboxes/${m.id}/reactivate`), 'Mailbox diaktifkan')}
-                                    className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200/80"
+                                    title="Aktifkan mailbox"
+                                    className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200/80"
                                   >
-                                    Aktifkan
+                                    <Play className="w-3.5 h-3.5" />
                                   </button>
                                 )}
                                 {m.status !== 'deleted' && (
@@ -1023,24 +1132,24 @@ function Admin_() {
                                     data-testid={`resend-cred-${m.id}`}
                                     onClick={() => handleResendCredentials(m)}
                                     disabled={resendingId === m.id}
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/10 rounded-lg transition-colors border border-primary/30 hover:border-primary shrink-0"
                                     title={`Kirim ulang rincian akun & kata sandi ke email pribadi ${m.personalEmail}`}
+                                    className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors border border-primary/30 hover:border-primary shrink-0"
                                   >
                                     {resendingId === m.id ? (
                                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                     ) : (
                                       <Mail className="w-3.5 h-3.5" />
                                     )}
-                                    <span>Kirim Info</span>
                                   </button>
                                 )}
                                 {m.status !== 'deleted' && (
                                   <button
                                     data-testid="delete-mailbox"
                                     onClick={() => act(() => api.delete(`/mailboxes/${m.id}`), 'Mailbox dihapus')}
-                                    className="px-2.5 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-red-200/80"
+                                    title="Hapus mailbox"
+                                    className="p-1.5 text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-red-200/80"
                                   >
-                                    Hapus
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 )}
                               </div>
@@ -1051,6 +1160,44 @@ function Admin_() {
                     </tbody>
                   </table>
                 </div>
+
+                {!isLoading && mailboxPagination && mailboxPagination.total > 0 && (
+                  <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-slate-100 bg-slate-50/50 text-xs text-slate-500">
+                    <span>
+                      Menampilkan{' '}
+                      <strong className="text-slate-700">
+                        {(mailboxPagination.page - 1) * mailboxPagination.limit + 1}
+                        –{Math.min(mailboxPagination.page * mailboxPagination.limit, mailboxPagination.total)}
+                      </strong>{' '}
+                      dari <strong className="text-slate-700">{mailboxPagination.total}</strong> mailbox
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        data-testid="mailbox-page-prev"
+                        aria-label="Halaman sebelumnya"
+                        onClick={() => setMailboxPage((p) => Math.max(1, p - 1))}
+                        disabled={mailboxPagination.page <= 1}
+                        className="p-1.5 rounded-lg border border-slate-200 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="px-2 font-semibold text-slate-700">
+                        {mailboxPagination.page} / {mailboxPagination.totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        data-testid="mailbox-page-next"
+                        aria-label="Halaman berikutnya"
+                        onClick={() => setMailboxPage((p) => Math.min(mailboxPagination.totalPages, p + 1))}
+                        disabled={mailboxPagination.page >= mailboxPagination.totalPages}
+                        className="p-1.5 rounded-lg border border-slate-200 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1767,6 +1914,9 @@ Tim Legal EasyLegal`}
       {/* New Mailbox Modal */}
       {showForm && (
         <NewMailboxForm
+          quotaDomains={data?.quota?.domains}
+          recommendedDomain={data?.quota?.recommendedDomain}
+          legalOfficers={data?.legalOfficers ?? []}
           onClose={() => setShowForm(false)}
           onCreated={(res) => {
             setCreated(res);
@@ -1888,14 +2038,22 @@ Tim Legal EasyLegal`}
 function NewMailboxForm({
   onClose,
   onCreated,
+  quotaDomains,
+  recommendedDomain,
+  legalOfficers,
 }: {
   onClose: () => void;
   onCreated: (r: { mailboxAddress: string; temporaryPassword: string }) => void;
+  quotaDomains?: Record<string, { used: number; limit: number; available: number; status: 'full' | 'available' }>;
+  recommendedDomain?: string;
+  legalOfficers: string[];
 }) {
   const [name, setName] = useState('');
   const [personalEmail, setPersonalEmail] = useState('');
   const [localPart, setLocalPart] = useState('');
+  const [domain, setDomain] = useState('auto');
   const [serviceCategory, setServiceCategory] = useState('Pendirian PT');
+  const [acquisitionLo, setAcquisitionLo] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -1904,7 +2062,7 @@ function NewMailboxForm({
     setError('');
     setSaving(true);
     try {
-      const res = await api.post('/auth/register', { name, personalEmail, localPart });
+      const res = await api.post('/auth/register', { name, personalEmail, localPart, domain, serviceCategory, acquisitionLo: acquisitionLo || null });
       onCreated(res.data);
     } catch (err) {
       setError(errMsg(err, 'Gagal membuat mailbox'));
@@ -1918,7 +2076,7 @@ function NewMailboxForm({
       <form
         onSubmit={submit}
         data-testid="mailbox-form"
-        className="modal-panel max-w-md overflow-hidden"
+        className="modal-panel max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto"
       >
         <header className="flex items-center justify-between px-5 py-4 bg-primary text-white select-none">
           <div className="flex items-center gap-2">
@@ -1979,6 +2137,22 @@ function NewMailboxForm({
           </div>
 
           <div>
+            <label htmlFor="acquisitionLo" className="block text-xs font-semibold text-slate-700 mb-1.5">
+              LO Akuisisi
+            </label>
+            <select
+              id="acquisitionLo"
+              data-testid="form-acquisition-lo"
+              value={acquisitionLo}
+              onChange={(e) => setAcquisitionLo(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="">Belum ditentukan</option>
+              {legalOfficers.map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </div>
+
+          <div>
             <label htmlFor="personalEmail" className="block text-xs font-semibold text-slate-700 mb-1.5">
               Email Pribadi (Untuk Menerima Info Login)
             </label>
@@ -2008,10 +2182,43 @@ function NewMailboxForm({
                 placeholder="hendra"
                 className="flex-1 px-3.5 py-2.5 bg-slate-50/70 hover:bg-slate-50 focus:bg-white rounded-l-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
-              <span className="px-3.5 py-2.5 bg-slate-100 border border-l-0 border-slate-200 rounded-r-xl text-xs font-mono font-medium text-slate-600 select-none">
-                @{process.env.NEXT_PUBLIC_HOSTINGER_DOMAIN || 'clienteasylegal.co.id'}
-              </span>
+              <select
+                id="mailboxDomain"
+                data-testid="form-domain"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                className="px-3 py-2.5 bg-slate-100 border border-l-0 border-slate-200 rounded-r-xl text-xs font-mono font-medium text-slate-700 hover:bg-slate-200/70 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer max-w-[200px] truncate"
+              >
+                <option value="auto">✨ Otomatis (Rekomendasi AI)</option>
+                <option value="clienteasylegal.com">
+                  @clienteasylegal.com ({quotaDomains?.['clienteasylegal.com']?.available ?? 99} sisa)
+                </option>
+                <option value="clienteasylegal.online">
+                  @clienteasylegal.online ({quotaDomains?.['clienteasylegal.online']?.available ?? 99} sisa)
+                </option>
+                <option
+                  value="clienteasylegal.co.id"
+                  disabled={quotaDomains?.['clienteasylegal.co.id']?.available === 0}
+                >
+                  @clienteasylegal.co.id ({quotaDomains?.['clienteasylegal.co.id']?.available === 0 ? 'Penuh 100/100' : `${quotaDomains?.['clienteasylegal.co.id']?.available ?? 0} sisa`})
+                </option>
+              </select>
             </div>
+            {domain === 'auto' ? (
+              <div className="mt-2.5 p-2.5 rounded-xl bg-purple-50/80 border border-purple-200 text-[11px] text-purple-900 flex items-start gap-2 shadow-2xs animate-in fade-in duration-150">
+                <Sparkles className="w-3.5 h-3.5 text-purple-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>AI Smart Distributor Aktif:</strong> Sistem otomatis mendistribusikan ke domain dengan kuota yang aman &amp; tersedia (Target saat ini: <code className="bg-white px-1.5 py-0.5 rounded border border-purple-200 font-mono font-bold text-purple-900">@{recommendedDomain || 'clienteasylegal.com'}</code>).
+                </div>
+              </div>
+            ) : domain === 'clienteasylegal.co.id' && (quotaDomains?.['clienteasylegal.co.id']?.available === 0) ? (
+              <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2 animate-in fade-in duration-150">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Peringatan Kapasitas:</strong> Kuota @clienteasylegal.co.id sudah terisi 100/100. AI akan otomatis mengamankan akun ke domain yang tersedia (@clienteasylegal.com / @clienteasylegal.online) agar pembuatan mailbox tidak gagal di Hostinger.
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 

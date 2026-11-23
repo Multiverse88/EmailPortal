@@ -9,7 +9,7 @@ import { toSnippet } from '../lib/sanitize';
 import { inferAttachmentMimeType } from '../lib/attachments';
 import { getAccountFolderName } from '../lib/synology-sync';
 import { storage } from '../lib/storage';
-import { isMailApiConfigured, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody, fetchMessageAttachment } from '../lib/hostinger';
+import { isMailApiConfigured, foldersApi, messagesApi, resolveResourceId, fetchMessages, fetchMessageBody, fetchMessageAttachment } from '../lib/hostinger';
 import { scanAttachmentBuffer, scanEmailContent } from '../lib/security-scanner';
 import { notifyEmailThreat } from '../lib/telegram';
 import { analyzeEmailThreat } from '../lib/ai-email-sentinel';
@@ -51,7 +51,7 @@ export class SyncWorker {
       console.log(`✓ Sync worker started via IMAP (${IMAP_HOST}:${IMAP_PORT}) (every ${SYNC_INTERVAL_MS / 1000}s)`);
     }
     this.timer = setInterval(() => void this.syncAll(), SYNC_INTERVAL_MS);
-    await this.syncAll();
+    void this.syncAll();
   }
 
   async syncCustomerMailbox(mailboxId: string): Promise<{ synced: number }> {
@@ -156,8 +156,31 @@ export class SyncWorker {
     const api = messagesApi();
     const folder = 'INBOX';
 
-    // Fetch latest messages (page 1, sort newest first)
-    const messages = await fetchMessages(resourceId, folder, { page: 1, perPage: 100, sort: '-uid' });
+    const { data: folderList } = await foldersApi().listFolders(resourceId);
+    let promoted = 0;
+    for (const source of folderList.data) {
+      if (source.path.toUpperCase() === 'INBOX' ||
+          !(source.specialUse?.toLowerCase() === '\\junk' || /^(junk|spam|junk e-mail)$/i.test(source.name))) continue;
+      let remaining = source.messageCount;
+      while (remaining > 0) {
+        const { data: batch } = await api.listMessages(resourceId, source.path, 1, 100, '-uid');
+        if (!batch.data.length) break;
+        await api.moveMessages(resourceId, source.path, {
+          uids: batch.data.map(message => message.uid),
+          targetFolder: 'INBOX',
+        });
+        promoted += batch.data.length;
+        remaining -= batch.data.length;
+      }
+    }
+
+    // Moving on the provider assigns destination UIDs; never cache Spam's UIDs as Inbox UIDs.
+    const messages = [];
+    for (let page = 1; page <= Math.ceil((100 + promoted) / 100); page++) {
+      const batch = await fetchMessages(resourceId, folder, { page, perPage: 100, sort: '-uid' });
+      messages.push(...batch);
+      if (batch.length < 100) break;
+    }
 
     for (const meta of messages) {
       const flags = meta.flags ?? [];
@@ -377,9 +400,44 @@ export class SyncWorker {
     });
   }
 
+  private async moveSpamToInbox(imap: Imap): Promise<number> {
+    const boxes = await new Promise<Imap.MailBoxes>((resolve, reject) => {
+      imap.getBoxes((error, result) => error ? reject(error) : resolve(result));
+    });
+    const spamFolders: string[] = [];
+    const walk = (items: Imap.MailBoxes, prefix = '') => {
+      for (const [name, box] of Object.entries(items)) {
+        const folder = prefix + name;
+        if (folder.toUpperCase() !== 'INBOX' &&
+            !box.attribs.some(flag => flag.toLowerCase() === '\\noselect') &&
+            (box.attribs.some(flag => flag.toLowerCase() === '\\junk') || /^(junk|spam|junk e-mail)$/i.test(name))) {
+          spamFolders.push(folder);
+        }
+        if (box.children) walk(box.children, folder + box.delimiter);
+      }
+    };
+    walk(boxes);
+    let promoted = 0;
+    for (const folder of spamFolders) {
+      await new Promise<Imap.Box>((resolve, reject) => {
+        imap.openBox(folder, false, (error, box) => error ? reject(error) : resolve(box));
+      });
+      const uids = await new Promise<number[]>((resolve, reject) => {
+        imap.search(['ALL'], (error, result) => error ? reject(error) : resolve(result));
+      });
+      if (!uids.length) continue;
+      await new Promise<void>((resolve, reject) => {
+        imap.move(uids, 'INBOX', error => error ? reject(error) : resolve());
+      });
+      promoted += uids.length;
+    }
+    return promoted;
+  }
+
   public async syncCustomer(customer: Customer) {
     const imap = await this.connect(customer);
     try {
+      const promoted = await this.moveSpamToInbox(imap);
       const box = await new Promise<Imap.Box>((resolve, reject) => {
         imap.openBox('INBOX', true, (err, b) => (err ? reject(err) : resolve(b)));
       });
@@ -390,7 +448,7 @@ export class SyncWorker {
       }
 
       const total = box.messages.total;
-      const start = Math.max(1, total - 49); // fetch up to last 50 messages
+      const start = Math.max(1, total - 49 - promoted);
       const range = `${start}:${total}`;
 
       await new Promise<void>((resolve, reject) => {
@@ -421,6 +479,66 @@ export class SyncWorker {
       });
     } finally {
       imap.end();
+    }
+  }
+
+  public async deleteMessageOnImap(customer: Customer, folder: string, uid: string, purge: boolean): Promise<void> {
+    try {
+      const imap = await this.connect(customer);
+      try {
+        await new Promise<void>((resolve, reject) => {
+          imap.openBox(folder, false, (openErr) => {
+            if (openErr) return reject(openErr);
+            if (purge) {
+              imap.addFlags(uid, '\\Deleted', (flagErr) => {
+                if (flagErr) return reject(flagErr);
+                imap.expunge((expErr) => {
+                  if (expErr) return reject(expErr);
+                  resolve();
+                });
+              });
+            } else {
+              imap.move(uid, 'Trash', (moveErr) => {
+                if (moveErr) {
+                  imap.addFlags(uid, '\\Deleted', (fErr) => {
+                    if (fErr) return reject(fErr);
+                    resolve();
+                  });
+                } else {
+                  resolve();
+                }
+              });
+            }
+          });
+        });
+      } finally {
+        imap.end();
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown IMAP error';
+      console.warn(`[IMAP Sync Delete] Gagal menghapus pesan ${uid} di Hostinger:`, msg);
+    }
+  }
+
+  public async moveMessageOnImap(customer: Customer, sourceFolder: string, targetFolder: string, uid: string): Promise<void> {
+    try {
+      const imap = await this.connect(customer);
+      try {
+        await new Promise<void>((resolve, reject) => {
+          imap.openBox(sourceFolder, false, (openErr) => {
+            if (openErr) return reject(openErr);
+            imap.move(uid, targetFolder, (moveErr) => {
+              if (moveErr) return reject(moveErr);
+              resolve();
+            });
+          });
+        });
+      } finally {
+        imap.end();
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown IMAP error';
+      console.warn(`[IMAP Sync Move] Gagal memindahkan pesan ${uid} ke ${targetFolder} di Hostinger:`, msg);
     }
   }
 

@@ -19,6 +19,7 @@ model Customer {
   passwordEnc       String // AES-256-GCM (needed plaintext for IMAP/SMTP)
   status            String    @default("active") // active, inactive, deleted
   serviceCategory   String    @default("Pendirian PT") // "Pendirian PT" | "Pendaftaran Merek"
+  acquisitionLo     String?
   storageQuota      Float     @default(5368709120) // 5 GB in bytes
   avatarUrl         String?
   createdAt         DateTime  @default(now())
