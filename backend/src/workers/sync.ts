@@ -216,7 +216,7 @@ export class SyncWorker {
       // and re-fires the Telegram alert forever, unrelated to any login session.
       const previousMessage = await this.prisma.messageCache.findUnique({
         where: { mailboxId_uid: { mailboxId: customer.id, uid: String(meta.uid) } },
-        select: { securityStatus: true },
+        select: { securityStatus: true, securityNotes: true },
       });
 
       if (contentScan.status === 'threat' && previousMessage?.securityStatus !== 'threat') {
@@ -260,24 +260,21 @@ export class SyncWorker {
           sender: meta.sender,
           isRead: wasSeen,
           isStarred: flags.includes('\\Flagged'),
-          securityStatus: contentScan.status,
-          securityNotes: contentScan.details,
+          securityStatus: previousMessage?.securityNotes?.startsWith('[AI SENTINEL') ? undefined : contentScan.status,
+          securityNotes: previousMessage?.securityNotes?.startsWith('[AI SENTINEL') ? undefined : contentScan.details,
           receivedAt: meta.date ? new Date(meta.date) : new Date(),
           bodyHtml,
         },
       });
-      // Asynchronous non-blocking AI Sentinel background enrichment
-      void this.enrichWithAiSentinel({
-        messageId: message.id,
-        customer: { id: customer.id, name: customer.name, mailboxAddress: customer.mailboxAddress },
-        emailData: {
-          sender: meta.sender,
-          subject: meta.subject,
-          bodyText,
-          bodyHtml,
-        },
-        currentStatus: contentScan.status,
-      });
+      // Polling revisits existing UIDs; only first ingestion should invoke AI.
+      if (!previousMessage) {
+        void this.enrichWithAiSentinel({
+          messageId: message.id,
+          customer: { id: customer.id, name: customer.name, mailboxAddress: customer.mailboxAddress },
+          emailData: { sender: meta.sender, subject: meta.subject, bodyText, bodyHtml },
+          currentStatus: contentScan.status,
+        });
+      }
 
 
       if (attachmentMeta) {
@@ -453,7 +450,7 @@ export class SyncWorker {
     // syncCustomerViaApi for why this must not re-fire on every sync pass.
     const previousMessage = await this.prisma.messageCache.findUnique({
       where: { mailboxId_uid: { mailboxId, uid } },
-      select: { securityStatus: true },
+      select: { securityStatus: true, securityNotes: true },
     });
 
     if (contentScan.status === 'threat' && customer && previousMessage?.securityStatus !== 'threat') {
@@ -487,10 +484,12 @@ export class SyncWorker {
     const message = await this.prisma.messageCache.upsert({
       where: { mailboxId_uid: { mailboxId, uid } },
       create: { mailboxId, uid, ...data },
-      update: data,
+      update: previousMessage?.securityNotes?.startsWith('[AI SENTINEL')
+        ? { ...data, securityStatus: undefined, securityNotes: undefined }
+        : data,
     });
     // Asynchronous non-blocking AI Sentinel background enrichment
-    if (customer) {
+    if (customer && !previousMessage) {
       void this.enrichWithAiSentinel({
         messageId: message.id,
         customer: { id: customer.id, name: customer.name, mailboxAddress: customer.mailboxAddress },
